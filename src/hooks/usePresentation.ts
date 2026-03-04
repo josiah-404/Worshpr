@@ -4,57 +4,82 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  BACKGROUNDS, TRANSITIONS, FONTS, SIZES, SPEEDS, parseLyrics,
+  BACKGROUNDS,
+  TRANSITIONS,
+  FONTS,
+  SIZES,
+  SPEEDS,
+  parseLyrics,
 } from "@/lib/worship-constants";
 
 export function usePresentation(presentationId: string | null) {
   const router = useRouter();
 
   /* ── Presentation data ── */
-  const [presentationDbId, setPresentationDbId] = useState<string | null>(presentationId);
-  const [title, setTitle]           = useState("");
-  const [lyrics, setLyrics]         = useState("");
-  const [bgId, setBgId]             = useState(BACKGROUNDS[0].id);
-  const [transitionId, setTransId]  = useState(TRANSITIONS[0].id);
-  const [fontId, setFontId]         = useState(FONTS[0].id);
-  const [sizeId, setSizeId]         = useState(SIZES[1].id);
-  const [transSpeed, setTransSpeed] = useState(SPEEDS[1].id);
-  const [animSpeed, setAnimSpeed]   = useState(SPEEDS[1].id);
+  const [presentationDbId, setPresentationDbId] = useState<string | null>(
+    presentationId,
+  );
+  const [title, setTitle] = useState("");
+  const [lyrics, setLyrics] = useState("");
+  const [bgId, setBgId] = useState<string>(BACKGROUNDS[0].id);
+  const [transitionId, setTransId] = useState<string>(TRANSITIONS[0].id);
+  const [fontId, setFontId] = useState<string>(FONTS[0].id);
+  const [sizeId, setSizeId] = useState<string>(SIZES[1].id);
+  const [transSpeed, setTransSpeed] = useState<string>(SPEEDS[1].id);
+  const [animSpeed, setAnimSpeed] = useState<string>(SPEEDS[1].id);
 
   /* ── Derived slide state ── */
-  const [slides, setSlides]   = useState<string[]>([]);
+  const [slides, setSlides] = useState<string[]>([]);
   const [current, setCurrent] = useState(0);
 
   /* ── UI state ── */
-  const [mode, setMode]             = useState<"editor" | "controller">("editor");
-  const [isSaving, setIsSaving]     = useState(false);
-  const [saved, setSaved]           = useState(false);
+  const [mode, setMode] = useState<"editor" | "controller">("editor");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [titleError, setTitleError] = useState(false);
-  const [isLoading, setIsLoading]   = useState(!!presentationId);
+  const [isLoading, setIsLoading] = useState(!!presentationId);
 
   /* ── Refs for BroadcastChannel sync (avoids stale closures) ── */
-  const channelRef     = useRef<BroadcastChannel | null>(null);
-  const presenterRef   = useRef<Window | null>(null);
-  const activeSlideRef = useRef<HTMLButtonElement | null>(null);
-  const slidesRef      = useRef(slides);
-  const currentRef     = useRef(current);
-  const bgIdRef        = useRef(bgId);
-  const transRef       = useRef(transitionId);
-  const fontRef        = useRef(fontId);
-  const sizeRef        = useRef(sizeId);
-  const transSpeedRef  = useRef(transSpeed);
-  const animSpeedRef   = useRef(animSpeed);
-  const modeRef        = useRef(mode);
+  const channelRef = useRef<BroadcastChannel | null>(null);
+  const presenterRef = useRef<Window | null>(null);
+  const activeSlideRef = useRef<HTMLButtonElement>(null!);
+  const slidesRef = useRef(slides);
+  const currentRef = useRef(current);
+  const bgIdRef = useRef(bgId);
+  const transRef = useRef(transitionId);
+  const fontRef = useRef(fontId);
+  const sizeRef = useRef(sizeId);
+  const transSpeedRef = useRef(transSpeed);
+  const animSpeedRef = useRef(animSpeed);
+  const modeRef = useRef(mode);
 
-  useEffect(() => { slidesRef.current      = slides;       }, [slides]);
-  useEffect(() => { currentRef.current     = current;      }, [current]);
-  useEffect(() => { bgIdRef.current        = bgId;         }, [bgId]);
-  useEffect(() => { transRef.current       = transitionId; }, [transitionId]);
-  useEffect(() => { fontRef.current        = fontId;       }, [fontId]);
-  useEffect(() => { sizeRef.current        = sizeId;       }, [sizeId]);
-  useEffect(() => { transSpeedRef.current  = transSpeed;   }, [transSpeed]);
-  useEffect(() => { animSpeedRef.current   = animSpeed;    }, [animSpeed]);
-  useEffect(() => { modeRef.current        = mode;         }, [mode]);
+  useEffect(() => {
+    slidesRef.current = slides;
+  }, [slides]);
+  useEffect(() => {
+    currentRef.current = current;
+  }, [current]);
+  useEffect(() => {
+    bgIdRef.current = bgId;
+  }, [bgId]);
+  useEffect(() => {
+    transRef.current = transitionId;
+  }, [transitionId]);
+  useEffect(() => {
+    fontRef.current = fontId;
+  }, [fontId]);
+  useEffect(() => {
+    sizeRef.current = sizeId;
+  }, [sizeId]);
+  useEffect(() => {
+    transSpeedRef.current = transSpeed;
+  }, [transSpeed]);
+  useEffect(() => {
+    animSpeedRef.current = animSpeed;
+  }, [animSpeed]);
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
 
   /* ── Load existing presentation ── */
   useEffect(() => {
@@ -87,13 +112,13 @@ export function usePresentation(presentationId: string | null) {
       if (e.data?.type === "REQUEST_STATE") {
         ch.postMessage({
           type: "UPDATE",
-          slide:      slidesRef.current[currentRef.current] ?? "",
-          bg:         bgIdRef.current,
+          slide: slidesRef.current[currentRef.current] ?? "",
+          bg: bgIdRef.current,
           transition: transRef.current,
-          font:       fontRef.current,
-          size:       sizeRef.current,
+          font: fontRef.current,
+          size: sizeRef.current,
           transSpeed: transSpeedRef.current,
-          animSpeed:  animSpeedRef.current,
+          animSpeed: animSpeedRef.current,
         });
       }
     };
@@ -108,13 +133,13 @@ export function usePresentation(presentationId: string | null) {
       setCurrent(c);
       channelRef.current?.postMessage({
         type: "UPDATE",
-        slide:      slidesRef.current[c] ?? "",
-        bg:         bgIdRef.current,
+        slide: slidesRef.current[c] ?? "",
+        bg: bgIdRef.current,
         transition: transRef.current,
-        font:       fontRef.current,
-        size:       sizeRef.current,
+        font: fontRef.current,
+        size: sizeRef.current,
         transSpeed: transSpeedRef.current,
-        animSpeed:  animSpeedRef.current,
+        animSpeed: animSpeedRef.current,
       });
     };
   });
@@ -124,9 +149,11 @@ export function usePresentation(presentationId: string | null) {
       if (modeRef.current !== "controller") return;
       if ((e.target as HTMLElement).tagName === "INPUT") return;
       if (e.key === "ArrowRight" || e.key === " " || e.key === "ArrowDown") {
-        e.preventDefault(); goToRef.current(currentRef.current + 1);
+        e.preventDefault();
+        goToRef.current(currentRef.current + 1);
       } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-        e.preventDefault(); goToRef.current(currentRef.current - 1);
+        e.preventDefault();
+        goToRef.current(currentRef.current - 1);
       }
     };
     window.addEventListener("keydown", handler);
@@ -136,20 +163,36 @@ export function usePresentation(presentationId: string | null) {
   /* ── Auto-scroll active slide in list ── */
   useEffect(() => {
     if (mode === "controller") {
-      activeSlideRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      activeSlideRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
     }
   }, [current, mode]);
 
   /* ── Broadcast helper ── */
   const broadcast = useCallback(
-    (idx: number, bg: string, tr: string, font: string, size: string, tSpd: string, aSpd: string) => {
+    (
+      idx: number,
+      bg: string,
+      tr: string,
+      font: string,
+      size: string,
+      tSpd: string,
+      aSpd: string,
+    ) => {
       channelRef.current?.postMessage({
         type: "UPDATE",
-        slide: slides[idx] ?? "", bg, transition: tr, font, size,
-        transSpeed: tSpd, animSpeed: aSpd,
+        slide: slides[idx] ?? "",
+        bg,
+        transition: tr,
+        font,
+        size,
+        transSpeed: tSpd,
+        animSpeed: aSpd,
       });
     },
-    [slides]
+    [slides],
   );
 
   /* ── Navigation & style change handlers ── */
@@ -158,18 +201,38 @@ export function usePresentation(presentationId: string | null) {
     setCurrent(c);
     broadcast(c, bgId, transitionId, fontId, sizeId, transSpeed, animSpeed);
   };
-  const changeBg         = (id: string) => { setBgId(id);        broadcast(current, id,  transitionId, fontId, sizeId, transSpeed, animSpeed); };
-  const changeTr         = (id: string) => { setTransId(id);     broadcast(current, bgId, id,          fontId, sizeId, transSpeed, animSpeed); };
-  const changeFont       = (id: string) => { setFontId(id);      broadcast(current, bgId, transitionId, id,    sizeId, transSpeed, animSpeed); };
-  const changeSize       = (id: string) => { setSizeId(id);      broadcast(current, bgId, transitionId, fontId, id,   transSpeed, animSpeed); };
-  const changeTransSpeed = (id: string) => { setTransSpeed(id);  broadcast(current, bgId, transitionId, fontId, sizeId, id,        animSpeed); };
-  const changeAnimSpeed  = (id: string) => { setAnimSpeed(id);   broadcast(current, bgId, transitionId, fontId, sizeId, transSpeed, id      ); };
+  const changeBg = (id: string) => {
+    setBgId(id);
+    broadcast(current, id, transitionId, fontId, sizeId, transSpeed, animSpeed);
+  };
+  const changeTr = (id: string) => {
+    setTransId(id);
+    broadcast(current, bgId, id, fontId, sizeId, transSpeed, animSpeed);
+  };
+  const changeFont = (id: string) => {
+    setFontId(id);
+    broadcast(current, bgId, transitionId, id, sizeId, transSpeed, animSpeed);
+  };
+  const changeSize = (id: string) => {
+    setSizeId(id);
+    broadcast(current, bgId, transitionId, fontId, id, transSpeed, animSpeed);
+  };
+  const changeTransSpeed = (id: string) => {
+    setTransSpeed(id);
+    broadcast(current, bgId, transitionId, fontId, sizeId, id, animSpeed);
+  };
+  const changeAnimSpeed = (id: string) => {
+    setAnimSpeed(id);
+    broadcast(current, bgId, transitionId, fontId, sizeId, transSpeed, id);
+  };
 
   /* ── Save ── */
   const handleSave = async () => {
     if (!title.trim()) {
       setTitleError(true);
-      toast.warning("Title is required", { description: "Please enter a title before saving." });
+      toast.warning("Title is required", {
+        description: "Please enter a title before saving.",
+      });
       return;
     }
     setTitleError(false);
@@ -184,7 +247,7 @@ export function usePresentation(presentationId: string | null) {
         });
         if (!res.ok) throw new Error("Failed to update presentation");
       } else {
-        const res  = await fetch("/api/presentations", {
+        const res = await fetch("/api/presentations", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
@@ -198,9 +261,14 @@ export function usePresentation(presentationId: string | null) {
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-      toast.success("Presentation saved", { description: `"${title}" has been saved successfully.` });
+      toast.success("Presentation saved", {
+        description: `"${title}" has been saved successfully.`,
+      });
     } catch (err) {
-      toast.error("Save failed", { description: err instanceof Error ? err.message : "An unexpected error occurred." });
+      toast.error("Save failed", {
+        description:
+          err instanceof Error ? err.message : "An unexpected error occurred.",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -212,12 +280,29 @@ export function usePresentation(presentationId: string | null) {
     let features = `left=${window.screen.width},top=0,width=${window.screen.width},height=${window.screen.height}`;
     try {
       if ("getScreenDetails" in window) {
-        const sd = await (window as unknown as { getScreenDetails(): Promise<{ screens: Array<{ isPrimary: boolean; availLeft: number; availTop: number; availWidth: number; availHeight: number }> }> }).getScreenDetails();
+        const sd = await (
+          window as unknown as {
+            getScreenDetails(): Promise<{
+              screens: Array<{
+                isPrimary: boolean;
+                availLeft: number;
+                availTop: number;
+                availWidth: number;
+                availHeight: number;
+              }>;
+            }>;
+          }
+        ).getScreenDetails();
         const second = sd.screens.find((s) => !s.isPrimary);
-        if (second) features = `left=${second.availLeft},top=${second.availTop},width=${second.availWidth},height=${second.availHeight}`;
+        if (second)
+          features = `left=${second.availLeft},top=${second.availTop},width=${second.availWidth},height=${second.availHeight}`;
       }
     } catch {}
-    presenterRef.current = window.open("/worship/present", "worship-presenter", features);
+    presenterRef.current = window.open(
+      "/worship/present",
+      "worship-presenter",
+      features,
+    );
   };
 
   const endPresentation = () => {
@@ -226,27 +311,50 @@ export function usePresentation(presentationId: string | null) {
   };
 
   /* ── Derived values ── */
-  const bgCls         = BACKGROUNDS.find((b) => b.id === bgId)?.cls ?? "";
-  const currentFamily = FONTS.find((f) => f.id === fontId)?.family ?? "'Inter', sans-serif";
-  const currentSlide  = slides[current] ?? "";
-  const nextSlide     = slides[current + 1] ?? "";
+  const bgCls = BACKGROUNDS.find((b) => b.id === bgId)?.cls ?? "";
+  const currentFamily =
+    FONTS.find((f) => f.id === fontId)?.family ?? "'Inter', sans-serif";
+  const currentSlide = slides[current] ?? "";
+  const nextSlide = slides[current + 1] ?? "";
 
   return {
     /* state */
-    title, setTitle,
-    lyrics, setLyrics,
-    slides, current,
-    bgId, transitionId, fontId, sizeId, transSpeed, animSpeed,
-    mode, setMode,
-    isSaving, saved,
-    titleError, setTitleError,
+    title,
+    setTitle,
+    lyrics,
+    setLyrics,
+    slides,
+    current,
+    bgId,
+    transitionId,
+    fontId,
+    sizeId,
+    transSpeed,
+    animSpeed,
+    mode,
+    setMode,
+    isSaving,
+    saved,
+    titleError,
+    setTitleError,
     isLoading,
     /* refs */
     activeSlideRef,
     /* derived */
-    bgCls, currentFamily, currentSlide, nextSlide,
+    bgCls,
+    currentFamily,
+    currentSlide,
+    nextSlide,
     /* actions */
-    goTo, changeBg, changeTr, changeFont, changeSize, changeTransSpeed, changeAnimSpeed,
-    handleSave, openPresenter, endPresentation,
+    goTo,
+    changeBg,
+    changeTr,
+    changeFont,
+    changeSize,
+    changeTransSpeed,
+    changeAnimSpeed,
+    handleSave,
+    openPresenter,
+    endPresentation,
   };
 }

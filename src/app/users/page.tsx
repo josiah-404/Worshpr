@@ -4,7 +4,16 @@ import UsersTable from "./UsersTable";
 export const dynamic = "force-dynamic";
 
 export default async function UsersPage() {
-  const users = await prisma.user.findMany({ orderBy: { createdAt: "desc" } });
+  const rawUsers = await prisma.user.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+  const users = rawUsers.map((u) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    createdAt: u.createdAt.toISOString(),
+  }));
 
   return (
     <div className="space-y-6">
