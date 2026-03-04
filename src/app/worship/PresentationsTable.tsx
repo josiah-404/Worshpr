@@ -1,44 +1,25 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Monitor } from "lucide-react";
-import { BACKGROUNDS, BG_BADGE_COLORS } from "@/lib/worship-constants";
-
-interface Presentation {
-  id:           string;
-  title:        string;
-  lyrics:       string;
-  bgId:         string;
-  transitionId: string;
-  fontId:       string;
-  sizeId:       string;
-  createdAt:    string;
-  updatedAt:    string;
-}
+import { BACKGROUNDS, BG_BADGE_COLORS, FONT_LABELS } from "@/lib/worship-constants";
+import { usePresentations, type Presentation } from "@/hooks/usePresentations";
 
 const BG_LABELS = Object.fromEntries(BACKGROUNDS.map((b) => [b.id, b.label]));
-
-const FONT_LABELS: Record<string, string> = {
-  inter:      "Inter",
-  playfair:   "Playfair",
-  montserrat: "Montserrat",
-  cormorant:  "Cormorant",
-};
 
 function slideCount(lyrics: string) {
   return lyrics.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean).length;
 }
 
 function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
+  const diff  = Date.now() - new Date(dateStr).getTime();
   const mins  = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days  = Math.floor(diff / 86400000);
-  if (mins  < 1)   return "Just now";
-  if (mins  < 60)  return `${mins}m ago`;
-  if (hours < 24)  return `${hours}h ago`;
-  if (days  < 30)  return `${days}d ago`;
+  if (mins  < 1)  return "Just now";
+  if (mins  < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days  < 30) return `${days}d ago`;
   return new Date(dateStr).toLocaleDateString();
 }
 
@@ -48,16 +29,7 @@ export default function PresentationsTable({
   presentations: Presentation[];
 }) {
   const router = useRouter();
-  const [presentations, setPresentations] = useState(initial);
-  const [deleting, setDeleting]           = useState<string | null>(null);
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this presentation?")) return;
-    setDeleting(id);
-    await fetch(`/api/presentations/${id}`, { method: "DELETE" });
-    setPresentations((prev) => prev.filter((p) => p.id !== id));
-    setDeleting(null);
-  };
+  const { presentations, deleting, deletePresentation } = usePresentations(initial);
 
   if (presentations.length === 0) {
     return (
@@ -112,7 +84,7 @@ export default function PresentationsTable({
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
                   <button
-                    onClick={() => handleDelete(p.id)}
+                    onClick={() => deletePresentation(p.id)}
                     disabled={deleting === p.id}
                     className="rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-40"
                     title="Delete"

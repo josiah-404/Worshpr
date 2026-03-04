@@ -1,3 +1,46 @@
+export const TRANSITIONS = [
+  { id: "fade", label: "Fade"     },
+  { id: "up",   label: "Slide Up" },
+  { id: "zoom", label: "Zoom"     },
+  { id: "blur", label: "Blur In"  },
+] as const;
+
+export const FONTS = [
+  { id: "inter",      label: "Inter",      family: "'Inter', sans-serif"         },
+  { id: "playfair",   label: "Playfair",   family: "'Playfair Display', serif"   },
+  { id: "montserrat", label: "Montserrat", family: "'Montserrat', sans-serif"    },
+  { id: "cormorant",  label: "Cormorant",  family: "'Cormorant Garamond', serif" },
+] as const;
+
+export const SIZES = [
+  { id: "sm", label: "S"  },
+  { id: "md", label: "M"  },
+  { id: "lg", label: "L"  },
+  { id: "xl", label: "XL" },
+] as const;
+
+export const PREVIEW_FONT_SIZES: Record<string, string> = {
+  sm: "clamp(0.6rem, 1.4vw, 1.1rem)",
+  md: "clamp(0.75rem, 1.8vw, 1.4rem)",
+  lg: "clamp(0.95rem, 2.3vw, 1.8rem)",
+  xl: "clamp(1.2rem,  3vw,   2.3rem)",
+};
+
+export const CONTROLLER_FONT_SIZES: Record<string, string> = {
+  sm: "clamp(0.9rem, 2vw,  1.8rem)",
+  md: "clamp(1.2rem, 2.5vw, 2.2rem)",
+  lg: "clamp(1.5rem, 3vw,  2.8rem)",
+  xl: "clamp(1.9rem, 3.8vw, 3.5rem)",
+};
+
+export const FONT_LABELS: Record<string, string> = Object.fromEntries(
+  FONTS.map((f) => [f.id, f.label])
+);
+
+export function parseLyrics(text: string): string[] {
+  return text.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
+}
+
 export const BACKGROUNDS = [
   { id: "deep-space",     label: "Deep Space",     cls: "bg-deep-space"     },
   { id: "aurora",         label: "Aurora",         cls: "bg-aurora"         },

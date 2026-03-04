@@ -2,49 +2,27 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input }  from "@/components/ui/input";
-import { Label }  from "@/components/ui/label";
 import { Badge }  from "@/components/ui/badge";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { PlusCircle, Pencil, Trash2 } from "lucide-react";
+import { useUsers, EMPTY_USER_FORM, type User, type UserFormState } from "@/hooks/useUsers";
+import { UserDialog } from "@/app/users/UserDialog";
 
-type UserRole = "ADMIN" | "MEDIA";
-
-type User = {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  createdAt: string;
-};
-
-type FormState = { name: string; email: string; role: UserRole; password: string };
-
-const ROLES: UserRole[] = ["ADMIN", "MEDIA"];
-
-const roleBadgeClass: Record<UserRole, string> = {
+const roleBadgeClass: Record<string, string> = {
   ADMIN: "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/20",
   MEDIA: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/20",
 };
 
-const emptyForm: FormState = { name: "", email: "", role: "MEDIA", password: "" };
-
 export default function UsersTable({ initialUsers }: { initialUsers: User[] }) {
-  const [users, setUsers]             = useState<User[]>(initialUsers);
+  const { users, loading, error, setError, createUser, updateUser, deleteUser } =
+    useUsers(initialUsers);
+
   const [open, setOpen]               = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [form, setForm]               = useState<FormState>(emptyForm);
-  const [loading, setLoading]         = useState(false);
-  const [error, setError]             = useState("");
+  const [form, setForm]               = useState<UserFormState>(EMPTY_USER_FORM);
 
   function openCreate() {
     setEditingUser(null);
-    setForm(emptyForm);
+    setForm(EMPTY_USER_FORM);
     setError("");
     setOpen(true);
   }
@@ -58,48 +36,15 @@ export default function UsersTable({ initialUsers }: { initialUsers: User[] }) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
-    setError("");
-
     try {
       if (editingUser) {
-        const body: Record<string, string> = { name: form.name, email: form.email, role: form.role };
-        if (form.password) body.password = form.password;
-
-        const res = await fetch(`/api/users/${editingUser.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok) throw new Error((await res.json()).error);
-        const updated: User = await res.json();
-        setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+        await updateUser(editingUser.id, form);
       } else {
-        const res = await fetch("/api/users", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
-        });
-        if (!res.ok) throw new Error((await res.json()).error);
-        const created: User = await res.json();
-        setUsers((prev) => [created, ...prev]);
+        await createUser(form);
       }
       setOpen(false);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleDelete(id: string) {
-    if (!confirm("Are you sure you want to remove this user?")) return;
-    try {
-      const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error();
-      setUsers((prev) => prev.filter((u) => u.id !== id));
     } catch {
-      alert("Failed to delete user.");
+      /* error is already set by the hook */
     }
   }
 
@@ -151,8 +96,12 @@ export default function UsersTable({ initialUsers }: { initialUsers: User[] }) {
                   <Button variant="ghost" size="icon" onClick={() => openEdit(user)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(user.id)}
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deleteUser(user.id)}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </td>
@@ -162,88 +111,16 @@ export default function UsersTable({ initialUsers }: { initialUsers: User[] }) {
         </table>
       </div>
 
-      {/* Dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingUser ? "Edit User" : "Add New User"}</DialogTitle>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmit} className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                required
-                placeholder="e.g. John Santos"
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                required
-                placeholder="e.g. john@church.com"
-                value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Role</Label>
-              <Select
-                value={form.role}
-                onValueChange={(v) => setForm((f) => ({ ...f, role: v as UserRole }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLES.map((r) => (
-                    <SelectItem key={r} value={r}>{r}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">
-                Password{" "}
-                {editingUser && (
-                  <span className="text-muted-foreground font-normal">(leave blank to keep current)</span>
-                )}
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                required={!editingUser}
-                placeholder="••••••••"
-                value={form.password}
-                onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-              />
-            </div>
-
-            {error && (
-              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
-                {error}
-              </p>
-            )}
-
-            <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? "Saving..." : editingUser ? "Save Changes" : "Add User"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <UserDialog
+        open={open}
+        onOpenChange={setOpen}
+        editingUser={editingUser}
+        form={form}
+        onFormChange={setForm}
+        onSubmit={handleSubmit}
+        loading={loading}
+        error={error}
+      />
     </>
   );
 }
