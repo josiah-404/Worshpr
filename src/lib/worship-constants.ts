@@ -1,3 +1,9 @@
+export const SPEEDS = [
+  { id: "fast",   label: "Fast",   ms: 250,  animRate: 2   },
+  { id: "normal", label: "Normal", ms: 600,  animRate: 1   },
+  { id: "slow",   label: "Slow",   ms: 1100, animRate: 0.5 },
+] as const;
+
 export const TRANSITIONS = [
   { id: "fade", label: "Fade"     },
   { id: "up",   label: "Slide Up" },
@@ -6,10 +12,20 @@ export const TRANSITIONS = [
 ] as const;
 
 export const FONTS = [
-  { id: "inter",      label: "Inter",      family: "'Inter', sans-serif"         },
-  { id: "playfair",   label: "Playfair",   family: "'Playfair Display', serif"   },
-  { id: "montserrat", label: "Montserrat", family: "'Montserrat', sans-serif"    },
-  { id: "cormorant",  label: "Cormorant",  family: "'Cormorant Garamond', serif" },
+  { id: "inter",       label: "Inter",        family: "'Inter', sans-serif"          },
+  { id: "lato",        label: "Lato",         family: "'Lato', sans-serif"           },
+  { id: "poppins",     label: "Poppins",      family: "'Poppins', sans-serif"        },
+  { id: "montserrat",  label: "Montserrat",   family: "'Montserrat', sans-serif"     },
+  { id: "raleway",     label: "Raleway",      family: "'Raleway', sans-serif"        },
+  { id: "nunito",      label: "Nunito",       family: "'Nunito', sans-serif"         },
+  { id: "oswald",      label: "Oswald",       family: "'Oswald', sans-serif"         },
+  { id: "bebas",       label: "Bebas Neue",   family: "'Bebas Neue', sans-serif"     },
+  { id: "playfair",    label: "Playfair",     family: "'Playfair Display', serif"    },
+  { id: "lora",        label: "Lora",         family: "'Lora', serif"               },
+  { id: "cormorant",   label: "Cormorant",    family: "'Cormorant Garamond', serif"  },
+  { id: "cinzel",      label: "Cinzel",       family: "'Cinzel', serif"              },
+  { id: "eb-garamond", label: "EB Garamond",  family: "'EB Garamond', serif"         },
+  { id: "dancing",     label: "Dancing Script", family: "'Dancing Script', cursive"  },
 ] as const;
 
 export const SIZES = [

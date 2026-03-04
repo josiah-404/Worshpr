@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
-  BACKGROUNDS, TRANSITIONS, FONTS, SIZES, parseLyrics,
+  BACKGROUNDS, TRANSITIONS, FONTS, SIZES, SPEEDS, parseLyrics,
 } from "@/lib/worship-constants";
 
 export function usePresentation(presentationId: string | null) {
@@ -17,6 +18,8 @@ export function usePresentation(presentationId: string | null) {
   const [transitionId, setTransId]  = useState(TRANSITIONS[0].id);
   const [fontId, setFontId]         = useState(FONTS[0].id);
   const [sizeId, setSizeId]         = useState(SIZES[1].id);
+  const [transSpeed, setTransSpeed] = useState(SPEEDS[1].id);
+  const [animSpeed, setAnimSpeed]   = useState(SPEEDS[1].id);
 
   /* ── Derived slide state ── */
   const [slides, setSlides]   = useState<string[]>([]);
@@ -39,15 +42,19 @@ export function usePresentation(presentationId: string | null) {
   const transRef       = useRef(transitionId);
   const fontRef        = useRef(fontId);
   const sizeRef        = useRef(sizeId);
+  const transSpeedRef  = useRef(transSpeed);
+  const animSpeedRef   = useRef(animSpeed);
   const modeRef        = useRef(mode);
 
-  useEffect(() => { slidesRef.current  = slides;       }, [slides]);
-  useEffect(() => { currentRef.current = current;      }, [current]);
-  useEffect(() => { bgIdRef.current    = bgId;         }, [bgId]);
-  useEffect(() => { transRef.current   = transitionId; }, [transitionId]);
-  useEffect(() => { fontRef.current    = fontId;       }, [fontId]);
-  useEffect(() => { sizeRef.current    = sizeId;       }, [sizeId]);
-  useEffect(() => { modeRef.current    = mode;         }, [mode]);
+  useEffect(() => { slidesRef.current      = slides;       }, [slides]);
+  useEffect(() => { currentRef.current     = current;      }, [current]);
+  useEffect(() => { bgIdRef.current        = bgId;         }, [bgId]);
+  useEffect(() => { transRef.current       = transitionId; }, [transitionId]);
+  useEffect(() => { fontRef.current        = fontId;       }, [fontId]);
+  useEffect(() => { sizeRef.current        = sizeId;       }, [sizeId]);
+  useEffect(() => { transSpeedRef.current  = transSpeed;   }, [transSpeed]);
+  useEffect(() => { animSpeedRef.current   = animSpeed;    }, [animSpeed]);
+  useEffect(() => { modeRef.current        = mode;         }, [mode]);
 
   /* ── Load existing presentation ── */
   useEffect(() => {
@@ -85,6 +92,8 @@ export function usePresentation(presentationId: string | null) {
           transition: transRef.current,
           font:       fontRef.current,
           size:       sizeRef.current,
+          transSpeed: transSpeedRef.current,
+          animSpeed:  animSpeedRef.current,
         });
       }
     };
@@ -104,6 +113,8 @@ export function usePresentation(presentationId: string | null) {
         transition: transRef.current,
         font:       fontRef.current,
         size:       sizeRef.current,
+        transSpeed: transSpeedRef.current,
+        animSpeed:  animSpeedRef.current,
       });
     };
   });
@@ -131,10 +142,11 @@ export function usePresentation(presentationId: string | null) {
 
   /* ── Broadcast helper ── */
   const broadcast = useCallback(
-    (idx: number, bg: string, tr: string, font: string, size: string) => {
+    (idx: number, bg: string, tr: string, font: string, size: string, tSpd: string, aSpd: string) => {
       channelRef.current?.postMessage({
         type: "UPDATE",
         slide: slides[idx] ?? "", bg, transition: tr, font, size,
+        transSpeed: tSpd, animSpeed: aSpd,
       });
     },
     [slides]
@@ -144,40 +156,54 @@ export function usePresentation(presentationId: string | null) {
   const goTo = (idx: number) => {
     const c = Math.max(0, Math.min(idx, slides.length - 1));
     setCurrent(c);
-    broadcast(c, bgId, transitionId, fontId, sizeId);
+    broadcast(c, bgId, transitionId, fontId, sizeId, transSpeed, animSpeed);
   };
-  const changeBg   = (id: string) => { setBgId(id);   broadcast(current, id,  transitionId, fontId, sizeId); };
-  const changeTr   = (id: string) => { setTransId(id); broadcast(current, bgId, id,          fontId, sizeId); };
-  const changeFont = (id: string) => { setFontId(id);  broadcast(current, bgId, transitionId, id,    sizeId); };
-  const changeSize = (id: string) => { setSizeId(id);  broadcast(current, bgId, transitionId, fontId, id   ); };
+  const changeBg         = (id: string) => { setBgId(id);        broadcast(current, id,  transitionId, fontId, sizeId, transSpeed, animSpeed); };
+  const changeTr         = (id: string) => { setTransId(id);     broadcast(current, bgId, id,          fontId, sizeId, transSpeed, animSpeed); };
+  const changeFont       = (id: string) => { setFontId(id);      broadcast(current, bgId, transitionId, id,    sizeId, transSpeed, animSpeed); };
+  const changeSize       = (id: string) => { setSizeId(id);      broadcast(current, bgId, transitionId, fontId, id,   transSpeed, animSpeed); };
+  const changeTransSpeed = (id: string) => { setTransSpeed(id);  broadcast(current, bgId, transitionId, fontId, sizeId, id,        animSpeed); };
+  const changeAnimSpeed  = (id: string) => { setAnimSpeed(id);   broadcast(current, bgId, transitionId, fontId, sizeId, transSpeed, id      ); };
 
   /* ── Save ── */
   const handleSave = async () => {
-    if (!title.trim()) { setTitleError(true); return; }
+    if (!title.trim()) {
+      setTitleError(true);
+      toast.warning("Title is required", { description: "Please enter a title before saving." });
+      return;
+    }
     setTitleError(false);
     setIsSaving(true);
-    const body = { title, lyrics, bgId, transitionId, fontId, sizeId };
-    if (presentationDbId) {
-      await fetch(`/api/presentations/${presentationDbId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-    } else {
-      const res  = await fetch("/api/presentations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (data.id) {
-        setPresentationDbId(data.id);
-        router.replace(`/worship/editor?id=${data.id}`);
+    try {
+      const body = { title, lyrics, bgId, transitionId, fontId, sizeId };
+      if (presentationDbId) {
+        const res = await fetch(`/api/presentations/${presentationDbId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error("Failed to update presentation");
+      } else {
+        const res  = await fetch("/api/presentations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error("Failed to create presentation");
+        const data = await res.json();
+        if (data.id) {
+          setPresentationDbId(data.id);
+          router.replace(`/worship/editor?id=${data.id}`);
+        }
       }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+      toast.success("Presentation saved", { description: `"${title}" has been saved successfully.` });
+    } catch (err) {
+      toast.error("Save failed", { description: err instanceof Error ? err.message : "An unexpected error occurred." });
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
   };
 
   /* ── Presenter window ── */
@@ -210,7 +236,7 @@ export function usePresentation(presentationId: string | null) {
     title, setTitle,
     lyrics, setLyrics,
     slides, current,
-    bgId, transitionId, fontId, sizeId,
+    bgId, transitionId, fontId, sizeId, transSpeed, animSpeed,
     mode, setMode,
     isSaving, saved,
     titleError, setTitleError,
@@ -220,7 +246,7 @@ export function usePresentation(presentationId: string | null) {
     /* derived */
     bgCls, currentFamily, currentSlide, nextSlide,
     /* actions */
-    goTo, changeBg, changeTr, changeFont, changeSize,
+    goTo, changeBg, changeTr, changeFont, changeSize, changeTransSpeed, changeAnimSpeed,
     handleSave, openPresenter, endPresentation,
   };
 }

@@ -1,3 +1,7 @@
+"use client";
+
+import { useRef, useEffect, useState } from "react";
+
 interface SlidePreviewProps {
   slide:       string;
   bgCls:       string;
@@ -12,11 +16,40 @@ export function SlidePreview({
   ringClass = "",
   emptyText = "No slide selected",
 }: SlidePreviewProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.1667); // default ~320/1920
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setScale(entry.contentRect.width / 1920);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div
-      className={`relative w-full rounded-xl overflow-hidden ${bgCls} ${ringClass}`}
+      ref={containerRef}
+      className={`relative w-full rounded-xl overflow-hidden ${ringClass}`}
       style={{ aspectRatio: "16/9" }}
     >
+      {/* Background rendered at full presenter size then scaled down — preserves blur fidelity */}
+      <div
+        className={bgCls}
+        style={{
+          position: "absolute",
+          width: "1920px",
+          height: "1080px",
+          top: "50%",
+          left: "50%",
+          transform: `translate(-50%, -50%) scale(${scale})`,
+          transformOrigin: "center",
+        }}
+      />
+
+      {/* Text layer */}
       <div className="absolute inset-0 flex items-center justify-center px-10">
         {slide ? (
           <p
