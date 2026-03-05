@@ -22,7 +22,7 @@ import {
   SPEEDS,
   PREVIEW_FONT_SIZES,
   CONTROLLER_FONT_SIZES,
-} from "@/lib/worship-constants";
+} from '@/lib/constants';
 import { usePresentation } from "@/hooks/usePresentation";
 import { SlidePreview } from "@/app/worship/components/SlidePreview";
 import { BackgroundPicker } from "@/app/worship/components/BackgroundPicker";

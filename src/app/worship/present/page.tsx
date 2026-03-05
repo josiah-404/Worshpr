@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Maximize2 } from "lucide-react";
-import { BACKGROUNDS, FONTS, SPEEDS } from "@/lib/worship-constants";
+import { BACKGROUNDS, FONTS, SPEEDS } from '@/lib/constants';
 
 const BG_CLASSES: Record<string, string> = Object.fromEntries(
   BACKGROUNDS.map((b) => [b.id, b.cls])

@@ -1,40 +1,55 @@
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
-import { Input }  from "@/components/ui/input";
-import { FormField } from "@/components/ui/form-field";
+import { type FC } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { FormField } from '@/components/ui/form-field';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { type User, type UserFormState } from "@/hooks/useUsers";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import type { User, UserFormState } from '@/types';
 
-const ROLES = ["ADMIN", "MEDIA"] as const;
+const ROLES = ['ADMIN', 'MEDIA'] as const;
 
 interface UserDialogProps {
-  open:         boolean;
+  open: boolean;
   onOpenChange: (open: boolean) => void;
-  editingUser:  User | null;
-  form:         UserFormState;
+  editingUser: User | null;
+  form: UserFormState;
   onFormChange: (form: UserFormState) => void;
-  onSubmit:     (e: React.FormEvent) => void;
-  loading:      boolean;
-  error:        string;
+  onSubmit: (e: React.FormEvent) => void;
+  loading: boolean;
+  error: string;
 }
 
-export function UserDialog({
-  open, onOpenChange, editingUser, form, onFormChange, onSubmit, loading, error,
-}: UserDialogProps) {
-  const set = (patch: Partial<UserFormState>) =>
-    onFormChange({ ...form, ...patch });
+export const UserDialog: FC<UserDialogProps> = ({
+  open,
+  onOpenChange,
+  editingUser,
+  form,
+  onFormChange,
+  onSubmit,
+  loading,
+  error,
+}) => {
+  const set = (patch: Partial<UserFormState>) => onFormChange({ ...form, ...patch });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{editingUser ? "Edit User" : "Add New User"}</DialogTitle>
+          <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="space-y-4 py-2">
@@ -62,14 +77,16 @@ export function UserDialog({
           <FormField label="Role">
             <Select
               value={form.role}
-              onValueChange={(v) => set({ role: v as UserFormState["role"] })}
+              onValueChange={(v) => set({ role: v as UserFormState['role'] })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>
                 {ROLES.map((r) => (
-                  <SelectItem key={r} value={r}>{r}</SelectItem>
+                  <SelectItem key={r} value={r}>
+                    {r}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -78,7 +95,7 @@ export function UserDialog({
           <FormField
             label="Password"
             htmlFor="password"
-            hint={editingUser ? "(leave blank to keep current)" : undefined}
+            hint={editingUser ? '(leave blank to keep current)' : undefined}
           >
             <Input
               id="password"
@@ -101,11 +118,11 @@ export function UserDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : editingUser ? "Save Changes" : "Add User"}
+              {loading ? 'Saving...' : editingUser ? 'Save Changes' : 'Add User'}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
   );
-}
+};

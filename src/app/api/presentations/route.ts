@@ -1,30 +1,40 @@
-import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { createPresentationSchema } from '@/validations/presentation.schema';
 
 export async function GET() {
-  const presentations = await prisma.presentation.findMany({
-    orderBy: { updatedAt: "desc" },
-  });
-  return NextResponse.json(presentations);
+  try {
+    const presentations = await prisma.presentation.findMany({
+      orderBy: { updatedAt: 'desc' },
+    });
+    return NextResponse.json({ data: presentations }, { status: 200 });
+  } catch {
+    return NextResponse.json({ error: 'Failed to fetch presentations' }, { status: 500 });
+  }
 }
 
-export async function POST(req: Request) {
-  const { title, lyrics, bgId, transitionId, fontId, sizeId } = await req.json();
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const parsed = createPresentationSchema.safeParse(body);
 
-  if (!title?.trim()) {
-    return NextResponse.json({ error: "Title is required" }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    }
+
+    const presentation = await prisma.presentation.create({
+      data: {
+        title: parsed.data.title.trim(),
+        lyrics: parsed.data.lyrics,
+        bgId: parsed.data.bgId,
+        transitionId: parsed.data.transitionId,
+        fontId: parsed.data.fontId,
+        sizeId: parsed.data.sizeId,
+      },
+    });
+
+    return NextResponse.json({ data: presentation }, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: 'Failed to create presentation' }, { status: 500 });
   }
-
-  const presentation = await prisma.presentation.create({
-    data: {
-      title: title.trim(),
-      lyrics:       lyrics       ?? "",
-      bgId:         bgId         ?? "deep-space",
-      transitionId: transitionId ?? "fade",
-      fontId:       fontId       ?? "inter",
-      sizeId:       sizeId       ?? "md",
-    },
-  });
-
-  return NextResponse.json(presentation, { status: 201 });
 }

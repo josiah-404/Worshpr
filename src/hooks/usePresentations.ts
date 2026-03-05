@@ -1,28 +1,29 @@
-import { useState } from "react";
+'use client';
 
-export interface Presentation {
-  id:           string;
-  title:        string;
-  lyrics:       string;
-  bgId:         string;
-  transitionId: string;
-  fontId:       string;
-  sizeId:       string;
-  createdAt:    string;
-  updatedAt:    string;
-}
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { deletePresentation } from '@/services/presentation.service';
+import type { Presentation } from '@/types';
+
+export type { Presentation };
 
 export function usePresentations(initialPresentations: Presentation[]) {
   const [presentations, setPresentations] = useState<Presentation[]>(initialPresentations);
-  const [deleting, setDeleting]           = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
-  async function deletePresentation(id: string) {
-    if (!confirm("Delete this presentation?")) return;
+  async function handleDeletePresentation(id: string) {
+    if (!confirm('Delete this presentation?')) return;
     setDeleting(id);
-    await fetch(`/api/presentations/${id}`, { method: "DELETE" });
-    setPresentations((prev) => prev.filter((p) => p.id !== id));
-    setDeleting(null);
+    try {
+      await deletePresentation(id);
+      setPresentations((prev) => prev.filter((p) => p.id !== id));
+      toast.success('Presentation deleted');
+    } catch {
+      toast.error('Delete failed', { description: 'Failed to delete presentation.' });
+    } finally {
+      setDeleting(null);
+    }
   }
 
-  return { presentations, deleting, deletePresentation };
+  return { presentations, deleting, deletePresentation: handleDeletePresentation };
 }

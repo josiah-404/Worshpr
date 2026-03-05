@@ -1,7 +1,7 @@
 "use client";
 
 import { X, Check } from "lucide-react";
-import { BACKGROUNDS } from "@/lib/worship-constants";
+import { BACKGROUNDS } from '@/lib/constants';
 
 interface BackgroundPickerProps {
   open:     boolean;

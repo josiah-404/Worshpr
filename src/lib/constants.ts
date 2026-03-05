@@ -1,3 +1,16 @@
+export const QUERY_KEYS = {
+  USERS: 'users',
+  PRESENTATIONS: 'presentations',
+  PRESENTATION: 'presentation',
+} as const;
+
+export const EMPTY_USER_FORM = {
+  name: '',
+  email: '',
+  role: 'MEDIA' as const,
+  password: '',
+};
+
 export const SPEEDS = [
   { id: "fast",   label: "Fast",   ms: 250,  animRate: 2   },
   { id: "normal", label: "Normal", ms: 600,  animRate: 1   },

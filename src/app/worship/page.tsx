@@ -1,14 +1,26 @@
-import Link from "next/link";
-import { Plus } from "lucide-react";
-import { prisma } from "@/lib/prisma";
-import PresentationsTable from "./PresentationsTable";
+import Link from 'next/link';
+import { Plus } from 'lucide-react';
+import { prisma } from '@/lib/prisma';
+import { Button } from '@/components/ui/button';
+import { PresentationsTable } from './PresentationsTable';
+import type { Presentation } from '@/types';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export default async function WorshipPage() {
-  const presentations = await prisma.presentation.findMany({
-    orderBy: { updatedAt: "desc" },
-  });
+  const raw = await prisma.presentation.findMany({ orderBy: { updatedAt: 'desc' } });
+
+  const presentations: Presentation[] = raw.map((p) => ({
+    id: p.id,
+    title: p.title,
+    lyrics: p.lyrics,
+    bgId: p.bgId,
+    transitionId: p.transitionId,
+    fontId: p.fontId,
+    sizeId: p.sizeId,
+    createdAt: p.createdAt.toISOString(),
+    updatedAt: p.updatedAt.toISOString(),
+  }));
 
   return (
     <div className="space-y-6">
@@ -20,14 +32,14 @@ export default async function WorshipPage() {
           </p>
         </div>
         <Link href="/worship/editor">
-          <button className="inline-flex items-center gap-2 rounded-md bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-600 transition-colors">
-            <Plus className="h-4 w-4" />
+          <Button className="bg-indigo-500 hover:bg-indigo-600 text-white">
+            <Plus className="mr-2 h-4 w-4" />
             New Presentation
-          </button>
+          </Button>
         </Link>
       </div>
 
-      <PresentationsTable presentations={presentations as any} />
+      <PresentationsTable presentations={presentations} />
     </div>
   );
 }

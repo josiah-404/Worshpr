@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { api } from '@/lib/axios';
 import {
   BACKGROUNDS,
   TRANSITIONS,
@@ -10,7 +11,8 @@ import {
   SIZES,
   SPEEDS,
   parseLyrics,
-} from "@/lib/worship-constants";
+} from '@/lib/constants';
+import type { Presentation } from '@/types';
 
 export function usePresentation(presentationId: string | null) {
   const router = useRouter();
@@ -84,17 +86,18 @@ export function usePresentation(presentationId: string | null) {
   /* ── Load existing presentation ── */
   useEffect(() => {
     if (!presentationId) return;
-    fetch(`/api/presentations/${presentationId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.error) return;
-        setTitle(data.title);
-        setLyrics(data.lyrics);
-        setBgId(data.bgId);
-        setTransId(data.transitionId);
-        setFontId(data.fontId);
-        setSizeId(data.sizeId);
+    api
+      .get<{ data: Presentation }>(`/presentations/${presentationId}`)
+      .then(({ data: res }) => {
+        const p = res.data;
+        setTitle(p.title);
+        setLyrics(p.lyrics);
+        setBgId(p.bgId);
+        setTransId(p.transitionId);
+        setFontId(p.fontId);
+        setSizeId(p.sizeId);
       })
+      .catch(() => {})
       .finally(() => setIsLoading(false));
   }, [presentationId]);
 
@@ -240,23 +243,12 @@ export function usePresentation(presentationId: string | null) {
     try {
       const body = { title, lyrics, bgId, transitionId, fontId, sizeId };
       if (presentationDbId) {
-        const res = await fetch(`/api/presentations/${presentationDbId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok) throw new Error("Failed to update presentation");
+        await api.put(`/presentations/${presentationDbId}`, body);
       } else {
-        const res = await fetch("/api/presentations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok) throw new Error("Failed to create presentation");
-        const data = await res.json();
-        if (data.id) {
-          setPresentationDbId(data.id);
-          router.replace(`/worship/editor?id=${data.id}`);
+        const { data: res } = await api.post<{ data: Presentation }>('/presentations', body);
+        if (res.data?.id) {
+          setPresentationDbId(res.data.id);
+          router.replace(`/worship/editor?id=${res.data.id}`);
         }
       }
       setSaved(true);
