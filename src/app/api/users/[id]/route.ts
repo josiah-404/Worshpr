@@ -1,16 +1,20 @@
-import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
+import { NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
+import { prisma } from '@/lib/prisma';
+import { updateUserSchema } from '@/validations/user.schema';
 
-// PUT /api/users/:id — update a user
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const body = await req.json();
-    const { name, email, role, password } = body;
+    const parsed = updateUserSchema.safeParse(body);
 
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    }
+
+    const { name, email, role, password } = parsed.data;
     const data: Record<string, unknown> = { name, email, role };
 
-    // Only re-hash password if a new one was provided
     if (password) {
       data.password = await bcrypt.hash(password, 10);
     }
@@ -20,18 +24,18 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       data,
       select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true },
     });
-    return NextResponse.json(user);
+
+    return NextResponse.json({ data: user }, { status: 200 });
   } catch {
-    return NextResponse.json({ error: "Failed to update user" }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }
 }
 
-// DELETE /api/users/:id — delete a user
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     await prisma.user.delete({ where: { id: params.id } });
-    return NextResponse.json({ message: "User deleted" });
+    return NextResponse.json({ data: { message: 'User deleted' } }, { status: 200 });
   } catch {
-    return NextResponse.json({ error: "Failed to delete user" }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
   }
 }

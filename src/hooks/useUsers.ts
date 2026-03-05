@@ -1,45 +1,28 @@
-import { useState } from "react";
+'use client';
 
-export type UserRole = "ADMIN" | "MEDIA";
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { createUser, updateUser, deleteUser } from '@/services/user.service';
+import { EMPTY_USER_FORM } from '@/lib/constants';
+import type { User, UserFormState } from '@/types';
 
-export type User = {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  createdAt: string;
-};
-
-export type UserFormState = {
-  name: string;
-  email: string;
-  role: UserRole;
-  password: string;
-};
-
-export const EMPTY_USER_FORM: UserFormState = {
-  name: "", email: "", role: "MEDIA", password: "",
-};
+export type { User, UserFormState };
+export { EMPTY_USER_FORM };
 
 export function useUsers(initialUsers: User[]) {
-  const [users, setUsers]     = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<User[]>(initialUsers);
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState("");
+  const [error, setError] = useState('');
 
-  async function createUser(form: UserFormState) {
+  async function handleCreateUser(form: UserFormState) {
     setLoading(true);
-    setError("");
+    setError('');
     try {
-      const res = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) throw new Error((await res.json()).error);
-      const created: User = await res.json();
+      const created = await createUser(form);
       setUsers((prev) => [created, ...prev]);
+      toast.success('User created', { description: `${created.name} has been added.` });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Something went wrong";
+      const msg = err instanceof Error ? err.message : 'Something went wrong';
       setError(msg);
       throw err;
     } finally {
@@ -47,24 +30,15 @@ export function useUsers(initialUsers: User[]) {
     }
   }
 
-  async function updateUser(id: string, form: UserFormState) {
+  async function handleUpdateUser(id: string, form: UserFormState) {
     setLoading(true);
-    setError("");
+    setError('');
     try {
-      const body: Record<string, string> = {
-        name: form.name, email: form.email, role: form.role,
-      };
-      if (form.password) body.password = form.password;
-      const res = await fetch(`/api/users/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error((await res.json()).error);
-      const updated: User = await res.json();
+      const updated = await updateUser(id, form);
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+      toast.success('User updated', { description: `${updated.name} has been updated.` });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Something went wrong";
+      const msg = err instanceof Error ? err.message : 'Something went wrong';
       setError(msg);
       throw err;
     } finally {
@@ -72,16 +46,24 @@ export function useUsers(initialUsers: User[]) {
     }
   }
 
-  async function deleteUser(id: string) {
-    if (!confirm("Are you sure you want to remove this user?")) return;
+  async function handleDeleteUser(id: string) {
+    if (!confirm('Are you sure you want to remove this user?')) return;
     try {
-      const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error();
+      await deleteUser(id);
       setUsers((prev) => prev.filter((u) => u.id !== id));
+      toast.success('User removed');
     } catch {
-      alert("Failed to delete user.");
+      toast.error('Delete failed', { description: 'Failed to remove user.' });
     }
   }
 
-  return { users, loading, error, setError, createUser, updateUser, deleteUser };
+  return {
+    users,
+    loading,
+    error,
+    setError,
+    createUser: handleCreateUser,
+    updateUser: handleUpdateUser,
+    deleteUser: handleDeleteUser,
+  };
 }

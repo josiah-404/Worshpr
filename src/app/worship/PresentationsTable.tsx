@@ -1,33 +1,38 @@
-"use client";
+'use client';
 
-import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Monitor } from "lucide-react";
-import { BACKGROUNDS, BG_BADGE_COLORS, FONT_LABELS } from "@/lib/worship-constants";
-import { usePresentations, type Presentation } from "@/hooks/usePresentations";
+import { type FC } from 'react';
+import { useRouter } from 'next/navigation';
+import { Pencil, Trash2, Monitor } from 'lucide-react';
+import { BACKGROUNDS, BG_BADGE_COLORS, FONT_LABELS } from '@/lib/constants';
+import { usePresentations } from '@/hooks/usePresentations';
+import type { Presentation } from '@/types';
+
+interface PresentationsTableProps {
+  presentations: Presentation[];
+}
 
 const BG_LABELS = Object.fromEntries(BACKGROUNDS.map((b) => [b.id, b.label]));
 
-function slideCount(lyrics: string) {
-  return lyrics.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean).length;
+function slideCount(lyrics: string): number {
+  return lyrics
+    .split(/\n{2,}/)
+    .map((b) => b.trim())
+    .filter(Boolean).length;
 }
 
-function timeAgo(dateStr: string) {
-  const diff  = Date.now() - new Date(dateStr).getTime();
-  const mins  = Math.floor(diff / 60000);
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
-  const days  = Math.floor(diff / 86400000);
-  if (mins  < 1)  return "Just now";
-  if (mins  < 60) return `${mins}m ago`;
+  const days = Math.floor(diff / 86400000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
   if (hours < 24) return `${hours}h ago`;
-  if (days  < 30) return `${days}d ago`;
+  if (days < 30) return `${days}d ago`;
   return new Date(dateStr).toLocaleDateString();
 }
 
-export default function PresentationsTable({
-  presentations: initial,
-}: {
-  presentations: Presentation[];
-}) {
+export const PresentationsTable: FC<PresentationsTableProps> = ({ presentations: initial }) => {
   const router = useRouter();
   const { presentations, deleting, deletePresentation } = usePresentations(initial);
 
@@ -48,11 +53,21 @@ export default function PresentationsTable({
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-muted/40">
-            <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Title</th>
-            <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Background</th>
-            <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Font</th>
-            <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Slides</th>
-            <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Updated</th>
+            <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Title
+            </th>
+            <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Background
+            </th>
+            <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Font
+            </th>
+            <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Slides
+            </th>
+            <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Updated
+            </th>
             <th className="px-4 py-3" />
           </tr>
         </thead>
@@ -61,19 +76,17 @@ export default function PresentationsTable({
             <tr key={p.id} className="hover:bg-muted/30 transition-colors">
               <td className="px-4 py-3 font-medium">{p.title}</td>
               <td className="px-4 py-3">
-                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${BG_BADGE_COLORS[p.bgId] ?? "bg-muted text-muted-foreground"}`}>
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                    BG_BADGE_COLORS[p.bgId] ?? 'bg-muted text-muted-foreground'
+                  }`}
+                >
                   {BG_LABELS[p.bgId] ?? p.bgId}
                 </span>
               </td>
-              <td className="px-4 py-3 text-muted-foreground">
-                {FONT_LABELS[p.fontId] ?? p.fontId}
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">
-                {slideCount(p.lyrics)}
-              </td>
-              <td className="px-4 py-3 text-muted-foreground text-xs">
-                {timeAgo(p.updatedAt)}
-              </td>
+              <td className="px-4 py-3 text-muted-foreground">{FONT_LABELS[p.fontId] ?? p.fontId}</td>
+              <td className="px-4 py-3 text-muted-foreground">{slideCount(p.lyrics)}</td>
+              <td className="px-4 py-3 text-muted-foreground text-xs">{timeAgo(p.updatedAt)}</td>
               <td className="px-4 py-3">
                 <div className="flex items-center justify-end gap-1">
                   <button
@@ -99,4 +112,4 @@ export default function PresentationsTable({
       </table>
     </div>
   );
-}
+};

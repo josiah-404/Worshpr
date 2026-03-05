@@ -1,7 +1,7 @@
 "use client";
 
 import { LayoutGrid, X, Tv2, MonitorOff, SlidersHorizontal } from "lucide-react";
-import { BACKGROUNDS, TRANSITIONS, FONTS, SIZES, SPEEDS } from "@/lib/worship-constants";
+import { BACKGROUNDS, TRANSITIONS, FONTS, SIZES, SPEEDS } from '@/lib/constants';
 
 interface SettingsDrawerProps {
   open:    boolean;

@@ -1,7 +1,7 @@
 "use client";
 
 import { LayoutGrid } from "lucide-react";
-import { BACKGROUNDS, TRANSITIONS, FONTS, SIZES } from "@/lib/worship-constants";
+import { BACKGROUNDS, TRANSITIONS, FONTS, SIZES } from '@/lib/constants';
 
 interface OptionsToolbarProps {
   bgId:         string;

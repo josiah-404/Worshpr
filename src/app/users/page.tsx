@@ -1,17 +1,17 @@
-import { prisma } from "@/lib/prisma";
-import UsersTable from "./UsersTable";
+import { prisma } from '@/lib/prisma';
+import { UsersTable } from './UsersTable';
+import type { User } from '@/types';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export default async function UsersPage() {
-  const rawUsers = await prisma.user.findMany({
-    orderBy: { createdAt: "desc" },
-  });
-  const users = rawUsers.map((u) => ({
+  const raw = await prisma.user.findMany({ orderBy: { createdAt: 'desc' } });
+
+  const users: User[] = raw.map((u) => ({
     id: u.id,
     name: u.name,
     email: u.email,
-    role: u.role,
+    role: u.role as User['role'],
     createdAt: u.createdAt.toISOString(),
   }));
 
