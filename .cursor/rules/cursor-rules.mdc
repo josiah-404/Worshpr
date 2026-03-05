@@ -1,0 +1,464 @@
+---
+alwaysApply: true
+---
+
+# Cursor Rules — Next.js Fullstack Project
+
+## Tech Stack
+
+- **Framework**: Next.js 14+ (App Router)
+- **Language**: TypeScript (strict mode)
+- **Styling**: Tailwind CSS + ShadCN UI
+- **ORM**: Prisma
+- **Database**: MongoDB Atlas
+- **Data Fetching**: Axios + TanStack Query (React Query)
+
+---
+
+## Project Folder Structure
+
+```
+src/
+├── app/                          # Next.js App Router
+│   ├── (auth)/                   # Route group: auth pages (login, register)
+│   │   ├── login/
+│   │   │   └── page.tsx
+│   │   └── register/
+│   │       └── page.tsx
+│   ├── (dashboard)/              # Route group: protected pages
+│   │   ├── layout.tsx
+│   │   └── [feature]/
+│   │       └── page.tsx
+│   ├── api/                      # API Route Handlers
+│   │   └── [resource]/
+│   │       ├── route.ts          # GET, POST
+│   │       └── [id]/
+│   │           └── route.ts      # GET, PATCH, DELETE
+│   ├── layout.tsx                # Root layout
+│   ├── page.tsx                  # Root page
+│   └── globals.css
+│
+├── components/
+│   ├── ui/                       # ShadCN auto-generated components (do not edit)
+│   ├── common/                   # Shared, reusable components (Button wrappers, etc.)
+│   └── [feature]/                # Feature-scoped components
+│
+├── hooks/                        # Custom React hooks (useAuth, useDebounce, etc.)
+│
+├── lib/
+│   ├── prisma.ts                 # Prisma client singleton
+│   ├── axios.ts                  # Axios instance with interceptors
+│   ├── utils.ts                  # cn() and other utility functions
+│   ├── constants.ts              # App-wide constants (currently worship-constants.ts)
+│
+├── providers/
+│   └── QueryProvider.tsx         # TanStack Query provider wrapper (currently at app/providers.tsx)
+│
+├── services/                     # API call functions (used by React Query)
+│   └── [resource].service.ts
+│
+├── types/                        # Global TypeScript types and interfaces
+│   ├── index.ts
+│   └── [feature].types.ts
+│
+├── validations/                  # Zod schemas for forms and API validation
+│   └── [feature].schema.ts
+│
+└── middleware.ts                 # Next.js middleware (auth guards, etc.)
+
+prisma/
+└── schema.prisma
+
+.env
+.env.example
+```
+
+---
+
+## General Rules
+
+### TypeScript
+
+- Always use **strict TypeScript** — no `any`, no untyped props.
+- Define all types in `src/types/`. Prefer `interface` for object shapes, `type` for unions/intersections.
+- Use `z.infer<typeof schema>` from Zod to derive types from validation schemas.
+- Never cast with `as` unless absolutely necessary — explain with a comment if used.
+
+### Code Style
+
+- All files use **named exports** except Next.js pages and layouts (those use default exports).
+- Keep components **small and single-responsibility** — if a component exceeds ~150 lines, split it.
+- No inline logic in JSX. Extract handlers, conditionals, and derived values above the return statement.
+- Sort imports: React → Next → third-party → internal (`@/`) → relative → types.
+- Use absolute imports via `@/` alias for everything inside `src/`.
+
+### Naming Conventions
+
+| Thing            | Convention                     | Example                         |
+| ---------------- | ------------------------------ | ------------------------------- |
+| Components       | PascalCase                     | `UserCard.tsx`                  |
+| Hooks            | camelCase with `use` prefix    | `useUserData.ts`                |
+| Services         | camelCase with `.service.ts`   | `user.service.ts`               |
+| Types/Interfaces | PascalCase                     | `UserProfile`, `ApiResponse<T>` |
+| API routes       | kebab-case folders             | `api/user-profile/route.ts`     |
+| Zod schemas      | camelCase with `Schema` suffix | `loginSchema`                   |
+| Constants        | SCREAMING_SNAKE_CASE           | `MAX_FILE_SIZE`                 |
+
+---
+
+## Component Rules
+
+### File Structure (per component file)
+
+```tsx
+// 1. Imports
+// 2. Types / Interfaces
+// 3. Constants (if any)
+// 4. Component function
+// 5. Subcomponents (if small and tightly coupled)
+// 6. Export
+```
+
+### Component Template
+
+```tsx
+import { type FC } from 'react';
+
+interface UserCardProps {
+  userId: string;
+  className?: string;
+}
+
+export const UserCard: FC<UserCardProps> = ({ userId, className }) => {
+  // hooks first
+  // derived values
+  // handlers
+  return <div className={cn('...', className)}>{/* JSX */}</div>;
+};
+```
+
+- Always use `cn()` from `lib/utils.ts` for conditional Tailwind classes.
+- Never hardcode colors or spacing values — use Tailwind tokens only.
+- Use ShadCN components from `components/ui/` as the base. Wrap them in `components/common/` if you need to extend behavior globally.
+
+---
+
+## Data Fetching Rules
+
+### Axios (`lib/axios.ts`)
+
+- One Axios instance for the whole app — configure base URL and headers once.
+- Add request/response interceptors for auth tokens and error normalization.
+
+```ts
+// lib/axios.ts
+import axios from 'axios';
+
+export const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    // normalize errors here
+    return Promise.reject(err);
+  },
+);
+```
+
+### Services (`services/`)
+
+- Each service file maps to one resource/domain.
+- Functions return typed Promises — never return `any`.
+
+```ts
+// services/user.service.ts
+import { api } from '@/lib/axios';
+import type { User } from '@/types';
+
+export const getUser = async (id: string): Promise<User> => {
+  const { data } = await api.get(`/users/${id}`);
+  return data;
+};
+```
+
+### TanStack Query (React Query)
+
+- Define query keys in a central `queryKeys` object per service file or in `lib/constants.ts`.
+- Always use `useQuery` for reads, `useMutation` for writes.
+- Invalidate related queries after mutations.
+- Handle `isLoading`, `isError`, and empty states explicitly — never assume data exists.
+
+```ts
+// hooks/useUser.ts
+import { useQuery } from '@tanstack/react-query';
+import { getUser } from '@/services/user.service';
+import { QUERY_KEYS } from '@/lib/constants';
+
+export const useUser = (id: string) => {
+  return useQuery({
+    queryKey: [QUERY_KEYS.USER, id],
+    queryFn: () => getUser(id),
+    enabled: !!id,
+  });
+};
+```
+
+---
+
+## API Route Rules (`app/api/`)
+
+- Each route file only handles its HTTP methods — no logic beyond parsing request, calling a service, and returning a response.
+- All business logic lives in dedicated server-side service functions, not inside `route.ts`.
+- Always validate request bodies with Zod before processing.
+- Return consistent response shapes:
+
+```ts
+// Success
+return NextResponse.json({ data: result }, { status: 200 });
+
+// Error
+return NextResponse.json({ error: 'Not found' }, { status: 404 });
+```
+
+### Route Template
+
+```ts
+// app/api/users/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { createUser } from '@/services/server/user.server-service';
+import { createUserSchema } from '@/validations/user.schema';
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const parsed = createUserSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.flatten() },
+        { status: 400 },
+      );
+    }
+
+    const user = await createUser(parsed.data);
+    return NextResponse.json({ data: user }, { status: 201 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 },
+    );
+  }
+}
+```
+
+---
+
+## Prisma Rules
+
+### Singleton Client (`lib/prisma.ts`)
+
+```ts
+import { PrismaClient } from '@prisma/client';
+
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+
+export const prisma =
+  globalForPrisma.prisma ?? new PrismaClient({ log: ['query'] });
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+```
+
+- Always import from `@/lib/prisma` — never instantiate `PrismaClient` elsewhere.
+- Never expose Prisma models directly to the client. Map them to plain types in your service layer.
+- Use `select` and `include` deliberately — never return full documents with unneeded fields.
+
+---
+
+## Authentication (NextAuth.js v4)
+
+This project uses **NextAuth.js v4** with the **Credentials provider** and **JWT sessions**. Auth config lives in `lib/auth.ts` and is consumed by the catch-all API route `app/api/auth/[...nextauth]/route.ts`.
+
+### Auth Config (`lib/auth.ts`)
+
+- Define `authOptions: NextAuthOptions` here and export it as a named export.
+- Use `session: { strategy: 'jwt' }`.
+- Extend the JWT token and session objects to carry `id` and `role` via the `jwt` and `session` callbacks.
+- Never put auth logic directly inside API route files — always import `authOptions`.
+
+```ts
+// lib/auth.ts
+import { NextAuthOptions } from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
+
+export const authOptions: NextAuthOptions = {
+  providers: [
+    CredentialsProvider({
+      name: 'credentials',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        // validate credentials against DB, return user or null
+      },
+    }),
+  ],
+  session: { strategy: 'jwt' },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) { token.id = user.id; token.role = user.role; }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) { session.user.id = token.id; session.user.role = token.role; }
+      return session;
+    },
+  },
+  pages: { signIn: '/login' },
+};
+```
+
+### Session in API Routes
+
+Use `getServerSession(authOptions)` to access the session server-side:
+
+```ts
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+
+const session = await getServerSession(authOptions);
+if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+```
+
+### Session in Client Components
+
+Use the `useSession` hook — always guard against the `unauthenticated` status:
+
+```ts
+'use client';
+import { useSession } from 'next-auth/react';
+
+const { data: session, status } = useSession();
+if (status === 'loading') return <Spinner />;
+if (status === 'unauthenticated') redirect('/login');
+```
+
+### Middleware (`middleware.ts`)
+
+The project uses NextAuth's built-in middleware export to protect all routes except auth and static assets:
+
+```ts
+// middleware.ts
+export { default } from 'next-auth/middleware';
+
+export const config = {
+  matcher: ['/((?!login|api/auth|_next/static|_next/image|favicon.ico).*)'],
+};
+```
+
+- Add new public routes to the `matcher` negative lookahead — never remove existing exclusions.
+- Role-based guards that need finer control should be added as custom middleware logic wrapping the NextAuth export.
+
+### Type Augmentation
+
+Extend NextAuth types in `src/types/next-auth.d.ts` to keep `id` and `role` typed on the session:
+
+```ts
+import 'next-auth';
+
+declare module 'next-auth' {
+  interface User { id: string; role: string; }
+  interface Session { user: User & { id: string; role: string }; }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT { id: string; role: string; }
+}
+```
+
+---
+
+## Styling Rules
+
+- Tailwind only — no inline `style={{}}` except for dynamic values that can't be expressed as classes (e.g., CSS variables).
+- Use `cn()` for conditional and merged class names.
+- Responsive design: mobile-first using `sm:`, `md:`, `lg:` breakpoints.
+- Dark mode via `dark:` variant — configured in `tailwind.config.ts`.
+- Group related utility classes: layout → spacing → typography → color → interactive.
+
+```tsx
+// Good
+<div className="flex flex-col gap-4 p-6 text-sm font-medium text-gray-900 bg-white rounded-lg hover:shadow-md">
+
+// Bad
+<div style={{ display: "flex", padding: "24px" }}>
+```
+
+---
+
+## Error Handling
+
+- Use `try/catch` in all async functions — server and client.
+- Create a typed `AppError` class or interface for consistent error shapes.
+- Never swallow errors silently — log them or surface them to the user.
+- Use TanStack Query's `onError` callback or `error` state to show UI feedback.
+- Show toast notifications via `sonner` for mutation success/error.
+
+```ts
+import { toast } from 'sonner';
+
+// Success
+toast.success('Saved', { description: 'Your changes have been saved.' });
+
+// Warning
+toast.warning('Title required', { description: 'Please enter a title.' });
+
+// Error
+toast.error('Save failed', { description: err instanceof Error ? err.message : 'Unexpected error.' });
+```
+
+---
+
+## Environment Variables
+
+- All server-only secrets: no `NEXT_PUBLIC_` prefix.
+- All client-accessible values: must use `NEXT_PUBLIC_` prefix.
+- Always maintain an up-to-date `.env.example` with placeholder values.
+- Validate env variables at startup using a Zod schema in `lib/env.ts`.
+
+```ts
+// lib/env.ts
+import { z } from 'zod';
+
+const envSchema = z.object({
+  DATABASE_URL: z.string().url(),
+  NEXT_PUBLIC_API_URL: z.string().url(),
+});
+
+export const env = envSchema.parse(process.env);
+```
+
+---
+
+## Do's and Don'ts
+
+### ✅ Do
+
+- Co-locate feature-specific components, hooks, and types within a feature folder when the feature grows large.
+- Write self-documenting code — clear variable names over comments.
+- Use Server Components by default; only add `"use client"` when you need interactivity or browser APIs.
+- Keep API routes thin — logic belongs in service functions.
+- Use Zod for all input validation (forms + API).
+
+### ❌ Don't
+
+- Don't `fetch()` directly inside components — use services + React Query (hooks currently use `fetch()` directly; migrate to the service layer as the project grows).
+- Don't put business logic inside route handlers.
+- Don't use `default export` for anything other than Next.js pages/layouts.
+- Don't commit `.env` — only `.env.example`.
+- Don't mix server and client concerns in the same file.
+- Don't leave unused imports, `console.log`s, or commented-out code in commits.
