@@ -35,18 +35,22 @@ export const SIZES = [
   { id: "xl", label: "XL" },
 ] as const;
 
-export const PREVIEW_FONT_SIZES: Record<string, string> = {
-  sm: "clamp(0.6rem, 1.4vw, 1.1rem)",
-  md: "clamp(0.75rem, 1.8vw, 1.4rem)",
-  lg: "clamp(0.95rem, 2.3vw, 1.8rem)",
-  xl: "clamp(1.2rem,  3vw,   2.3rem)",
+/**
+ * Base font sizes in px at 1920px presenter resolution.
+ * SlidePreview scales these by containerWidth/1920 automatically.
+ */
+export const PREVIEW_FONT_SIZES: Record<string, number> = {
+  sm: 40,
+  md: 56,
+  lg: 78,
+  xl: 100,
 };
 
-export const CONTROLLER_FONT_SIZES: Record<string, string> = {
-  sm: "clamp(0.9rem, 2vw,  1.8rem)",
-  md: "clamp(1.2rem, 2.5vw, 2.2rem)",
-  lg: "clamp(1.5rem, 3vw,  2.8rem)",
-  xl: "clamp(1.9rem, 3.8vw, 3.5rem)",
+export const CONTROLLER_FONT_SIZES: Record<string, number> = {
+  sm: 40,
+  md: 56,
+  lg: 78,
+  xl: 100,
 };
 
 export const FONT_LABELS: Record<string, string> = Object.fromEntries(

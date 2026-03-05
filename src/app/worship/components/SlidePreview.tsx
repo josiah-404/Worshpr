@@ -6,7 +6,8 @@ interface SlidePreviewProps {
   slide:       string;
   bgCls:       string;
   fontFamily:  string;
-  fontSize:    string;
+  /** Base font size in px at 1920px presenter resolution — scaled to container size automatically */
+  fontSize:    number;
   ringClass?:  string;
   emptyText?:  string;
 }
@@ -56,7 +57,7 @@ export function SlidePreview({
             className="text-white text-center font-bold leading-tight drop-shadow-2xl whitespace-pre-line"
             style={{
               fontFamily,
-              fontSize,
+              fontSize: Math.max(7, Math.round(fontSize * scale)),
               textShadow: "0 2px 20px rgba(0,0,0,0.85)",
             }}
           >
