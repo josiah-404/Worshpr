@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
+import { isTitleSlide, parseTitleSlide } from "@/lib/constants";
 
 interface SlidePreviewProps {
   slide:       string;
@@ -30,6 +31,8 @@ export function SlidePreview({
     return () => observer.disconnect();
   }, []);
 
+  const titleParts = parseTitleSlide(slide);
+
   return (
     <div
       ref={containerRef}
@@ -52,7 +55,30 @@ export function SlidePreview({
 
       {/* Text layer */}
       <div className="absolute inset-0 flex items-center justify-center px-10">
-        {slide ? (
+        {titleParts ? (
+          <div className="flex flex-col items-center gap-1 text-center">
+            <p
+              className="text-white font-bold leading-tight drop-shadow-2xl"
+              style={{
+                fontFamily,
+                fontSize: Math.max(7, Math.round(fontSize * scale)),
+                textShadow: "0 2px 20px rgba(0,0,0,0.85)",
+              }}
+            >
+              {titleParts.title}
+            </p>
+            <p
+              className="text-white/70 font-medium leading-tight drop-shadow-xl"
+              style={{
+                fontFamily,
+                fontSize: Math.max(5, Math.round(fontSize * scale * 0.5)),
+                textShadow: "0 2px 12px rgba(0,0,0,0.7)",
+              }}
+            >
+              {titleParts.artist}
+            </p>
+          </div>
+        ) : slide && !isTitleSlide(slide) ? (
           <p
             className="text-white text-center font-bold leading-tight drop-shadow-2xl whitespace-pre-line"
             style={{

@@ -316,6 +316,7 @@ export function usePresentation(presentationId: string | null) {
     lyrics,
     setLyrics,
     slides,
+    setSlides,
     current,
     bgId,
     transitionId,
