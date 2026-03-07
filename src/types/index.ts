@@ -26,3 +26,10 @@ export interface Presentation {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface AiSearchQuotaRecord {
+  used: number;
+  limit: number;
+  remaining: number;
+  date: string;
+}

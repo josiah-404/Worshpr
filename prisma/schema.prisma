@@ -82,6 +82,16 @@ model MediaFile {
   createdAt DateTime  @default(now())
 }
 
+/// Tracks daily AI search quota per organisation (keyed by a stable org identifier).
+model AiSearchQuota {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  /// Stable key identifying the organisation (e.g. "org_default" until multi-tenancy is wired).
+  orgKey    String   @unique
+  date      String   /// ISO date string YYYY-MM-DD — resets when date changes.
+  used      Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
 // ─── Enums ─────────────────────────────────────────────────────────────────
 
 enum UserRole {
