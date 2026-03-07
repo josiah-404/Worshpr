@@ -101,7 +101,12 @@ export default function WorshipPresentPage() {
     <div
       ref={bgRef}
       className={`fixed inset-0 overflow-hidden flex items-center justify-center ${bgCls}`}
-      style={{ cursor: "none", ["--tr-dur" as string]: `${trDur}ms` }}
+      style={{
+        cursor: "none",
+        ["--tr-dur" as string]: `${trDur}ms`,
+        contain: "strict",
+        isolation: "isolate",
+      }}
     >
       {/* Slide text */}
       {titleParts ? (
