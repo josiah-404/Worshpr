@@ -2,7 +2,7 @@
 
 import { type FC } from 'react';
 import { useRouter } from 'next/navigation';
-import { Pencil, Trash2, Monitor } from 'lucide-react';
+import { Pencil, Trash2, Monitor, Play } from 'lucide-react';
 import { BACKGROUNDS, BG_BADGE_COLORS, FONT_LABELS } from '@/lib/constants';
 import { usePresentations } from '@/hooks/usePresentations';
 import type { Presentation } from '@/types';
@@ -89,6 +89,13 @@ export const PresentationsTable: FC<PresentationsTableProps> = ({ presentations:
               <td className="px-4 py-3 text-muted-foreground text-xs">{timeAgo(p.updatedAt)}</td>
               <td className="px-4 py-3">
                 <div className="flex items-center justify-end gap-1">
+                  <button
+                    onClick={() => router.push(`/worship/editor?id=${p.id}&present=1`)}
+                    className="rounded-md p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                    title="Present"
+                  >
+                    <Play className="h-3.5 w-3.5" />
+                  </button>
                   <button
                     onClick={() => router.push(`/worship/editor?id=${p.id}`)}
                     className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"

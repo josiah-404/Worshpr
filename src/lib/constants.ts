@@ -70,8 +70,23 @@ export const FONT_LABELS: Record<string, string> = Object.fromEntries(
   FONTS.map((f) => [f.id, f.label])
 );
 
-export function parseLyrics(text: string): string[] {
+export function parseLyrics(text: string | undefined | null): string[] {
+  if (!text) return [];
   return text.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
+}
+
+/** Prefix that marks a slide as a song-title card: "§TITLE§\nSong Title\nArtist Name" */
+export const TITLE_SLIDE_MARKER = '§TITLE§';
+
+export function isTitleSlide(slide: string): boolean {
+  return slide.startsWith(TITLE_SLIDE_MARKER);
+}
+
+/** Parse a title slide into its parts. Returns null if not a title slide. */
+export function parseTitleSlide(slide: string): { title: string; artist: string } | null {
+  if (!isTitleSlide(slide)) return null;
+  const [, title = '', artist = ''] = slide.split('\n');
+  return { title, artist };
 }
 
 export const BACKGROUNDS = [

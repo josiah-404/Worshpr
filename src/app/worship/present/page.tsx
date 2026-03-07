@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Maximize2 } from "lucide-react";
-import { BACKGROUNDS, FONTS, SPEEDS } from '@/lib/constants';
+import { BACKGROUNDS, FONTS, SPEEDS, parseTitleSlide } from '@/lib/constants';
 
 const BG_CLASSES: Record<string, string> = Object.fromEntries(
   BACKGROUNDS.map((b) => [b.id, b.cls])
@@ -93,6 +93,9 @@ export default function WorshipPresentPage() {
   const trDur = SPEEDS.find((s) => s.id === transSpeed)?.ms ?? 600;
   const bgCls = BG_CLASSES[bgId]         ?? "bg-deep-space";
   const trCls = TR_CLASSES[transitionId] ?? "tr-fade";
+  const fontFamily = FONT_FAMILIES[fontId] ?? FONT_FAMILIES.inter;
+  const fontSize   = SIZE_STYLES[sizeId]   ?? SIZE_STYLES.md;
+  const titleParts = parseTitleSlide(slide);
 
   return (
     <div
@@ -101,15 +104,33 @@ export default function WorshipPresentPage() {
       style={{ cursor: "none", ["--tr-dur" as string]: `${trDur}ms` }}
     >
       {/* Slide text */}
-      {slide ? (
+      {titleParts ? (
+        <div
+          key={slideKey}
+          className={`flex flex-col items-center gap-3 text-center px-16 ${trCls}`}
+        >
+          <p
+            className="text-white font-bold leading-tight drop-shadow-2xl"
+            style={{ fontFamily, fontSize, textShadow: "0 2px 24px rgba(0,0,0,0.85)" }}
+          >
+            {titleParts.title}
+          </p>
+          <p
+            className="text-white/65 font-medium leading-tight drop-shadow-xl"
+            style={{
+              fontFamily,
+              fontSize: `calc(${fontSize} * 0.5)`,
+              textShadow: "0 2px 16px rgba(0,0,0,0.75)",
+            }}
+          >
+            {titleParts.artist}
+          </p>
+        </div>
+      ) : slide ? (
         <p
           key={slideKey}
           className={`text-white text-center font-bold leading-tight drop-shadow-2xl whitespace-pre-line px-16 ${trCls}`}
-          style={{
-            fontFamily: FONT_FAMILIES[fontId] ?? FONT_FAMILIES.inter,
-            fontSize:   SIZE_STYLES[sizeId]   ?? SIZE_STYLES.md,
-            textShadow: "0 2px 24px rgba(0,0,0,0.85)",
-          }}
+          style={{ fontFamily, fontSize, textShadow: "0 2px 24px rgba(0,0,0,0.85)" }}
         >
           {slide}
         </p>

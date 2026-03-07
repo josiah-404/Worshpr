@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense, useRef, useEffect } from "react";
+import { useState, Suspense, useRef, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ExternalLink,
@@ -13,6 +13,9 @@ import {
   Check,
   LayoutGrid,
   SlidersHorizontal,
+  Sparkles,
+  Loader2,
+  ClipboardPaste,
 } from "lucide-react";
 import {
   BACKGROUNDS,
@@ -22,8 +25,11 @@ import {
   SPEEDS,
   PREVIEW_FONT_SIZES,
   CONTROLLER_FONT_SIZES,
+  TITLE_SLIDE_MARKER,
+  parseTitleSlide,
 } from '@/lib/constants';
 import { usePresentation } from "@/hooks/usePresentation";
+import { api } from "@/lib/axios";
 import { SlidePreview } from "@/app/worship/components/SlidePreview";
 import { BackgroundPicker } from "@/app/worship/components/BackgroundPicker";
 import { SettingsDrawer } from "@/app/worship/components/SettingsDrawer";
@@ -147,11 +153,74 @@ function SlideList({
           <span className="text-[10px] font-medium text-muted-foreground/50 mr-1.5">
             {i + 1}.
           </span>
-          {slide.split("\n")[0]}
+          {(() => {
+            const titleParts = parseTitleSlide(slide);
+            if (titleParts) {
+              return (
+                <span className="italic opacity-70">{titleParts.title}</span>
+              );
+            }
+            return slide.split("\n")[0];
+          })()}
         </button>
       ))}
     </>
   );
+}
+
+interface SongResult {
+  title: string;
+  artist: string;
+  album?: string;
+  year?: string;
+  excerpt?: string;
+  lyricsSource?: string;
+}
+
+/** Lyrics stored in textarea never contain the marker.
+ *  Each song block is just the plain lyrics text.
+ *  The marker is injected at display-time by buildDisplaySlides. */
+function buildSongBlock(song: SongResult) {
+  return song.excerpt?.trim() ?? '';
+}
+
+/** Build the slides array that the presenter / preview / controller uses.
+ *  Injects a §TITLE§ title slide before each song's lyric blocks using the queue metadata.
+ *  Falls back to parseLyrics when no queue is present (manual paste mode). */
+function buildDisplaySlides(
+  lyrics: string,
+  queue: { title: string; artist: string }[],
+): string[] {
+  if (queue.length === 0) {
+    // Pure manual paste — just split normally
+    return lyrics
+      .split(/\n{2,}/)
+      .map((b) => b.trim())
+      .filter(Boolean);
+  }
+
+  // Split the lyrics into per-song bodies (songs are separated by \n\n\n)
+  const songBodies = lyrics.split(/\n{3,}/);
+
+  const allSlides: string[] = [];
+  for (let i = 0; i < queue.length; i++) {
+    const song = queue[i];
+    const body = (songBodies[i] ?? '').trim();
+
+    // Always inject the title slide first
+    allSlides.push(`${TITLE_SLIDE_MARKER}\n${song.title}\n${song.artist}`);
+
+    // Split the song body into individual slides
+    if (body) {
+      const lyricSlides = body
+        .split(/\n{2,}/)
+        .map((b) => b.trim())
+        .filter(Boolean);
+      allSlides.push(...lyricSlides);
+    }
+  }
+
+  return allSlides;
 }
 
 /* ── Inner component ── */
@@ -163,12 +232,24 @@ function WorshipEditorInner() {
   const [bgDialogOpen, setBgDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // AI Lyrics state
+  type LyricsMode = 'paste' | 'ai';
+  const [lyricsMode, setLyricsMode] = useState<LyricsMode>('paste');
+  const [aiDescription, setAiDescription] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiResults, setAiResults] = useState<SongResult[]>([]);
+  const [songQueue, setSongQueue] = useState<SongResult[]>([]);
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  const [fetchingIdx, setFetchingIdx] = useState<number | null>(null);
+
   const {
     title,
     setTitle,
     lyrics,
     setLyrics,
     slides,
+    setSlides,
     current,
     bgId,
     transitionId,
@@ -199,6 +280,115 @@ function WorshipEditorInner() {
     openPresenter,
     endPresentation,
   } = usePresentation(presentationId);
+
+  // Override slides from usePresentation with queue-aware version that injects title slides
+  useEffect(() => {
+    setSlides(buildDisplaySlides(lyrics, songQueue));
+  }, [lyrics, songQueue, setSlides]);
+
+  const handleSearchLyrics = useCallback(async () => {
+    if (!aiDescription.trim()) return;
+    setAiLoading(true);
+    setAiError(null);
+    setAiResults([]);
+    setExpandedIdx(null);
+    try {
+      const { data: res } = await api.post<{
+        data: { results: SongResult[]; totalFound: number; suggestion?: string };
+      }>('/generate-lyrics', { description: aiDescription });
+      setAiResults(res.data.results ?? []);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'Unexpected error.');
+    } finally {
+      setAiLoading(false);
+    }
+  }, [aiDescription]);
+
+  const handleSelectSong = useCallback(
+    (song: SongResult) => {
+      setSongQueue((prev) => {
+        const alreadyQueued = prev.some(
+          (s) => s.title === song.title && s.artist === song.artist,
+        );
+        if (alreadyQueued) return prev;
+        const next = [...prev, song];
+        setLyrics(next.map(buildSongBlock).join('\n\n\n'));
+        return next;
+      });
+      setLyricsMode('paste');
+    },
+    [setLyrics],
+  );
+
+  const handleRemoveFromQueue = useCallback(
+    (song: SongResult) => {
+      setSongQueue((prev) => {
+        const next = prev.filter(
+          (s) => !(s.title === song.title && s.artist === song.artist),
+        );
+        setLyrics(next.map(buildSongBlock).join('\n\n\n'));
+        return next;
+      });
+    },
+    [setLyrics],
+  );
+
+  const handleFetchLyrics = useCallback(
+    async (idx: number) => {
+      const song = aiResults[idx];
+      if (!song) return;
+      setFetchingIdx(idx);
+      setAiError(null);
+      try {
+        const { data: res } = await api.post<{ data: { lyrics: string } }>(
+          '/fetch-lyrics',
+          { title: song.title, artist: song.artist },
+        );
+        const fullLyrics = res.data.lyrics;
+        const updatedSong: SongResult = { ...song, excerpt: fullLyrics };
+        setAiResults((prev) =>
+          prev.map((s, i) => (i === idx ? updatedSong : s)),
+        );
+        setSongQueue((prev) => {
+          const inQueue = prev.some(
+            (s) => s.title === song.title && s.artist === song.artist,
+          );
+          if (!inQueue) return prev;
+          const next = prev.map((s) =>
+            s.title === song.title && s.artist === song.artist ? updatedSong : s,
+          );
+          setLyrics(next.map(buildSongBlock).join('\n\n\n'));
+          return next;
+        });
+      } catch (err) {
+        setAiError(err instanceof Error ? err.message : 'Failed to fetch lyrics.');
+      } finally {
+        setFetchingIdx(null);
+      }
+    },
+    [aiResults, setLyrics],
+  );
+
+  const handleRemoveSong = useCallback(
+    (idx: number) => {
+      setSongQueue((prev) => {
+        const next = prev.filter((_, i) => i !== idx);
+        setLyrics(next.map(buildSongBlock).join('\n\n\n'));
+        return next;
+      });
+    },
+    [setLyrics],
+  );
+
+  // Auto-launch presenter when navigated here with ?present=1
+  const autoPresent = searchParams.get("present") === "1";
+  useEffect(() => {
+    if (autoPresent && !isLoading) {
+      void openPresenter();
+    }
+    // Only run once after load completes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading]);
 
   if (isLoading) return <EditorSkeleton />;
 
@@ -428,22 +618,188 @@ function WorshipEditorInner() {
 
         {/* ── Panel 2: Lyrics editor ── */}
         <div className="w-96 shrink-0 flex flex-col gap-3">
+          {/* Header + mode toggle */}
           <div className="flex items-center justify-between shrink-0">
             <div>
               <p className="text-sm font-medium">Song Lyrics</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Separate slides with a blank line
+                {lyricsMode === 'paste'
+                  ? 'Separate slides with a blank line'
+                  : 'Search for a song by title, lyric, theme, or scripture'}
               </p>
             </div>
+            <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
+              <button
+                onClick={() => { setLyricsMode('paste'); setAiError(null); }}
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                  lyricsMode === 'paste'
+                    ? 'bg-accent text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <ClipboardPaste className="h-3.5 w-3.5" />
+                Paste
+              </button>
+              <button
+                onClick={() => { setLyricsMode('ai'); setAiError(null); }}
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                  lyricsMode === 'ai'
+                    ? 'bg-accent text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                AI Search
+              </button>
+            </div>
           </div>
-          <textarea
-            value={lyrics}
-            onChange={(e) => setLyrics(e.target.value)}
-            placeholder={
-              "Amazing grace, how sweet the sound\nThat saved a wretch like me\n\nI once was lost, but now I'm found\nWas blind but now I see"
-            }
-            className="flex-1 w-full rounded-lg border border-input bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono leading-relaxed min-h-[320px]"
-          />
+
+          {lyricsMode === 'paste' ? (
+            <div className="flex flex-col gap-2 flex-1 min-h-0">
+              {songQueue.length > 0 && (
+                <div className="flex flex-col gap-1 rounded-lg border border-border bg-accent/30 p-2 shrink-0">
+                  <div className="flex items-center justify-between px-1">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest">Set list</p>
+                    <button
+                      onClick={() => { setLyricsMode('ai'); setAiError(null); }}
+                      className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      + Add song
+                    </button>
+                  </div>
+                  {songQueue.map((s, i) => (
+                    <div key={i} className="flex items-center gap-2 rounded-md px-2 py-1.5 bg-background border border-border/60">
+                      <span className="text-[11px] font-mono text-muted-foreground/60 w-4 shrink-0">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{s.title}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{s.artist}</p>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveSong(i)}
+                        className="text-[11px] text-muted-foreground/60 hover:text-destructive transition-colors shrink-0"
+                        aria-label="Remove"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <textarea
+                value={lyrics}
+                onChange={(e) => setLyrics(e.target.value)}
+                placeholder={
+                  "Amazing grace, how sweet the sound\nThat saved a wretch like me\n\nI once was lost, but now I'm found\nWas blind but now I see"
+                }
+                className="flex-1 w-full rounded-lg border border-input bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono leading-relaxed min-h-[200px]"
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 flex-1 min-h-0">
+              <div className="flex gap-2 shrink-0">
+                <input
+                  type="text"
+                  value={aiDescription}
+                  onChange={(e) => { setAiDescription(e.target.value); setAiError(null); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') void handleSearchLyrics(); }}
+                  placeholder="Song title, lyric, theme, scripture…"
+                  className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  disabled={aiLoading}
+                />
+                <button
+                  onClick={() => void handleSearchLyrics()}
+                  disabled={aiLoading || !aiDescription.trim()}
+                  className="flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-3 py-2 text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                >
+                  {aiLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  {aiLoading ? 'Searching…' : 'Search'}
+                </button>
+              </div>
+
+              {aiError && (
+                <p className="text-xs text-destructive shrink-0">{aiError}</p>
+              )}
+
+              {aiResults.length > 0 && (
+                <div className="flex flex-col gap-2 overflow-y-auto flex-1 min-h-0">
+                  <p className="text-xs text-muted-foreground shrink-0">
+                    {aiResults.length} result{aiResults.length !== 1 ? 's' : ''} found
+                  </p>
+                  {aiResults.map((song, i) => {
+                    const isSelected = songQueue.some(
+                      (s) => s.title === song.title && s.artist === song.artist,
+                    );
+                    const isExpanded = expandedIdx === i;
+                    const excerpt = song.excerpt?.trim() ?? '';
+                    const meta = [song.album, song.year].filter(Boolean).join(' · ');
+                    return (
+                      <div
+                        key={i}
+                        className={`rounded-lg border transition-colors ${isSelected ? 'border-primary bg-primary/5' : 'border-border bg-background'}`}
+                      >
+                        <div className="flex items-start gap-2 px-3 py-2.5">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              {isSelected && <Check className="h-3 w-3 text-primary shrink-0" />}
+                              <p className="text-sm font-medium leading-tight truncate">{song.title}</p>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">{song.artist}</p>
+                            {meta && (
+                              <p className="text-[11px] text-muted-foreground/60 mt-0.5">{meta}</p>
+                            )}
+                            {excerpt && (
+                              <p className={`text-xs text-muted-foreground/70 mt-1.5 font-mono leading-relaxed whitespace-pre-wrap ${isExpanded ? '' : 'line-clamp-2'}`}>
+                                {excerpt}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 border-t border-border/50 px-3 py-1.5 flex-wrap">
+                          {excerpt && (
+                            <>
+                              <button
+                                onClick={() => setExpandedIdx(isExpanded ? null : i)}
+                                className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                {isExpanded ? 'Show less' : 'Show excerpt'}
+                              </button>
+                              <span className="text-muted-foreground/40 text-[11px]">·</span>
+                            </>
+                          )}
+                          <button
+                            onClick={() => void handleFetchLyrics(i)}
+                            disabled={fetchingIdx === i}
+                            className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {fetchingIdx === i
+                              ? <><Loader2 className="h-2.5 w-2.5 animate-spin" /> Fetching…</>
+                              : 'Fetch lyrics'}
+                          </button>
+                          <span className="text-muted-foreground/40 text-[11px]">·</span>
+                          <button
+                            onClick={() => isSelected ? handleRemoveFromQueue(song) : handleSelectSong(song)}
+                            className={`text-[11px] font-medium transition-colors ${isSelected ? 'text-muted-foreground hover:text-destructive' : 'text-primary hover:text-primary/80'}`}
+                          >
+                            {isSelected ? 'Remove' : 'Add to set'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {!aiLoading && aiResults.length === 0 && !aiError && (
+                <p className="text-xs text-muted-foreground">
+                  Search by song title, partial lyric, theme, or scripture reference.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── Panel 3: Preview + controls ── */}
