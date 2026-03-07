@@ -29,6 +29,7 @@ import {
   parseTitleSlide,
 } from '@/lib/constants';
 import { usePresentation } from "@/hooks/usePresentation";
+import { useAiSearchQuota } from "@/hooks/useAiSearchQuota";
 import { api } from "@/lib/axios";
 import { SlidePreview } from "@/app/worship/components/SlidePreview";
 import { BackgroundPicker } from "@/app/worship/components/BackgroundPicker";
@@ -242,6 +243,14 @@ function WorshipEditorInner() {
   const [songQueue, setSongQueue] = useState<SongResult[]>([]);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [fetchingIdx, setFetchingIdx] = useState<number | null>(null);
+  const { quota, isLoading: quotaLoading, quotaExhausted, consume: consumeQuota, cooldownMs } = useAiSearchQuota();
+  const quotaUsed = quota?.used ?? 0;
+  const quotaRemaining = quota?.remaining ?? 0;
+  const quotaLimit = quota?.limit ?? 20;
+
+  const [cooldownSecsLeft, setCooldownSecsLeft] = useState(0);
+  const isCoolingDown = cooldownSecsLeft > 0;
+  const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const {
     title,
@@ -286,8 +295,30 @@ function WorshipEditorInner() {
     setSlides(buildDisplaySlides(lyrics, songQueue));
   }, [lyrics, songQueue, setSlides]);
 
+  useEffect(() => {
+    return () => {
+      if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+    };
+  }, []);
+
+  const startCooldown = useCallback(() => {
+    if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+    const secs = Math.ceil(cooldownMs / 1000);
+    setCooldownSecsLeft(secs);
+    cooldownTimerRef.current = setInterval(() => {
+      setCooldownSecsLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(cooldownTimerRef.current!);
+          cooldownTimerRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [cooldownMs]);
+
   const handleSearchLyrics = useCallback(async () => {
-    if (!aiDescription.trim()) return;
+    if (!aiDescription.trim() || quotaExhausted || isCoolingDown) return;
     setAiLoading(true);
     setAiError(null);
     setAiResults([]);
@@ -297,12 +328,14 @@ function WorshipEditorInner() {
         data: { results: SongResult[]; totalFound: number; suggestion?: string };
       }>('/generate-lyrics', { description: aiDescription });
       setAiResults(res.data.results ?? []);
+      await consumeQuota(1);
+      startCooldown();
     } catch (err) {
       setAiError(err instanceof Error ? err.message : 'Unexpected error.');
     } finally {
       setAiLoading(false);
     }
-  }, [aiDescription]);
+  }, [aiDescription, quotaExhausted, isCoolingDown, consumeQuota, startCooldown]);
 
   const handleSelectSong = useCallback(
     (song: SongResult) => {
@@ -650,6 +683,9 @@ function WorshipEditorInner() {
               >
                 <Sparkles className="h-3.5 w-3.5" />
                 AI Search
+                {quotaExhausted && (
+                  <span className="ml-0.5 h-1.5 w-1.5 rounded-full bg-destructive shrink-0" />
+                )}
               </button>
             </div>
           </div>
@@ -701,23 +737,56 @@ function WorshipEditorInner() {
                   type="text"
                   value={aiDescription}
                   onChange={(e) => { setAiDescription(e.target.value); setAiError(null); }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') void handleSearchLyrics(); }}
-                  placeholder="Song title, lyric, theme, scripture…"
-                  className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  disabled={aiLoading}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !quotaExhausted && !isCoolingDown) void handleSearchLyrics();
+                  }}
+                  placeholder={
+                    quotaExhausted
+                      ? 'Daily search limit reached — resets tomorrow'
+                      : 'Song title, lyric, theme, scripture…'
+                  }
+                  className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                  disabled={aiLoading || quotaExhausted}
                 />
                 <button
                   onClick={() => void handleSearchLyrics()}
-                  disabled={aiLoading || !aiDescription.trim()}
+                  disabled={aiLoading || !aiDescription.trim() || quotaExhausted || isCoolingDown}
                   className="flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-3 py-2 text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                 >
                   {aiLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : isCoolingDown ? (
+                    <span className="tabular-nums text-xs">{cooldownSecsLeft}s</span>
                   ) : (
                     <Sparkles className="h-4 w-4" />
                   )}
-                  {aiLoading ? 'Searching…' : 'Search'}
+                  {aiLoading ? 'Searching…' : isCoolingDown ? 'Wait' : 'Search'}
                 </button>
+              </div>
+
+              {/* Daily quota bar */}
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="flex-1 h-1 rounded-full bg-border overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      quotaLoading
+                        ? 'bg-muted-foreground/30 animate-pulse w-full'
+                        : quotaExhausted
+                        ? 'bg-destructive'
+                        : quotaUsed >= quotaLimit * 0.7
+                        ? 'bg-yellow-500'
+                        : 'bg-primary'
+                    }`}
+                    style={quotaLoading ? undefined : { width: `${Math.min(100, (quotaUsed / quotaLimit) * 100)}%` }}
+                  />
+                </div>
+                <p className={`text-[11px] shrink-0 tabular-nums ${quotaExhausted ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                  {quotaLoading
+                    ? '…'
+                    : quotaExhausted
+                    ? 'Limit reached — resets tomorrow'
+                    : `${quotaRemaining} / ${quotaLimit} searches left today`}
+                </p>
               </div>
 
               {aiError && (

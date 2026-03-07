@@ -6,6 +6,36 @@ const searchLyricsSchema = z.object({
   description: z.string().min(1).max(500),
 });
 
+const songResultSchema = z.object({
+  title: z.string(),
+  artist: z.string(),
+  album: z.string().optional().default(''),
+  year: z.string().optional().default(''),
+  excerpt: z.string().optional().default(''),
+  lyricsSource: z.string().optional().default(''),
+});
+
+const responseSchema = z.object({
+  results: z.array(songResultSchema),
+  totalFound: z.number(),
+  suggestion: z.string().optional(),
+});
+
+/** Extract the first {...} JSON object from a string that may contain surrounding text. */
+function extractJson(text: string): string | null {
+  const start = text.indexOf('{');
+  if (start === -1) return null;
+  let depth = 0;
+  for (let i = start; i < text.length; i++) {
+    if (text[i] === '{') depth++;
+    else if (text[i] === '}') {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -28,73 +58,67 @@ export async function POST(req: NextRequest) {
     const { description } = parsed.data;
     const ai = new GoogleGenAI({ apiKey });
 
-    // ─── Prompt ───────────────────────────────────────────────────────────────
-    // NOTE: We removed the "return full lyrics" instruction because:
-    //   1. LLMs hallucinate verbatim lyrics — they sound plausible but are wrong.
-    //   2. Returning full lyrics may infringe copyright.
-    //   3. Google Search grounding gives us real song metadata; lyrics should
-    //      come from a licensed source (e.g. Genius API, CCLI, etc.)
-    //
-    // This prompt uses grounding to identify the correct song(s), then returns
-    // a representative lyric excerpt (chorus / hook) only — enough for the user
-    // to confirm the match, without fabricating or reproducing full copyrighted
-    // lyrics verbatim.
-    // ─────────────────────────────────────────────────────────────────────────
-    const prompt = `You are a worship song search assistant with access to Google Search.
-The user is searching for existing worship or praise songs.
+    const prompt = `You are a worship song search assistant. The user is looking for existing worship or praise songs.
 
 User query: "${description}"
 
-Steps:
-1. Use Google Search to look up the exact song(s) matching the query. The query could be a song title, partial lyric, theme, scripture reference, or description.
-2. Verify the song title, artist/band, and album using real search results — do NOT guess or rely on memory alone.
-3. Return up to 5 matching songs, ranked by relevance.
+Search your knowledge for real worship/praise songs that match this query. The query may be:
+- A song title (exact or partial), e.g. "Pusong Dalisay", "Amazing Grace"
+- A partial lyric
+- A theme, e.g. "songs about healing", "grace"
+- A scripture reference, e.g. "Psalm 23"
+- A language/version, e.g. "Tagalog worship songs about prayer"
 
-Respond ONLY in the following JSON format — no markdown, no code fences, no extra text:
+Return up to 5 matching songs ranked by relevance.
+
+You MUST respond with ONLY a valid JSON object — no markdown, no code fences, no explanation, no extra text before or after. The JSON must match this exact shape:
 {
   "results": [
     {
-      "title": "<Exact Song Title>",
-      "artist": "<Artist or Band>",
-      "album": "<Album name if known, or empty string>",
-      "year": "<Release year if known, or empty string>",
-      "excerpt": "<A short representative excerpt (chorus or hook, max 4 lines) using the REAL lyrics found via search — label the section, e.g. [Chorus]\\nLine 1\\nLine 2>",
-      "lyricsSource": "<URL to a lyrics page found via search, e.g. genius.com or azlyrics.com, or empty string if not found>"
+      "title": "Exact Song Title",
+      "artist": "Artist or Band Name",
+      "album": "Album name or empty string",
+      "year": "Release year or empty string",
+      "excerpt": "A short representative excerpt (chorus or hook, max 4 lines). Include the section label on the first line, e.g. [Chorus]",
+      "lyricsSource": ""
     }
   ],
-  "totalFound": <number of results returned>
+  "totalFound": 1
 }
 
-Rules:
-- ONLY return real, verified songs found via Google Search. Do NOT fabricate songs or lyrics.
-- If the query exactly matches a specific song title and artist, return that song first.
-- If the query is a theme (e.g. "grace", "healing"), return the most well-known worship songs on that theme.
-- If the query is a partial lyric, search for it and identify the correct song.
-- If the query is a scripture reference (e.g. "Psalm 23"), return worship songs inspired by that passage.
-- If nothing is found, return:
-{
-  "results": [],
-  "totalFound": 0,
-  "suggestion": "<A helpful message with alternatives or corrections>"
-}`;
+If nothing matches, return:
+{"results":[],"totalFound":0,"suggestion":"Helpful message here"}`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-lite',
       contents: prompt,
       config: {
-        // Google Search grounding — this is what prevents hallucinated lyrics.
-        // Gemini will search the web before answering, anchoring its response
-        // in real search results rather than pattern-matched memory.
-        tools: [{ googleSearch: {} }],
+        responseMimeType: 'application/json',
+        temperature: 0.2,
       },
     });
 
     const raw = response.text?.trim() ?? '';
 
-    let result: Record<string, unknown>;
+    if (!raw) {
+      return NextResponse.json(
+        { error: 'No response from AI. Please try again.' },
+        { status: 502 },
+      );
+    }
+
+    // Extract JSON from anywhere in the response (handles stray text / grounding metadata)
+    const jsonStr = extractJson(raw) ?? raw;
+
+    let result: z.infer<typeof responseSchema>;
     try {
-      const cleaned = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
-      result = JSON.parse(cleaned);
+      const parsed = responseSchema.safeParse(JSON.parse(jsonStr));
+      if (!parsed.success) {
+        // Shape mismatch — try to return whatever we got as-is
+        result = { results: [], totalFound: 0, suggestion: 'Unexpected response format. Please try again.' };
+      } else {
+        result = parsed.data;
+      }
     } catch {
       return NextResponse.json(
         { error: 'Failed to parse AI response. Please try again.' },
