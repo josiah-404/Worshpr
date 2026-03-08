@@ -14,7 +14,7 @@ export default async function WorshipPage() {
   });
 
   const presentations: Presentation[] = raw.map((p: PrismaPresentation) => ({
-    id: p.id,
+    id: p.id.toString(),
     title: p.title,
     lyrics: p.lyrics,
     songQueue: [],

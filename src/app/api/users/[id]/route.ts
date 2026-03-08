@@ -25,7 +25,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true },
     });
 
-    return NextResponse.json({ data: user }, { status: 200 });
+    return NextResponse.json({ data: { ...user, id: user.id.toString() } }, { status: 200 });
   } catch {
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }

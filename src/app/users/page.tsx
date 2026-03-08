@@ -9,7 +9,7 @@ export default async function UsersPage() {
   const raw = await prisma.user.findMany({ orderBy: { createdAt: 'desc' } });
 
   const users: User[] = raw.map((u: PrismaUser) => ({
-    id: u.id,
+    id: u.id.toString(),
     name: u.name,
     email: u.email,
     role: u.role as User['role'],

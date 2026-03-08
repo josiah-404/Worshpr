@@ -12,7 +12,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ data: presentation }, { status: 200 });
+    return NextResponse.json({ data: { ...presentation, id: presentation.id.toString() } }, { status: 200 });
   } catch {
     return NextResponse.json({ error: 'Failed to fetch presentation' }, { status: 500 });
   }
@@ -36,7 +36,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       data,
     });
 
-    return NextResponse.json({ data: presentation }, { status: 200 });
+    return NextResponse.json({ data: { ...presentation, id: presentation.id.toString() } }, { status: 200 });
   } catch {
     return NextResponse.json({ error: 'Failed to update presentation' }, { status: 500 });
   }
