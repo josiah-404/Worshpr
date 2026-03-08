@@ -14,6 +14,7 @@ export default async function WorshipPage() {
     id: p.id,
     title: p.title,
     lyrics: p.lyrics,
+    songQueue: [],
     bgId: p.bgId,
     transitionId: p.transitionId,
     fontId: p.fontId,

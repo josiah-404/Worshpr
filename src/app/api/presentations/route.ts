@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
       data: {
         title: parsed.data.title.trim(),
         lyrics: parsed.data.lyrics,
+        songQueue: parsed.data.songQueue,
         bgId: parsed.data.bgId,
         transitionId: parsed.data.transitionId,
         fontId: parsed.data.fontId,

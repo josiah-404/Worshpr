@@ -26,6 +26,7 @@ model Presentation {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   title        String
   lyrics       String
+  songQueue    Json     @default("[]")
   bgId         String   @default("deep-space")
   transitionId String   @default("fade")
   fontId       String   @default("inter")

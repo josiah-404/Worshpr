@@ -13,6 +13,7 @@ import {
   parseLyrics,
 } from '@/lib/constants';
 import type { Presentation } from '@/types';
+import type { SongResult } from '@/types/worship.types';
 
 export function usePresentation(presentationId: string | null) {
   const router = useRouter();
@@ -23,6 +24,7 @@ export function usePresentation(presentationId: string | null) {
   );
   const [title, setTitle] = useState("");
   const [lyrics, setLyrics] = useState("");
+  const [initialQueue, setInitialQueue] = useState<SongResult[]>([]);
   const [bgId, setBgId] = useState<string>(BACKGROUNDS[0].id);
   const [transitionId, setTransId] = useState<string>(TRANSITIONS[0].id);
   const [fontId, setFontId] = useState<string>(FONTS[0].id);
@@ -92,6 +94,7 @@ export function usePresentation(presentationId: string | null) {
         const p = res.data;
         setTitle(p.title);
         setLyrics(p.lyrics);
+        setInitialQueue(Array.isArray(p.songQueue) ? p.songQueue : []);
         setBgId(p.bgId);
         setTransId(p.transitionId);
         setFontId(p.fontId);
@@ -230,7 +233,7 @@ export function usePresentation(presentationId: string | null) {
   };
 
   /* ── Save ── */
-  const handleSave = async () => {
+  const handleSave = async (songQueue: SongResult[] = []) => {
     if (!title.trim()) {
       setTitleError(true);
       toast.warning("Title is required", {
@@ -241,7 +244,7 @@ export function usePresentation(presentationId: string | null) {
     setTitleError(false);
     setIsSaving(true);
     try {
-      const body = { title, lyrics, bgId, transitionId, fontId, sizeId };
+      const body = { title, lyrics, songQueue, bgId, transitionId, fontId, sizeId };
       if (presentationDbId) {
         await api.put(`/presentations/${presentationDbId}`, body);
       } else {
@@ -315,6 +318,7 @@ export function usePresentation(presentationId: string | null) {
     setTitle,
     lyrics,
     setLyrics,
+    initialQueue,
     slides,
     setSlides,
     current,
