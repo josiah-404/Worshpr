@@ -1,0 +1,116 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Models ────────────────────────────────────────────────────────────────
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole @default(MEDIA)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Presentation {
+  id           Int      @id @default(autoincrement())
+  title        String
+  lyrics       String
+  songQueue    Json     @default("[]")
+  bgId         String   @default("deep-space")
+  transitionId String   @default("fade")
+  fontId       String   @default("inter")
+  sizeId       String   @default("md")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Song {
+  id        Int      @id @default(autoincrement())
+  title     String
+  artist    String?
+  lyrics    String?
+  key       String? // e.g. "G", "A", "Bb"
+  bpm       Int?
+  tags      String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  serviceItems ServiceItem[]
+}
+
+model ServicePlan {
+  id          Int      @id @default(autoincrement())
+  title       String
+  date        DateTime
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items ServiceItem[]
+}
+
+model ServiceItem {
+  id        Int      @id @default(autoincrement())
+  order     Int
+  type      ItemType
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  servicePlan   ServicePlan @relation(fields: [servicePlanId], references: [id])
+  servicePlanId Int
+
+  song   Song? @relation(fields: [songId], references: [id])
+  songId Int?
+}
+
+model MediaFile {
+  id        Int       @id @default(autoincrement())
+  name      String
+  url       String
+  type      MediaType
+  createdAt DateTime  @default(now())
+}
+
+/// Tracks daily AI search quota per organisation (keyed by a stable org identifier).
+model AiSearchQuota {
+  id        Int      @id @default(autoincrement())
+  /// Stable key identifying the organisation (e.g. "org_default" until multi-tenancy is wired).
+  orgKey    String   @unique
+  date      String /// ISO date string YYYY-MM-DD — resets when date changes.
+  used      Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Enums ─────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  MEDIA
+}
+
+enum ItemType {
+  SONG
+  SCRIPTURE
+  ANNOUNCEMENT
+  MEDIA
+  PRAYER
+  OFFERING
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+}

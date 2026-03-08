@@ -3,7 +3,7 @@ import type { SongResult } from '@/types/worship.types';
 export type UserRole = 'ADMIN' | 'MEDIA';
 
 export interface User {
-  id: string;
+  id: number;
   name: string;
   email: string;
   role: UserRole;
@@ -18,7 +18,7 @@ export interface UserFormState {
 }
 
 export interface Presentation {
-  id: string;
+  id: number;
   title: string;
   lyrics: string;
   songQueue: SongResult[];

@@ -444,6 +444,51 @@ export const env = envSchema.parse(process.env);
 
 ---
 
+## Prisma Migration Workflow (Neon / PostgreSQL)
+
+### Local Development
+
+When adding or changing models in `prisma/schema.prisma`, always use `migrate dev` — never `db push`:
+
+```bash
+npx prisma migrate dev --name <descriptive_name>
+```
+
+This creates a timestamped migration file in `prisma/migrations/` and regenerates the client. Commit the `prisma/migrations/` folder — it is the source of truth for production deploys.
+
+### Production / Vercel
+
+The `build` script must run `migrate deploy` before `next build` so pending migrations are applied on every deploy:
+
+```json
+"build": "prisma migrate deploy && prisma generate && next build"
+```
+
+`migrate deploy` applies pending migrations only — it never creates new ones.
+
+### Drift / First-time Setup
+
+If `migrate dev` reports **"Drift detected"** (tables exist but no migration history), the cleanest fix is:
+
+```bash
+npx prisma migrate reset   # drops schema, recreates from scratch, applies migrations
+npm run db:seed            # re-seed after reset
+```
+
+Only use the baseline approach (`migrate diff` + `migrate resolve --applied`) when you have real production data you cannot afford to lose.
+
+### Command Reference
+
+| Command | When to use |
+|---|---|
+| `prisma migrate dev --name x` | Adding/changing schema locally |
+| `prisma migrate deploy` | CI/CD and production builds |
+| `prisma migrate reset` | Resolve drift in dev (data loss is acceptable) |
+| `prisma generate` | After any schema change, to update TS types |
+| `prisma db push` | Prototyping only — never use for tracked schemas |
+
+---
+
 ## Do's and Don'ts
 
 ### ✅ Do
