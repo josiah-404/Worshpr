@@ -7,7 +7,8 @@ export async function GET() {
     const presentations = await prisma.presentation.findMany({
       orderBy: { updatedAt: 'desc' },
     });
-    return NextResponse.json({ data: presentations }, { status: 200 });
+    const serialized = presentations.map((p) => ({ ...p, id: p.id.toString() }));
+    return NextResponse.json({ data: serialized }, { status: 200 });
   } catch {
     return NextResponse.json({ error: 'Failed to fetch presentations' }, { status: 500 });
   }
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ data: presentation }, { status: 201 });
+    return NextResponse.json({ data: { ...presentation, id: presentation.id.toString() } }, { status: 201 });
   } catch {
     return NextResponse.json({ error: 'Failed to create presentation' }, { status: 500 });
   }

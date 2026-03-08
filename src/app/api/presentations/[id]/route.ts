@@ -5,14 +5,14 @@ import { updatePresentationSchema } from '@/validations/presentation.schema';
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const presentation = await prisma.presentation.findUnique({
-      where: { id: params.id },
+      where: { id: parseInt(params.id, 10) },
     });
 
     if (!presentation) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ data: presentation }, { status: 200 });
+    return NextResponse.json({ data: { ...presentation, id: presentation.id.toString() } }, { status: 200 });
   } catch {
     return NextResponse.json({ error: 'Failed to fetch presentation' }, { status: 500 });
   }
@@ -32,11 +32,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       : parsed.data;
 
     const presentation = await prisma.presentation.update({
-      where: { id: params.id },
+      where: { id: parseInt(params.id, 10) },
       data,
     });
 
-    return NextResponse.json({ data: presentation }, { status: 200 });
+    return NextResponse.json({ data: { ...presentation, id: presentation.id.toString() } }, { status: 200 });
   } catch {
     return NextResponse.json({ error: 'Failed to update presentation' }, { status: 500 });
   }
@@ -44,7 +44,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    await prisma.presentation.delete({ where: { id: params.id } });
+    await prisma.presentation.delete({ where: { id: parseInt(params.id, 10) } });
     return NextResponse.json({ data: { success: true } }, { status: 200 });
   } catch {
     return NextResponse.json({ error: 'Failed to delete presentation' }, { status: 500 });

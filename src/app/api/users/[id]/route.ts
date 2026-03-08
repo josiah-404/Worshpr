@@ -20,12 +20,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     const user = await prisma.user.update({
-      where: { id: params.id },
+      where: { id: parseInt(params.id, 10) },
       data,
       select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true },
     });
 
-    return NextResponse.json({ data: user }, { status: 200 });
+    return NextResponse.json({ data: { ...user, id: user.id.toString() } }, { status: 200 });
   } catch {
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }
@@ -33,7 +33,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    await prisma.user.delete({ where: { id: params.id } });
+    await prisma.user.delete({ where: { id: parseInt(params.id, 10) } });
     return NextResponse.json({ data: { message: 'User deleted' } }, { status: 200 });
   } catch {
     return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
