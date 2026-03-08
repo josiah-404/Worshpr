@@ -11,12 +11,15 @@ interface SlidePreviewProps {
   fontSize:    number;
   ringClass?:  string;
   emptyText?:  string;
+  /** Freeze background animations — use in editor thumbnails to reduce GPU load */
+  paused?:     boolean;
 }
 
 export function SlidePreview({
   slide, bgCls, fontFamily, fontSize,
   ringClass = "",
   emptyText = "No slide selected",
+  paused = false,
 }: SlidePreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.1667); // default ~320/1920
@@ -41,7 +44,7 @@ export function SlidePreview({
     >
       {/* Background rendered at full presenter size then scaled down — preserves blur fidelity */}
       <div
-        className={bgCls}
+        className={`${bgCls}${paused ? " animations-paused" : ""}`}
         style={{
           position: "absolute",
           width: "1920px",
@@ -56,7 +59,34 @@ export function SlidePreview({
       {/* Text layer */}
       <div className="absolute inset-0 flex items-center justify-center px-10">
         {titleParts ? (
+          titleParts.isSection ? (
+            /* Section slide — label shown large and centred */
+            <p
+              className="text-white font-bold uppercase tracking-widest text-center drop-shadow-2xl"
+              style={{
+                fontFamily,
+                fontSize: Math.max(6, Math.round(fontSize * scale * 0.7)),
+                textShadow: "0 2px 20px rgba(0,0,0,0.85)",
+                letterSpacing: "0.15em",
+              }}
+            >
+              {titleParts.role}
+            </p>
+          ) : (
           <div className="flex flex-col items-center gap-1 text-center">
+            {titleParts.role && (
+              <p
+                className="text-white/50 font-medium uppercase tracking-widest drop-shadow-lg"
+                style={{
+                  fontFamily,
+                  fontSize: Math.max(4, Math.round(fontSize * scale * 0.35)),
+                  textShadow: "0 1px 8px rgba(0,0,0,0.7)",
+                  letterSpacing: "0.2em",
+                }}
+              >
+                {titleParts.role}
+              </p>
+            )}
             <p
               className="text-white font-bold leading-tight drop-shadow-2xl"
               style={{
@@ -78,6 +108,7 @@ export function SlidePreview({
               {titleParts.artist}
             </p>
           </div>
+          )
         ) : slide && !isTitleSlide(slide) ? (
           <p
             className="text-white text-center font-bold leading-tight drop-shadow-2xl whitespace-pre-line"

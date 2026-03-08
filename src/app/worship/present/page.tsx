@@ -110,10 +110,38 @@ export default function WorshipPresentPage() {
     >
       {/* Slide text */}
       {titleParts ? (
+        titleParts.isSection ? (
+          /* Section slide — label shown large and centred */
+          <p
+            key={slideKey}
+            className={`text-white font-bold uppercase tracking-widest text-center drop-shadow-2xl px-16 ${trCls}`}
+            style={{
+              fontFamily,
+              fontSize: `calc(${fontSize} * 0.7)`,
+              textShadow: "0 2px 24px rgba(0,0,0,0.85)",
+              letterSpacing: "0.15em",
+            }}
+          >
+            {titleParts.role}
+          </p>
+        ) : (
         <div
           key={slideKey}
           className={`flex flex-col items-center gap-3 text-center px-16 ${trCls}`}
         >
+          {titleParts.role && (
+            <p
+              className="text-white/50 font-medium uppercase tracking-widest drop-shadow-lg"
+              style={{
+                fontFamily,
+                fontSize: `calc(${fontSize} * 0.35)`,
+                textShadow: "0 2px 12px rgba(0,0,0,0.7)",
+                letterSpacing: "0.2em",
+              }}
+            >
+              {titleParts.role}
+            </p>
+          )}
           <p
             className="text-white font-bold leading-tight drop-shadow-2xl"
             style={{ fontFamily, fontSize, textShadow: "0 2px 24px rgba(0,0,0,0.85)" }}
@@ -131,6 +159,7 @@ export default function WorshipPresentPage() {
             {titleParts.artist}
           </p>
         </div>
+        )
       ) : slide ? (
         <p
           key={slideKey}

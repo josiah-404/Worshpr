@@ -112,7 +112,7 @@ export function SettingsDrawer({
                 <button
                   key={bg.id}
                   onClick={() => onChangeBg(bg.id)}
-                  className={`relative h-10 rounded-md overflow-hidden transition-all ${bg.cls} ${
+                  className={`relative h-10 rounded-md overflow-hidden transition-all animations-paused ${bg.cls} ${
                     bgId === bg.id
                       ? "ring-2 ring-indigo-500 ring-offset-2 ring-offset-card"
                       : "opacity-55 hover:opacity-100"

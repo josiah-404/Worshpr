@@ -1,3 +1,5 @@
+import type { SongResult } from '@/types/worship.types';
+
 export type UserRole = 'ADMIN' | 'MEDIA';
 
 export interface User {
@@ -19,6 +21,7 @@ export interface Presentation {
   id: string;
   title: string;
   lyrics: string;
+  songQueue: SongResult[];
   bgId: string;
   transitionId: string;
   fontId: string;

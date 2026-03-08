@@ -48,7 +48,7 @@ export function BackgroundPicker({ open, selected, onSelect, onClose }: Backgrou
                     : "opacity-75 hover:opacity-100 hover:ring-1 hover:ring-white/20"
                 }`}
               >
-                <div className={`w-full ${bg.cls}`} style={{ aspectRatio: "16/9" }} />
+                <div className={`w-full animations-paused ${bg.cls}`} style={{ aspectRatio: "16/9" }} />
                 <div className="px-2 py-1.5 bg-card/80 backdrop-blur-sm">
                   <p className="text-xs font-medium text-center truncate">{bg.label}</p>
                 </div>

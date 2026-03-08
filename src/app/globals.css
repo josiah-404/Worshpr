@@ -1154,6 +1154,13 @@
 .tr-zoom { animation: tr-zoom var(--tr-dur, 0.5s)  cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 .tr-blur { animation: tr-blur var(--tr-dur, 0.7s)  ease                              forwards; }
 
+/* ── Static backgrounds (animations paused for editor thumbnails) ── */
+.animations-paused,
+.animations-paused::before,
+.animations-paused::after {
+  animation-play-state: paused !important;
+}
+
 /* ── Minimalist Scrollbars ────────────────────────────────────────── */
 * {
   scrollbar-width: thin;

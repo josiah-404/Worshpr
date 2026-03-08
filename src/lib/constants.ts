@@ -82,11 +82,13 @@ export function isTitleSlide(slide: string): boolean {
   return slide.startsWith(TITLE_SLIDE_MARKER);
 }
 
-/** Parse a title slide into its parts. Returns null if not a title slide. */
-export function parseTitleSlide(slide: string): { title: string; artist: string } | null {
+/** Parse a title slide into its parts. Returns null if not a title slide.
+ *  Format: §TITLE§\n<title>\n<artist>\n<role?>
+ *  Sections have blank title & artist with only role set. */
+export function parseTitleSlide(slide: string): { title: string; artist: string; role: string; isSection: boolean } | null {
   if (!isTitleSlide(slide)) return null;
-  const [, title = '', artist = ''] = slide.split('\n');
-  return { title, artist };
+  const [, title = '', artist = '', role = ''] = slide.split('\n');
+  return { title, artist, role, isSection: !title && !artist && !!role };
 }
 
 export const BACKGROUNDS = [
