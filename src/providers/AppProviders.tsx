@@ -4,6 +4,7 @@ import { useState, type FC } from 'react';
 import { SessionProvider } from 'next-auth/react';
 import { ThemeProvider } from 'next-themes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ProgressProvider } from '@bprogress/next/app';
 
 interface AppProvidersProps {
   children: React.ReactNode;
@@ -22,7 +23,16 @@ export const AppProviders: FC<AppProvidersProps> = ({ children }) => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          <ProgressProvider
+            height="4px"
+            color="hsl(263.4 70% 50.4%)"
+            options={{ showSpinner: false }}
+            shallowRouting
+          >
+            {children}
+          </ProgressProvider>
+        </SessionProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
