@@ -19,7 +19,7 @@ const PAGE_TITLES: Record<string, string> = {
 
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const hideSidebar = pathname === "/login" || pathname === "/worship/present";
+  const hideSidebar = pathname === "/login" || pathname.startsWith("/auth/") || pathname === "/worship/present";
 
   if (hideSidebar) return <>{children}</>;
 

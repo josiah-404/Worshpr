@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { createUserSchema } from '@/validations/user.schema';
+import { sendOnboardingEmail } from '@/lib/mail';
 
 export async function GET() {
   try {
@@ -25,12 +26,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { name, email, password, role } = parsed.data;
-    const hashed = await bcrypt.hash(password, 10);
+    const { name, email, role } = parsed.data;
 
-    const user = await prisma.user.create({
-      data: { name, email, password: hashed, role },
-      select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true },
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date();
+    expires.setHours(expires.getHours() + 24);
+
+    // Send email before writing to DB so a delivery failure doesn't leave a broken user
+    try {
+      await sendOnboardingEmail({ email, name, token });
+    } catch (emailError) {
+      console.error('Failed to send onboarding email:', emailError);
+      return NextResponse.json(
+        { error: 'Failed to send onboarding email. Please try again.' },
+        { status: 500 },
+      );
+    }
+
+    const user = await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: { name, email, role },
+        select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true },
+      });
+
+      await tx.passwordResetToken.create({
+        data: {
+          token,
+          type: 'PASSWORD_SETUP',
+          userId: created.id,
+          expires,
+        },
+      });
+
+      return created;
     });
 
     return NextResponse.json({ data: { ...user, id: user.id.toString() } }, { status: 201 });
