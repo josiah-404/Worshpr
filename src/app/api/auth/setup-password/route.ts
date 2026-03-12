@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hash } from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@/generated/prisma';
 import { setupPasswordSchema } from '@/validations/user.schema';
 
 export async function POST(req: NextRequest) {
@@ -9,7 +10,10 @@ export async function POST(req: NextRequest) {
     const parsed = setupPasswordSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+      return NextResponse.json(
+        { error: parsed.error.issues },
+        { status: 400 },
+      );
     }
 
     const { token, password } = parsed.data;
@@ -25,38 +29,87 @@ export async function POST(req: NextRequest) {
 
     if (!record) {
       return NextResponse.json(
-        { error: 'Invalid or expired setup link. Please contact your admin.' },
+        {
+          status: 'error',
+          message: 'Invalid or expired token. Please request a new setup link.',
+        },
         { status: 400 },
       );
     }
 
-    if (record.user.password) {
-      await prisma.passwordResetToken.delete({ where: { id: record.id } }).catch(() => null);
+    if (!record.user) {
+      console.error('Token exists but user not found:', record.id);
       return NextResponse.json(
-        { error: 'Password has already been set. Please log in or use Forgot Password.' },
+        {
+          status: 'error',
+          message: 'Associated user account not found. Please contact support.',
+        },
+        { status: 404 },
+      );
+    }
+
+    if (record.user.password) {
+      await prisma.passwordResetToken
+        .delete({ where: { id: record.id } })
+        .catch((err) => console.error('Failed to delete token:', err));
+
+      return NextResponse.json(
+        {
+          status: 'error',
+          message:
+            'Password has already been set for this account. Please log in or use password reset.',
+        },
         { status: 409 },
       );
     }
 
     const hashed = await hash(password, 12);
 
-    await prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: record.userId },
-        data: { password: hashed, emailVerified: new Date() },
-      });
+    try {
+      await prisma.$transaction(async (tx) => {
+        await tx.user.update({
+          where: { id: record.userId },
+          data: { password: hashed, emailVerified: new Date() },
+        });
 
-      await tx.passwordResetToken.deleteMany({
-        where: { userId: record.userId, type: 'PASSWORD_SETUP' },
+        await tx.passwordResetToken.deleteMany({
+          where: { userId: record.userId, type: 'PASSWORD_SETUP' },
+        });
       });
-    });
+    } catch (txError) {
+      console.error('Transaction failed during password setup:', txError);
+
+      if (txError instanceof Prisma.PrismaClientKnownRequestError) {
+        if (txError.code === 'P2025') {
+          return NextResponse.json(
+            {
+              status: 'error',
+              message: 'User account no longer exists.',
+            },
+            { status: 404 },
+          );
+        }
+      }
+
+      throw txError;
+    }
 
     return NextResponse.json(
-      { data: { message: 'Password set successfully. You can now log in.' } },
+      {
+        status: 'success',
+        message: 'Password setup successful. You can now log in.',
+      },
       { status: 200 },
     );
   } catch (err: unknown) {
     console.error('Setup password error:', err);
-    return NextResponse.json({ error: 'Failed to set password. Please try again.' }, { status: 500 });
+    return NextResponse.json(
+      {
+        status: 'error',
+        message: 'Failed to setup password. Please try again later.',
+        error: err instanceof Error ? err.message : 'Unknown error',
+      },
+      { status: 500 },
+    );
   }
 }

@@ -1,70 +1,144 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { prisma } from '@/lib/prisma';
-import { forgotPasswordSchema } from '@/validations/user.schema';
 import { sendPasswordResetEmail } from '@/lib/mail';
+import { prisma } from '@/lib/prisma';
+import { Prisma } from '@/generated/prisma';
 
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
-    const parsed = forgotPasswordSchema.safeParse(body);
+    const { email } = await request.json();
 
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-    }
-
-    const { email } = parsed.data;
-
-    const user = await prisma.user.findUnique({ where: { email } });
-
-    if (!user) {
-      // Return success regardless to prevent user enumeration
+    // Validate email format
+    if (!email || !email.includes('@')) {
       return NextResponse.json(
-        { data: { message: 'If an account exists, a reset link has been sent.' } },
-        { status: 200 },
+        {
+          status: 'error',
+          message: 'Please provide a valid email address.',
+        },
+        { status: 400 },
       );
     }
 
-    if (!user.password) {
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    // Return error if user doesn't exist
+    if (!user) {
       return NextResponse.json(
         {
-          error:
-            'Your account setup is incomplete. Check your inbox for the original setup email.',
+          status: 'error',
+          message: 'No account found with this email address.',
+        },
+        { status: 404 },
+      );
+    }
+
+    // Check if user has completed account setup (emailVerified is set by setup-password)
+    if (!user.emailVerified) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          message:
+            'Please complete your account setup first before resetting your password. Check your email for the verification link.',
         },
         { status: 403 },
       );
     }
 
+    // Generate reset token
     const token = crypto.randomBytes(32).toString('hex');
     const expires = new Date();
     expires.setHours(expires.getHours() + 24);
 
     try {
-      await sendPasswordResetEmail({ email: user.email, name: user.name, token });
+      await sendPasswordResetEmail({
+        email: user.email,
+        name: user.name,
+        token,
+      });
     } catch (emailError) {
       console.error('Failed to send password reset email:', emailError);
+
+      // Return error response if email fails
       return NextResponse.json(
-        { error: 'Failed to send reset email. Please try again later.' },
+        {
+          status: 'error',
+          message:
+            'Failed to send password reset email. Please try again later or contact support.',
+          error:
+            emailError instanceof Error
+              ? emailError.message
+              : 'Email service error',
+        },
         { status: 500 },
       );
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.passwordResetToken.deleteMany({
-        where: { userId: user.id, type: 'PASSWORD_RESET' },
-      });
+    try {
+      await prisma.$transaction(async (tx) => {
+        // Delete old PASSWORD_RESET tokens for this user
+        await tx.passwordResetToken.deleteMany({
+          where: {
+            userId: user.id,
+            type: 'PASSWORD_RESET',
+          },
+        });
 
-      await tx.passwordResetToken.create({
-        data: { token, type: 'PASSWORD_RESET', userId: user.id, expires },
+        // Create a new password reset token
+        await tx.passwordResetToken.create({
+          data: {
+            token,
+            type: 'PASSWORD_RESET',
+            userId: user.id,
+            expires,
+          },
+        });
       });
-    });
+    } catch (txError) {
+      console.error('Failed to create new reset token:', txError);
+
+      if (txError instanceof Prisma.PrismaClientKnownRequestError) {
+        // User not found during update
+        if (txError.code === 'P2025') {
+          return NextResponse.json(
+            {
+              status: 'error',
+              message: 'User account no longer exists.',
+            },
+            { status: 404 },
+          );
+        }
+      }
+
+      return NextResponse.json(
+        {
+          status: 'error',
+          message:
+            'Email sent but failed to update reset token. Please contact support.',
+        },
+        { status: 500 },
+      );
+    }
 
     return NextResponse.json(
-      { data: { message: 'Password reset email sent. Please check your inbox.' } },
+      {
+        status: 'success',
+        message:
+          'Password reset email sent successfully. Please check your inbox.',
+      },
       { status: 200 },
     );
-  } catch (err: unknown) {
-    console.error('Forgot password error:', err);
-    return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
+  } catch (error) {
+    console.error('Password reset error:', error);
+    return NextResponse.json(
+      {
+        status: 'error',
+        message:
+          'Failed to process password reset request. Please try again later.',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
+    );
   }
 }
