@@ -23,8 +23,20 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts Account[]
-  sessions Session[]
+  accounts            Account[]
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  type      TokenType
+  userId    String
+  expires   DateTime
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Account {
@@ -139,6 +151,11 @@ model AiSearchQuota {
 enum UserRole {
   ADMIN
   MEDIA
+}
+
+enum TokenType {
+  PASSWORD_SETUP
+  PASSWORD_RESET
 }
 
 enum ItemType {

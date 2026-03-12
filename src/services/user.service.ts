@@ -7,7 +7,11 @@ export const getUsers = async (): Promise<User[]> => {
 };
 
 export const createUser = async (form: UserFormState): Promise<User> => {
-  const { data } = await api.post<{ data: User }>('/users', form);
+  const { data } = await api.post<{ data: User }>('/users', {
+    name: form.name,
+    email: form.email,
+    role: form.role,
+  });
   return data.data;
 };
 

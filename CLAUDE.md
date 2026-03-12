@@ -139,6 +139,110 @@ export const UserCard: FC<UserCardProps> = ({ userId, className }) => {
 
 ---
 
+## Forms (React Hook Form + Zod)
+
+All forms use **React Hook Form** with **Zod** validation via `@hookform/resolvers`.
+
+### Setup
+
+```ts
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+```
+
+### Schema (`validations/[feature].schema.ts`)
+
+- Define the Zod schema and derive the TypeScript type with `z.infer`.
+- For forms with `confirmPassword`, use `.refine()` on the object schema.
+- Client-side schema (with `confirmPassword`) is separate from the server-side schema (token + password only).
+
+```ts
+// validations/user.schema.ts
+export const setupPasswordClientSchema = z
+  .object({
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(/[A-Z]/, 'Must contain an uppercase letter')
+      .regex(/[a-z]/, 'Must contain a lowercase letter')
+      .regex(/[0-9]/, 'Must contain a number')
+      .regex(/[^A-Za-z0-9]/, 'Must contain a special character'),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
+
+export type SetupPasswordClientInput = z.infer<typeof setupPasswordClientSchema>;
+```
+
+### Form Component Pattern
+
+Use the ShadCN `Form` components from `components/ui/form.tsx` (built on React Hook Form's `FormProvider` + `Controller`):
+
+```tsx
+'use client';
+
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { mySchema, type MyInput } from '@/validations/my.schema';
+
+export const MyForm = () => {
+  const form = useForm<MyInput>({
+    resolver: zodResolver(mySchema),
+    defaultValues: { fieldName: '' },
+  });
+
+  const onSubmit = async (values: MyInput) => {
+    // call mutation or service
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="fieldName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Field Label</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="..." />
+              </FormControl>
+              <FormDescription>Helper text.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" disabled={form.formState.isSubmitting}>Submit</Button>
+      </form>
+    </Form>
+  );
+};
+```
+
+### Rules
+
+- Always use `zodResolver` — never validate manually inside submit handlers.
+- Derive TypeScript types from Zod schemas via `z.infer<typeof schema>` — never duplicate type definitions.
+- Use `<FormMessage />` for field-level errors — it reads from the form state automatically.
+- Use `<FormDescription />` for hint text (e.g. password requirements).
+- Pass `disabled={mutation.isPending}` to inputs and the submit button during async submission.
+- Pair forms with TanStack Query mutations: call `mutation.mutateAsync(values)` inside `onSubmit`.
+
+---
+
 ## Data Fetching Rules
 
 ### Axios (`lib/axios.ts`)

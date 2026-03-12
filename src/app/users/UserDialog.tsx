@@ -50,6 +50,11 @@ export const UserDialog: FC<UserDialogProps> = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
+          {!editingUser && (
+            <p className="text-sm text-muted-foreground mt-1">
+              An onboarding email with a setup link will be sent to the user.
+            </p>
+          )}
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="space-y-4 py-2">
@@ -92,20 +97,21 @@ export const UserDialog: FC<UserDialogProps> = ({
             </Select>
           </FormField>
 
-          <FormField
-            label="Password"
-            htmlFor="password"
-            hint={editingUser ? '(leave blank to keep current)' : undefined}
-          >
-            <Input
-              id="password"
-              type="password"
-              required={!editingUser}
-              placeholder="••••••••"
-              value={form.password}
-              onChange={(e) => set({ password: e.target.value })}
-            />
-          </FormField>
+          {editingUser && (
+            <FormField
+              label="Password"
+              htmlFor="password"
+              hint="(leave blank to keep current)"
+            >
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={form.password}
+                onChange={(e) => set({ password: e.target.value })}
+              />
+            </FormField>
+          )}
 
           {error && (
             <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
