@@ -1,47 +1,42 @@
 'use client';
 
 import { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { api } from '@/lib/axios';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { useAuth } from '@/hooks/use-auth';
+import { setupPasswordClientSchema, type SetupPasswordClientInput } from '@/validations/user.schema';
 
 function ResetPasswordForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token') ?? '';
+  const { resetPassword } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const form = useForm<SetupPasswordClientInput>({
+    resolver: zodResolver(setupPasswordClientSchema),
+    defaultValues: { password: '', confirmPassword: '' },
+  });
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (password !== confirm) {
-      setError('Passwords do not match.');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      await api.post('/api/auth/reset-password', { token, password });
-      setSuccess(true);
-      setTimeout(() => router.push('/login'), 2500);
-    } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : 'Failed to reset password. Please try again.';
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const onSubmit = async (values: SetupPasswordClientInput) => {
+    await resetPassword.mutateAsync({ token, password: values.password });
+  };
 
   if (!token) {
     return (
@@ -56,51 +51,77 @@ function ResetPasswordForm() {
     );
   }
 
-  if (success) {
-    return (
-      <p className="text-sm text-center text-muted-foreground">
-        Password reset successfully! Redirecting to login...
-      </p>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="password">New Password</Label>
-        <Input
-          id="password"
-          type="password"
-          required
-          minLength={8}
-          placeholder="••••••••"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>New Password</FormLabel>
+              <FormControl>
+                <div className="relative">
+                  <Input
+                    {...field}
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    disabled={resetPassword.isPending}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </FormControl>
+              <FormDescription className="text-xs">
+                Must be at least 8 characters with uppercase, lowercase, number, and special character.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="confirm">Confirm Password</Label>
-        <Input
-          id="confirm"
-          type="password"
-          required
-          placeholder="••••••••"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
+        <FormField
+          control={form.control}
+          name="confirmPassword"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Confirm Password</FormLabel>
+              <FormControl>
+                <div className="relative">
+                  <Input
+                    {...field}
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    disabled={resetPassword.isPending}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      {error && (
-        <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
-          {error}
-        </p>
-      )}
-
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? 'Resetting...' : 'Reset Password'}
-      </Button>
-    </form>
+        <Button type="submit" className="w-full" disabled={resetPassword.isPending}>
+          {resetPassword.isPending ? 'Resetting...' : 'Reset Password'}
+        </Button>
+      </form>
+    </Form>
   );
 }
 
