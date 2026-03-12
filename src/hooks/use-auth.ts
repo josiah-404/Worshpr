@@ -1,7 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-
 import { api } from '@/lib/axios';
 
 export const useAuth = () => {
@@ -14,7 +13,7 @@ export const useAuth = () => {
     },
     onSuccess: () => {
       toast.success('Password set successfully!');
-      setTimeout(() => router.push('/login'), 2000);
+      setTimeout(() => router.push('/auth/login'), 2000);
     },
     onError: (err: Error) => {
       toast.error('Failed to set password', { description: err.message });
@@ -28,7 +27,7 @@ export const useAuth = () => {
     },
     onSuccess: () => {
       toast.success('Password reset successfully!');
-      setTimeout(() => router.push('/login'), 2000);
+      setTimeout(() => router.push('/auth/login'), 2000);
     },
     onError: (err: Error) => {
       toast.error('Failed to reset password', { description: err.message });
