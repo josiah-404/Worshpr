@@ -51,7 +51,7 @@ function BgThumb({ bgCls, label, selected, onClick }: BgThumbProps) {
       onClick={onClick}
       className={`relative rounded-md overflow-hidden transition-all ${
         selected
-          ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-background'
+          ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
           : 'opacity-60 hover:opacity-100'
       }`}
       style={{ aspectRatio: '16/5' }}
@@ -172,7 +172,7 @@ export const PreviewPanel: FC<PreviewPanelProps> = ({
           </p>
           <button
             onClick={() => setBgDialogOpen(true)}
-            className='flex items-center gap-0.5 text-[10px] text-indigo-400 hover:text-indigo-300 transition-colors'
+            className='flex items-center gap-0.5 text-[10px] text-primary hover:text-primary/80 transition-colors'
           >
             <LayoutGrid className='h-2.5 w-2.5' />
             See all
@@ -203,7 +203,7 @@ export const PreviewPanel: FC<PreviewPanelProps> = ({
               onClick={() => onChangeTr(tr.id)}
               className={`rounded-md py-1.5 text-xs font-medium transition-colors ${
                 transitionId === tr.id
-                  ? 'bg-indigo-500 text-white'
+                  ? 'bg-primary text-primary-foreground'
                   : 'border border-border text-muted-foreground hover:bg-accent/60 hover:text-foreground'
               }`}
             >
@@ -226,7 +226,7 @@ export const PreviewPanel: FC<PreviewPanelProps> = ({
                 onClick={() => onChangeTransSpeed(s.id)}
                 className={`rounded-md py-1.5 text-xs font-medium transition-colors ${
                   transSpeed === s.id
-                    ? 'bg-indigo-500 text-white'
+                    ? 'bg-primary text-primary-foreground'
                     : 'border border-border text-muted-foreground hover:bg-accent/60 hover:text-foreground'
                 }`}
               >
@@ -246,7 +246,7 @@ export const PreviewPanel: FC<PreviewPanelProps> = ({
                 onClick={() => onChangeAnimSpeed(s.id)}
                 className={`rounded-md py-1.5 text-xs font-medium transition-colors ${
                   animSpeed === s.id
-                    ? 'bg-indigo-500 text-white'
+                    ? 'bg-primary text-primary-foreground'
                     : 'border border-border text-muted-foreground hover:bg-accent/60 hover:text-foreground'
                 }`}
               >

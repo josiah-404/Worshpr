@@ -15,10 +15,12 @@ export const updateUser = async (
   id: string,
   form: Omit<UserFormState, 'password'> & { password?: string },
 ): Promise<User> => {
-  const body: Record<string, string> = {
+  const body: Record<string, string | undefined> = {
     name: form.name,
     email: form.email,
     role: form.role,
+    orgId: form.orgId || undefined,
+    title: form.title || undefined,
   };
   if (form.password) body.password = form.password;
 

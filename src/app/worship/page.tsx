@@ -36,7 +36,7 @@ export default async function WorshipPage() {
           </p>
         </div>
         <Link href='/worship/editor'>
-          <Button className='bg-indigo-500 hover:bg-indigo-600 text-white'>
+          <Button>
             <Plus className='mr-2 h-4 w-4' />
             New Presentation
           </Button>

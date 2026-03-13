@@ -7,7 +7,16 @@ export async function GET() {
   try {
     const users = await prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
-      select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        orgId: true,
+        title: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
     const serialized = users.map((u) => ({ ...u, id: u.id.toString() }));
     return NextResponse.json({ data: serialized }, { status: 200 });
@@ -25,12 +34,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { name, email, password, role } = parsed.data;
+    const { name, email, password, role, orgId, title } = parsed.data;
     const hashed = await bcrypt.hash(password, 10);
 
     const user = await prisma.user.create({
-      data: { name, email, password: hashed, role },
-      select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true },
+      data: {
+        name,
+        email,
+        password: hashed,
+        role,
+        orgId: role === 'super_admin' ? null : (orgId || null),
+        title: title ?? null,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        orgId: true,
+        title: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
     return NextResponse.json({ data: { ...user, id: user.id.toString() } }, { status: 201 });

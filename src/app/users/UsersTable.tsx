@@ -6,24 +6,34 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useUsers, EMPTY_USER_FORM } from '@/hooks/useUsers';
 import { UserDialog } from '@/app/users/UserDialog';
-import type { User, UserFormState } from '@/types';
+import type { User, UserFormState, Organization } from '@/types';
 
 interface UsersTableProps {
   initialUsers: User[];
+  organizations: Organization[];
 }
 
 const ROLE_BADGE_CLASS: Record<string, string> = {
-  ADMIN: 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/20',
-  MEDIA: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/20',
+  super_admin: 'bg-purple-500/20 text-purple-400 border-purple-500/30 hover:bg-purple-500/20',
+  org_admin:   'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/20',
+  officer:     'bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/20',
 };
 
-export const UsersTable: FC<UsersTableProps> = ({ initialUsers }) => {
+const ROLE_LABEL: Record<string, string> = {
+  super_admin: 'Super Admin',
+  org_admin:   'Org Admin',
+  officer:     'Officer',
+};
+
+export const UsersTable: FC<UsersTableProps> = ({ initialUsers, organizations }) => {
   const { users, loading, error, setError, createUser, updateUser, deleteUser } =
     useUsers(initialUsers);
 
   const [open, setOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [form, setForm] = useState<UserFormState>(EMPTY_USER_FORM);
+
+  const orgMap = Object.fromEntries(organizations.map((o) => [o.id, o.name]));
 
   function openCreate() {
     setEditingUser(null);
@@ -34,7 +44,14 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers }) => {
 
   function openEdit(user: User) {
     setEditingUser(user);
-    setForm({ name: user.name, email: user.email, role: user.role, password: '' });
+    setForm({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      password: '',
+      orgId: user.orgId ?? '',
+      title: user.title ?? '',
+    });
     setError('');
     setOpen(true);
   }
@@ -57,7 +74,7 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers }) => {
     <>
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-muted-foreground">
-          {users.length} member{users.length !== 1 ? 's' : ''}
+          {users.length} user{users.length !== 1 ? 's' : ''}
         </p>
         <Button onClick={openCreate} size="sm">
           <PlusCircle className="mr-2 h-4 w-4" /> Add User
@@ -70,7 +87,9 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers }) => {
             <tr className="text-muted-foreground uppercase text-xs tracking-wider">
               <th className="px-6 py-3 text-left font-medium">Name</th>
               <th className="px-6 py-3 text-left font-medium">Email</th>
+              <th className="px-6 py-3 text-left font-medium">Organization</th>
               <th className="px-6 py-3 text-left font-medium">Role</th>
+              <th className="px-6 py-3 text-left font-medium">Title</th>
               <th className="px-6 py-3 text-left font-medium">Joined</th>
               <th className="px-6 py-3 text-right font-medium">Actions</th>
             </tr>
@@ -78,7 +97,7 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers }) => {
           <tbody className="divide-y divide-border">
             {users.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
+                <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
                   No users yet. Add your first team member.
                 </td>
               </tr>
@@ -87,10 +106,16 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers }) => {
               <tr key={user.id} className="hover:bg-muted/30 transition-colors">
                 <td className="px-6 py-4 font-medium">{user.name}</td>
                 <td className="px-6 py-4 text-muted-foreground">{user.email}</td>
+                <td className="px-6 py-4 text-muted-foreground">
+                  {user.orgId ? orgMap[user.orgId] ?? '—' : '—'}
+                </td>
                 <td className="px-6 py-4">
                   <Badge variant="outline" className={ROLE_BADGE_CLASS[user.role]}>
-                    {user.role}
+                    {ROLE_LABEL[user.role] ?? user.role}
                   </Badge>
+                </td>
+                <td className="px-6 py-4 text-muted-foreground">
+                  {user.title ?? '—'}
                 </td>
                 <td className="px-6 py-4 text-muted-foreground">
                   {new Date(user.createdAt).toLocaleDateString()}
@@ -123,6 +148,7 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers }) => {
         onSubmit={handleSubmit}
         loading={loading}
         error={error}
+        organizations={organizations}
       />
     </>
   );

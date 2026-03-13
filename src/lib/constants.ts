@@ -1,14 +1,35 @@
 export const QUERY_KEYS = {
   USERS: 'users',
+  ORGANIZATIONS: 'organizations',
   PRESENTATIONS: 'presentations',
   PRESENTATION: 'presentation',
 } as const;
 
+export const OFFICER_TITLES = [
+  'President',
+  'Vice President',
+  'Secretary',
+  'Treasurer',
+  'Auditor',
+  'PIO',
+  'Program Co.',
+  'Intercessory Co.',
+  'Media Co.',
+  'Music Co.',
+  'Technical Co.',
+  'Business Manager',
+  'Other',
+] as const;
+
+export type OfficerTitle = (typeof OFFICER_TITLES)[number];
+
 export const EMPTY_USER_FORM = {
   name: '',
   email: '',
-  role: 'MEDIA' as const,
+  role: 'officer' as const,
   password: '',
+  orgId: '',
+  title: '',
 };
 
 export const SPEEDS = [
@@ -109,7 +130,7 @@ export const BACKGROUNDS = [
 export type BackgroundId = (typeof BACKGROUNDS)[number]["id"];
 
 export const BG_BADGE_COLORS: Record<string, string> = {
-  "deep-space":     "bg-indigo-500/15 text-indigo-400",
+  "deep-space":     "bg-primary/15 text-primary",
   "aurora":         "bg-emerald-500/15 text-emerald-400",
   "sunset":         "bg-orange-500/15 text-orange-400",
   "holy-fire":      "bg-red-500/15 text-red-400",

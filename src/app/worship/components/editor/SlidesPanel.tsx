@@ -38,7 +38,7 @@ export const SlidesPanel: FC<SlidesPanelProps> = ({
                 onClick={() => onGoTo(i)}
                 className={`w-full text-left rounded-md px-3 py-2 text-xs leading-snug transition-colors ${
                   i === current
-                    ? 'bg-indigo-500/15 border border-indigo-500/30 text-foreground'
+                    ? 'bg-primary/15 border border-primary/30 text-foreground'
                     : 'border border-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground'
                 }`}
               >

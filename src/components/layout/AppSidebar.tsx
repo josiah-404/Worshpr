@@ -1,6 +1,7 @@
 'use client';
 
-import { LayoutDashboard, Users, Monitor, Music2 } from 'lucide-react';
+import { LayoutDashboard, Users, Monitor, Flame, Building2 } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 
 import { NavMain } from '@/components/layout/NavMain';
 import { NavUser } from '@/components/layout/NavUser';
@@ -15,21 +16,25 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar';
 
-const navGroups = [
+const ALL_NAV_GROUPS = [
   {
     label: 'Home',
+    roles: ['super_admin', 'org_admin', 'officer'],
     items: [
       { title: 'Dashboard', url: '/', icon: LayoutDashboard },
     ],
   },
   {
     label: 'Management',
+    roles: ['super_admin', 'org_admin'],
     items: [
+      { title: 'Organizations', url: '/organizations', icon: Building2 },
       { title: 'User Management', url: '/users', icon: Users },
     ],
   },
   {
     label: 'Modules',
+    roles: ['super_admin', 'org_admin', 'officer'],
     items: [
       {
         title: 'Worship Screen',
@@ -47,6 +52,10 @@ const navGroups = [
 export default function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
+  const { data: session } = useSession();
+  const role = session?.user?.role ?? 'officer';
+  const navGroups = ALL_NAV_GROUPS.filter((g) => g.roles.includes(role));
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -54,11 +63,11 @@ export default function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <a href="/">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-indigo-500">
-                  <Music2 className="size-4 text-white" />
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary">
+                  <Flame className="size-4 text-primary-foreground" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">WorShipr</span>
+                  <span className="truncate font-semibold tracking-wide">EMBR</span>
                   <span className="truncate text-xs text-muted-foreground">
                     Worship App
                   </span>

@@ -174,7 +174,7 @@ function WorshipEditorInner() {
           <SaveButton onSave={handleSave} isSaving={isSaving} saved={saved} />
           <button
             onClick={openPresenter}
-            className='inline-flex items-center gap-2 rounded-md bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-600 transition-colors'
+            className='inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors'
           >
             <Tv2 className='h-4 w-4' />
             Open Presenter

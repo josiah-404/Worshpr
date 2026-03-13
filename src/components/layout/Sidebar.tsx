@@ -6,8 +6,9 @@ import { signOut, useSession } from "next-auth/react";
 import {
   LayoutDashboard,
   Users,
-  Music2,
+  Flame,
   Monitor,
+  Building2,
   LogOut,
   Settings,
   HelpCircle,
@@ -19,21 +20,25 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
 
 /* ── Nav structure ───────────────────────────────────────────── */
-const navGroups = [
+const ALL_NAV_GROUPS = [
   {
     label: "Home",
+    roles: ['super_admin', 'org_admin', 'officer'],
     items: [
       { href: "/",      label: "Dashboard",       icon: LayoutDashboard },
     ],
   },
   {
     label: "Management",
+    roles: ['super_admin', 'org_admin'],
     items: [
+      { href: "/organizations", label: "Organizations", icon: Building2 },
       { href: "/users", label: "User Management", icon: Users },
     ],
   },
   {
     label: "Modules",
+    roles: ['super_admin', 'org_admin', 'officer'],
     items: [
       { href: "/worship", label: "Worship Screen", icon: Monitor },
     ],
@@ -45,6 +50,9 @@ export default function Sidebar() {
   const pathname        = usePathname();
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
+
+  const role = session?.user?.role ?? 'officer';
+  const navGroups = ALL_NAV_GROUPS.filter((g) => g.roles.includes(role));
 
   const initials = session?.user?.name
     ?.split(" ")
@@ -58,12 +66,10 @@ export default function Sidebar() {
 
       {/* ── Logo ──────────────────────────────────────────── */}
       <div className="flex items-center gap-2.5 px-4 h-14 border-b border-border">
-        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-indigo-500">
-          <Music2 className="h-3.5 w-3.5 text-white" />
+        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary">
+          <Flame className="h-3.5 w-3.5 text-primary-foreground" />
         </div>
-        <span className="text-sm font-semibold tracking-tight">
-          Wor<span className="text-indigo-400">Shipr</span>
-        </span>
+        <span className="text-sm font-semibold tracking-wide">EMBR</span>
       </div>
 
       {/* ── Navigation ────────────────────────────────────── */}
@@ -124,7 +130,7 @@ export default function Sidebar() {
       <div className="border-t border-border px-2 py-3">
         <div className="flex items-center gap-2.5 rounded-md px-2 py-1.5 group">
           {/* Avatar */}
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-400 text-xs font-semibold">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary text-xs font-semibold">
             {initials}
           </div>
 

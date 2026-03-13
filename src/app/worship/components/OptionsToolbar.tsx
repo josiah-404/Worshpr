@@ -35,7 +35,7 @@ export function OptionsToolbar({
               onClick={() => onChangeBg(bg.id)}
               className={`relative h-6 w-14 rounded overflow-hidden transition-all ${bg.cls} ${
                 bgId === bg.id
-                  ? "ring-2 ring-indigo-500 ring-offset-1 ring-offset-background"
+                  ? "ring-2 ring-primary ring-offset-1 ring-offset-background"
                   : "opacity-55 hover:opacity-100"
               }`}
             >
@@ -47,7 +47,7 @@ export function OptionsToolbar({
         </div>
         <button
           onClick={onOpenBgPicker}
-          className="flex items-center gap-0.5 text-[10px] text-indigo-400 hover:text-indigo-300 transition-colors"
+          className="flex items-center gap-0.5 text-[10px] text-primary hover:text-primary/80 transition-colors"
         >
           <LayoutGrid className="h-2.5 w-2.5" />more
         </button>
@@ -65,7 +65,7 @@ export function OptionsToolbar({
               onClick={() => onChangeTr(tr.id)}
               className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
                 transitionId === tr.id
-                  ? "bg-indigo-500 text-white"
+                  ? "bg-primary text-primary-foreground"
                   : "border border-border text-muted-foreground hover:bg-accent/60 hover:text-foreground"
               }`}
             >
@@ -88,7 +88,7 @@ export function OptionsToolbar({
               style={{ fontFamily: f.family }}
               className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
                 fontId === f.id
-                  ? "bg-indigo-500 text-white"
+                  ? "bg-primary text-primary-foreground"
                   : "border border-border text-muted-foreground hover:bg-accent/60 hover:text-foreground"
               }`}
             >
@@ -110,7 +110,7 @@ export function OptionsToolbar({
               onClick={() => onChangeSize(s.id)}
               className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
                 sizeId === s.id
-                  ? "bg-indigo-500 text-white"
+                  ? "bg-primary text-primary-foreground"
                   : "border border-border text-muted-foreground hover:bg-accent/60 hover:text-foreground"
               }`}
             >

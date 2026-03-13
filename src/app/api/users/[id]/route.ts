@@ -12,17 +12,30 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { name, email, role, password } = parsed.data;
-    const data: Record<string, unknown> = { name, email, role };
+    const { name, email, role, orgId, title, password } = parsed.data;
+    const data: Record<string, unknown> = {
+      name,
+      email,
+      role,
+      orgId: role === 'super_admin' ? null : (orgId ?? null),
+      title: role === 'officer' ? (title ?? null) : null,
+    };
 
-    if (password) {
-      data.password = await bcrypt.hash(password, 10);
-    }
+    if (password) data.password = await bcrypt.hash(password, 10);
 
     const user = await prisma.user.update({
       where: { id: params.id },
       data,
-      select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        orgId: true,
+        title: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
     return NextResponse.json({ data: user }, { status: 200 });
