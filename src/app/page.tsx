@@ -4,7 +4,7 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-xl font-semibold">Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Welcome to WorShipr — your worship media team portal.
+          Welcome to EMBR — your worship media team portal.
         </p>
       </div>
     </div>

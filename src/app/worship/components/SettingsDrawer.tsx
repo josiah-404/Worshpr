@@ -62,7 +62,7 @@ export function SettingsDrawer({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
           <div className="flex items-center gap-2">
-            <SlidersHorizontal className="h-4 w-4 text-indigo-400" />
+            <SlidersHorizontal className="h-4 w-4 text-primary" />
             <span className="text-sm font-semibold">Presentation Settings</span>
           </div>
           <button
@@ -82,7 +82,7 @@ export function SettingsDrawer({
             {mode === "editor" ? (
               <button
                 onClick={() => { onOpenPresenter(); onClose(); }}
-                className="w-full flex items-center justify-center gap-2 rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-600 transition-colors"
+                className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 <Tv2 className="h-4 w-4" />Open Presenter
               </button>
@@ -102,7 +102,7 @@ export function SettingsDrawer({
               <SectionLabel>Background</SectionLabel>
               <button
                 onClick={() => { onOpenBgPicker(); onClose(); }}
-                className="flex items-center gap-1 text-[10px] text-indigo-400 hover:text-indigo-300 transition-colors -mt-2"
+                className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 transition-colors -mt-2"
               >
                 <LayoutGrid className="h-2.5 w-2.5" />See all
               </button>
@@ -114,7 +114,7 @@ export function SettingsDrawer({
                   onClick={() => onChangeBg(bg.id)}
                   className={`relative h-10 rounded-md overflow-hidden transition-all animations-paused ${bg.cls} ${
                     bgId === bg.id
-                      ? "ring-2 ring-indigo-500 ring-offset-2 ring-offset-card"
+                      ? "ring-2 ring-primary ring-offset-2 ring-offset-card"
                       : "opacity-55 hover:opacity-100"
                   }`}
                 >
@@ -136,7 +136,7 @@ export function SettingsDrawer({
                   onClick={() => onChangeTr(tr.id)}
                   className={`rounded-md py-2 text-xs font-medium transition-colors ${
                     transitionId === tr.id
-                      ? "bg-indigo-500 text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "border border-border text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                   }`}
                 >
@@ -156,7 +156,7 @@ export function SettingsDrawer({
                   onClick={() => onChangeTransSpeed(s.id)}
                   className={`flex-1 rounded-md py-2 text-xs font-medium transition-colors ${
                     transSpeed === s.id
-                      ? "bg-indigo-500 text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "border border-border text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                   }`}
                 >
@@ -176,7 +176,7 @@ export function SettingsDrawer({
                   onClick={() => onChangeAnimSpeed(s.id)}
                   className={`flex-1 rounded-md py-2 text-xs font-medium transition-colors ${
                     animSpeed === s.id
-                      ? "bg-indigo-500 text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "border border-border text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                   }`}
                 >
@@ -197,7 +197,7 @@ export function SettingsDrawer({
                   style={{ fontFamily: f.family }}
                   className={`w-full rounded-md px-3 py-2 text-sm text-left transition-colors ${
                     fontId === f.id
-                      ? "bg-indigo-500/15 border border-indigo-500/30 text-foreground"
+                      ? "bg-primary/15 border border-primary/30 text-foreground"
                       : "border border-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                   }`}
                 >
@@ -217,7 +217,7 @@ export function SettingsDrawer({
                   onClick={() => onChangeSize(s.id)}
                   className={`rounded-md py-2 text-xs font-semibold transition-colors ${
                     sizeId === s.id
-                      ? "bg-indigo-500 text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "border border-border text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                   }`}
                 >

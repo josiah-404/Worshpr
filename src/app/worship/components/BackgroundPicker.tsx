@@ -44,7 +44,7 @@ export function BackgroundPicker({ open, selected, onSelect, onClose }: Backgrou
                 onClick={() => { onSelect(bg.id); onClose(); }}
                 className={`group relative rounded-lg overflow-hidden transition-all focus:outline-none ${
                   isSelected
-                    ? "ring-2 ring-indigo-500 ring-offset-2 ring-offset-card"
+                    ? "ring-2 ring-primary ring-offset-2 ring-offset-card"
                     : "opacity-75 hover:opacity-100 hover:ring-1 hover:ring-white/20"
                 }`}
               >
@@ -53,7 +53,7 @@ export function BackgroundPicker({ open, selected, onSelect, onClose }: Backgrou
                   <p className="text-xs font-medium text-center truncate">{bg.label}</p>
                 </div>
                 {isSelected && (
-                  <div className="absolute top-1.5 right-1.5 h-4 w-4 rounded-full bg-indigo-500 flex items-center justify-center">
+                  <div className="absolute top-1.5 right-1.5 h-4 w-4 rounded-full bg-primary flex items-center justify-center">
                     <Check className="h-2.5 w-2.5 text-white" />
                   </div>
                 )}

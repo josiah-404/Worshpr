@@ -41,7 +41,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center">
           <h1 className="text-4xl font-bold tracking-tight">
-            Wor<span className="text-indigo-400">Shipr</span>
+            <span className="text-primary tracking-wide">EMBR</span>
           </h1>
           <p className="text-muted-foreground mt-2 text-sm">Worship Media Team Portal</p>
         </div>

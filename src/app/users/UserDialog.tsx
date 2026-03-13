@@ -1,6 +1,6 @@
 'use client';
 
-import { type FC } from 'react';
+import { useState, useEffect, type FC } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FormField } from '@/components/ui/form-field';
@@ -18,9 +18,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { User, UserFormState } from '@/types';
+import { OFFICER_TITLES } from '@/lib/constants';
+import type { User, UserFormState, Organization } from '@/types';
 
-const ROLES = ['ADMIN', 'MEDIA'] as const;
+const ROLES: { value: UserFormState['role']; label: string }[] = [
+  { value: 'super_admin', label: 'Super Admin' },
+  { value: 'org_admin',   label: 'Org Admin'   },
+  { value: 'officer',     label: 'Officer'      },
+];
+
+const PREDEFINED_TITLES = OFFICER_TITLES.filter((t) => t !== 'Other') as readonly string[];
 
 interface UserDialogProps {
   open: boolean;
@@ -31,6 +38,7 @@ interface UserDialogProps {
   onSubmit: (e: React.FormEvent) => void;
   loading: boolean;
   error: string;
+  organizations: Organization[];
 }
 
 export const UserDialog: FC<UserDialogProps> = ({
@@ -42,8 +50,35 @@ export const UserDialog: FC<UserDialogProps> = ({
   onSubmit,
   loading,
   error,
+  organizations,
 }) => {
   const set = (patch: Partial<UserFormState>) => onFormChange({ ...form, ...patch });
+
+  // Local state to track what's selected in the title dropdown
+  const [titleSelectValue, setTitleSelectValue] = useState('');
+
+  // Sync dropdown selection whenever the dialog opens
+  useEffect(() => {
+    if (!open) return;
+    if (!form.title) {
+      setTitleSelectValue('');
+    } else if (PREDEFINED_TITLES.includes(form.title)) {
+      setTitleSelectValue(form.title);
+    } else {
+      setTitleSelectValue('other');
+    }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const needsOrg = form.role !== 'super_admin';
+
+  function handleTitleSelectChange(value: string) {
+    setTitleSelectValue(value);
+    if (value === 'other') {
+      set({ title: '' }); // clear so user types their own
+    } else {
+      set({ title: value });
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -77,20 +112,81 @@ export const UserDialog: FC<UserDialogProps> = ({
           <FormField label="Role">
             <Select
               value={form.role}
-              onValueChange={(v) => set({ role: v as UserFormState['role'] })}
+              onValueChange={(v) =>
+                set({
+                  role: v as UserFormState['role'],
+                  orgId: v === 'super_admin' ? '' : form.orgId,
+                  title: v !== 'officer' ? '' : form.title,
+                })
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>
                 {ROLES.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
+                  <SelectItem key={r.value} value={r.value}>
+                    {r.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </FormField>
+
+          {needsOrg && (
+            <FormField label="Organization">
+              <Select
+                required
+                value={form.orgId}
+                onValueChange={(v) => set({ orgId: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {organizations.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+          )}
+
+          {form.role === 'officer' && (
+            <>
+              <FormField label="Title">
+                <Select
+                  value={titleSelectValue}
+                  onValueChange={handleTitleSelectChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select title" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {OFFICER_TITLES.map((t) => (
+                      <SelectItem key={t} value={t === 'Other' ? 'other' : t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+
+              {titleSelectValue === 'other' && (
+                <FormField label="Specify Title" htmlFor="title-custom">
+                  <Input
+                    id="title-custom"
+                    required
+                    placeholder="e.g. Worship Leader"
+                    value={form.title}
+                    onChange={(e) => set({ title: e.target.value })}
+                  />
+                </FormField>
+              )}
+            </>
+          )}
 
           <FormField
             label="Password"

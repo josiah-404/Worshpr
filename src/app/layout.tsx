@@ -8,7 +8,7 @@ import ConditionalLayout from '@/components/layout/ConditionalLayout';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'WorShipr',
+  title: 'EMBR',
   description: 'Worship presentation app for the media team',
 };
 
