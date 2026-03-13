@@ -28,8 +28,8 @@ const ALL_NAV_GROUPS = [
     label: 'Management',
     roles: ['super_admin', 'org_admin'],
     items: [
-      { title: 'Organizations', url: '/organizations', icon: Building2 },
-      { title: 'User Management', url: '/users', icon: Users },
+      { title: 'Organizations', url: '/organizations', icon: Building2, roles: ['super_admin'] },
+      { title: 'User Management', url: '/users', icon: Users, roles: ['super_admin', 'org_admin'] },
     ],
   },
   {
@@ -54,7 +54,13 @@ export default function AppSidebar({
 }: React.ComponentProps<typeof Sidebar>) {
   const { data: session } = useSession();
   const role = session?.user?.role ?? 'officer';
-  const navGroups = ALL_NAV_GROUPS.filter((g) => g.roles.includes(role));
+  const navGroups = ALL_NAV_GROUPS
+    .filter((g) => g.roles.includes(role))
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((item) => !('roles' in item) || (item.roles as string[]).includes(role)),
+    }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <Sidebar collapsible="icon" {...props}>
