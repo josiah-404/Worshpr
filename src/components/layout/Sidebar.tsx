@@ -25,22 +25,22 @@ const ALL_NAV_GROUPS = [
     label: "Home",
     roles: ['super_admin', 'org_admin', 'officer'],
     items: [
-      { href: "/",      label: "Dashboard",       icon: LayoutDashboard },
+      { href: "/",      label: "Dashboard",       icon: LayoutDashboard, roles: ['super_admin', 'org_admin', 'officer'] },
     ],
   },
   {
     label: "Management",
     roles: ['super_admin', 'org_admin'],
     items: [
-      { href: "/organizations", label: "Organizations", icon: Building2 },
-      { href: "/users", label: "User Management", icon: Users },
+      { href: "/organizations", label: "Organizations", icon: Building2, roles: ['super_admin'] },
+      { href: "/users", label: "User Management", icon: Users, roles: ['super_admin', 'org_admin'] },
     ],
   },
   {
     label: "Modules",
     roles: ['super_admin', 'org_admin', 'officer'],
     items: [
-      { href: "/worship", label: "Worship Screen", icon: Monitor },
+      { href: "/worship", label: "Worship Screen", icon: Monitor, roles: ['super_admin', 'org_admin', 'officer'] },
     ],
   },
 ];
@@ -52,7 +52,10 @@ export default function Sidebar() {
   const { theme, setTheme } = useTheme();
 
   const role = session?.user?.role ?? 'officer';
-  const navGroups = ALL_NAV_GROUPS.filter((g) => g.roles.includes(role));
+  const navGroups = ALL_NAV_GROUPS
+    .filter((g) => g.roles.includes(role))
+    .map((g) => ({ ...g, items: g.items.filter((item) => item.roles.includes(role)) }))
+    .filter((g) => g.items.length > 0);
 
   const initials = session?.user?.name
     ?.split(" ")

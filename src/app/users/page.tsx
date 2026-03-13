@@ -1,3 +1,5 @@
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { UsersTable } from './UsersTable';
 import type { User, Organization } from '@/types';
@@ -6,10 +8,19 @@ import type { User as PrismaUser } from '@/generated/prisma';
 export const dynamic = 'force-dynamic';
 
 export default async function UsersPage() {
+  const session = await getServerSession(authOptions);
+  const isOrgAdmin = session?.user?.role === 'org_admin';
+  const orgId = session?.user?.orgId ?? null;
+
+  const userWhere = isOrgAdmin && orgId ? { orgId } : undefined;
+  const orgWhere = isOrgAdmin && orgId
+    ? { isActive: true, id: orgId }
+    : { isActive: true };
+
   const [rawUsers, rawOrgs] = await Promise.all([
-    prisma.user.findMany({ orderBy: { createdAt: 'desc' } }),
+    prisma.user.findMany({ where: userWhere, orderBy: { createdAt: 'desc' } }),
     prisma.organization.findMany({
-      where: { isActive: true },
+      where: orgWhere,
       orderBy: { name: 'asc' },
       select: { id: true, name: true, logoUrl: true, isActive: true, createdAt: true, updatedAt: true },
     }),
