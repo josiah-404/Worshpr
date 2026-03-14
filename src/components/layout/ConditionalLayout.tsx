@@ -13,7 +13,7 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
   if (hideSidebar) return <>{children}</>;
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className="h-svh overflow-hidden">
       <AppSidebar />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
@@ -26,7 +26,7 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
             <OrgBar />
           </div>
         </header>
-        <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6 flex flex-col">
           {children}
         </div>
       </SidebarInset>
