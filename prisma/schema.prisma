@@ -12,8 +12,6 @@ datasource db {
 
 // ─── Models ────────────────────────────────────────────────────────────────
 
-<<<<<<< Updated upstream
-=======
 model Organization {
   id        String   @id @default(cuid())
   name      String
@@ -28,20 +26,23 @@ model Organization {
   @@map("organizations")
 }
 
->>>>>>> Stashed changes
 model User {
-  id            String    @id @default(cuid())
+  id            String        @id @default(cuid())
   name          String
-  email         String    @unique
+  email         String        @unique
   emailVerified DateTime?
   image         String?
   password      String?
-  role          UserRole  @default(MEDIA)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  role          UserRole      @default(MEDIA)
+  orgId         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
-  accounts Account[]
-  sessions Session[]
+  organization  Organization? @relation(fields: [orgId], references: [id])
+  accounts      Account[]
+  sessions      Session[]
+
+  @@map("users")
 }
 
 model Account {
@@ -141,7 +142,6 @@ model MediaFile {
   createdAt DateTime  @default(now())
 }
 
-/// Tracks daily AI search quota per organisation (keyed by a stable org identifier).
 model Event {
   id                   String    @id @default(cuid())
   orgId                String
@@ -183,11 +183,12 @@ model Registration {
   @@map("registrations")
 }
 
+/// Tracks daily AI search quota per organisation (keyed by a stable org identifier).
 model AiSearchQuota {
   id        String   @id @default(cuid())
   /// Stable key identifying the organisation (e.g. "org_default" until multi-tenancy is wired).
   orgKey    String   @unique
-  date      String /// ISO date string YYYY-MM-DD — resets when date changes.
+  date      String   /// ISO date string YYYY-MM-DD — resets when date changes.
   used      Int      @default(0)
   updatedAt DateTime @updatedAt
 }
