@@ -1,6 +1,11 @@
 'use client';
 
+<<<<<<< Updated upstream
 import { LayoutDashboard, Users, Monitor, Music2 } from 'lucide-react';
+=======
+import { LayoutDashboard, Users, Monitor, Flame, Building2, CalendarDays } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+>>>>>>> Stashed changes
 
 import { NavMain } from '@/components/layout/NavMain';
 import { NavUser } from '@/components/layout/NavUser';
@@ -31,6 +36,7 @@ const navGroups = [
   {
     label: 'Modules',
     items: [
+      { title: 'Events', url: '/events', icon: CalendarDays },
       {
         title: 'Worship Screen',
         url: '/worship',

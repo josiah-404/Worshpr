@@ -12,6 +12,23 @@ datasource db {
 
 // ─── Models ────────────────────────────────────────────────────────────────
 
+<<<<<<< Updated upstream
+=======
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  logoUrl   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users  User[]
+  events Event[]
+
+  @@map("organizations")
+}
+
+>>>>>>> Stashed changes
 model User {
   id            String    @id @default(cuid())
   name          String
@@ -125,6 +142,47 @@ model MediaFile {
 }
 
 /// Tracks daily AI search quota per organisation (keyed by a stable org identifier).
+model Event {
+  id                   String    @id @default(cuid())
+  orgId                String
+  theme                String
+  description          String?
+  type                 String    // "camp" | "fellowship" | "seminar"
+  venue                String?
+  isOngoing            Boolean   @default(false)
+  isOpen               Boolean   @default(false)
+  startDate            DateTime
+  endDate              DateTime
+  registrationDeadline DateTime?
+  registrationFee      Float     @default(0)
+  maxSlots             Int?
+  status               String    @default("draft") // draft | open | closed | cancelled | completed
+  coverImageUrl        String?
+  createdBy            String
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  organization  Organization   @relation(fields: [orgId], references: [id])
+  registrations Registration[]
+
+  @@map("events")
+}
+
+model Registration {
+  id        String   @id @default(cuid())
+  eventId   String
+  name      String
+  email     String
+  phone     String?
+  status    String   @default("pending") // pending | confirmed | cancelled
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("registrations")
+}
+
 model AiSearchQuota {
   id        String   @id @default(cuid())
   /// Stable key identifying the organisation (e.g. "org_default" until multi-tenancy is wired).

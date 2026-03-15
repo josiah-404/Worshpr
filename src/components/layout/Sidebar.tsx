@@ -13,7 +13,6 @@ import {
   HelpCircle,
   Sun,
   Moon,
-  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
