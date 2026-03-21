@@ -3,6 +3,9 @@ export const QUERY_KEYS = {
   ORGANIZATIONS: 'organizations',
   PRESENTATIONS: 'presentations',
   PRESENTATION: 'presentation',
+  EVENTS: 'events',
+  EVENT: 'event',
+  COLLABORATIONS: 'collaborations',
 } as const;
 
 export const OFFICER_TITLES = [

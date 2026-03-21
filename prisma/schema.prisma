@@ -13,14 +13,17 @@ datasource db {
 // ─── Models ────────────────────────────────────────────────────────────────
 
 model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  logoUrl   String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  slug        String?  @unique
+  description String?
+  logoUrl     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  users User[]
+  users              User[]
+  eventOrganizations EventOrganization[]
 
   @@map("organizations")
 }
@@ -44,6 +47,7 @@ model User {
   organization  Organization? @relation(fields: [orgId], references: [id])
   accounts      Account[]
   sessions      Session[]
+  createdEvents Event[]       @relation("CreatedEvents")
 
   @@map("users")
 }
@@ -155,6 +159,49 @@ model AiSearchQuota {
   updatedAt DateTime @updatedAt
 }
 
+model Event {
+  id                   String       @id @default(cuid())
+  title                String
+  slug                 String       @unique
+  description          String?      @db.Text
+  type                 EventType
+  venue                String?
+  startDate            DateTime
+  endDate              DateTime
+  registrationDeadline DateTime?
+  fee                  Float        @default(0)
+  maxSlots             Int?
+  status               EventStatus  @default(DRAFT)
+  coverImage           String?
+  createdBy            String
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  creator       User                @relation("CreatedEvents", fields: [createdBy], references: [id])
+  organizations EventOrganization[]
+
+  @@index([status, startDate])
+  @@map("events")
+}
+
+model EventOrganization {
+  id           String            @id @default(cuid())
+  eventId      String
+  orgId        String
+  role         EventOrgRole      @default(HOST)
+  inviteStatus EventInviteStatus @default(ACCEPTED)
+  invitedBy    String?
+  respondedAt  DateTime?
+  createdAt    DateTime          @default(now())
+
+  event        Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@unique([eventId, orgId])
+  @@index([orgId, inviteStatus])
+  @@map("event_organizations")
+}
+
 // ─── Enums ─────────────────────────────────────────────────────────────────
 
 enum ItemType {
@@ -170,4 +217,30 @@ enum MediaType {
   IMAGE
   VIDEO
   AUDIO
+}
+
+enum EventType {
+  CAMP
+  FELLOWSHIP
+  SEMINAR
+  WORSHIP_NIGHT
+}
+
+enum EventStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  CANCELLED
+  COMPLETED
+}
+
+enum EventOrgRole {
+  HOST
+  COLLABORATOR
+}
+
+enum EventInviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
 }

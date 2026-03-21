@@ -1,5 +1,7 @@
 import type { SongResult } from '@/types/worship.types';
 
+export type { EventType, EventStatus, EventOrgRole, EventInviteStatus, EventOrg, EventListItem, CollaborationInvite } from '@/types/event.types';
+
 export type OrgRole = 'super_admin' | 'org_admin' | 'officer';
 
 export interface Organization {
