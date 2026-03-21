@@ -48,9 +48,10 @@ export const EventsGrid: FC<EventsGridProps> = ({
   const [editingEvent, setEditingEvent] = useState<EventListItem | null>(null);
 
   const [invitePanelOpen, setInvitePanelOpen] = useState(false);
-  const [inviteEvent, setInviteEvent] = useState<EventListItem | null>(null);
+  const [inviteEventId, setInviteEventId] = useState<string | null>(null);
 
   const { data: events = initialEvents, isLoading } = useGetEvents(activeOrgId, initialEvents);
+  const inviteEvent = inviteEventId ? (events.find((e) => e.id === inviteEventId) ?? null) : null;
   const { mutate: deleteEvent, isPending: isDeleting } = useDeleteEvent();
 
   const canEdit = role !== 'officer';
@@ -94,7 +95,7 @@ export const EventsGrid: FC<EventsGridProps> = ({
   };
 
   const handleInvite = (event: EventListItem) => {
-    setInviteEvent(event);
+    setInviteEventId(event.id);
     setInvitePanelOpen(true);
   };
 
