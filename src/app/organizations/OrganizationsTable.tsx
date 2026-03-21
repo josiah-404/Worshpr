@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useOrganizations, EMPTY_ORG_FORM } from '@/hooks/useOrganizations';
+import { useConfirm } from '@/hooks/useConfirm';
 import { OrganizationDialog } from '@/app/organizations/OrganizationDialog';
 import type { OrganizationRow, OrganizationFormState } from '@/types';
 
@@ -23,6 +24,13 @@ export const OrganizationsTable: FC<OrganizationsTableProps> = ({ initialOrgs })
     updateOrganization,
     deleteOrganization,
   } = useOrganizations(initialOrgs);
+
+  const [confirm, ConfirmDialogEl] = useConfirm({
+    title: 'Delete Organization',
+    description: 'This will permanently delete the organization and cannot be undone.',
+    confirmLabel: 'Delete',
+    variant: 'destructive',
+  });
 
   const [open, setOpen] = useState(false);
   const [editingOrg, setEditingOrg] = useState<OrganizationRow | null>(null);
@@ -58,6 +66,12 @@ export const OrganizationsTable: FC<OrganizationsTableProps> = ({ initialOrgs })
 
   async function handleToggleActive(org: OrganizationRow) {
     await updateOrganization(org.id, { isActive: !org.isActive });
+  }
+
+  async function handleDelete(org: OrganizationRow) {
+    const ok = await confirm();
+    if (!ok) return;
+    await deleteOrganization(org.id);
   }
 
   return (
@@ -148,7 +162,7 @@ export const OrganizationsTable: FC<OrganizationsTableProps> = ({ initialOrgs })
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => deleteOrganization(org.id)}
+                      onClick={() => handleDelete(org)}
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -171,6 +185,8 @@ export const OrganizationsTable: FC<OrganizationsTableProps> = ({ initialOrgs })
         loading={loading}
         error={error}
       />
+
+      {ConfirmDialogEl}
     </>
   );
 };

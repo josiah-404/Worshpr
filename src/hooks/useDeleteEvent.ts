@@ -9,9 +9,8 @@ export function useDeleteEvent() {
 
   return useMutation<void, Error, string>({
     mutationFn: deleteEvent,
-    onSuccess: (_data, deletedId) => {
-      queryClient.removeQueries({ queryKey: [QUERY_KEYS.EVENT, deletedId] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.EVENTS] });
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: [QUERY_KEYS.EVENTS], type: 'active' });
     },
   });
 }

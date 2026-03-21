@@ -12,7 +12,6 @@ export function usePresentations(initialPresentations: Presentation[]) {
   const [deleting, setDeleting] = useState<string | null>(null);
 
   async function handleDeletePresentation(id: string) {
-    if (!confirm('Delete this presentation?')) return;
     setDeleting(id);
     try {
       await deletePresentation(id);

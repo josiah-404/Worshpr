@@ -16,8 +16,8 @@ export function useRespondToInvite() {
   return useMutation<void, Error, RespondPayload>({
     mutationFn: ({ eventId, orgId, status }) => respondToInvite(eventId, orgId, status),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.COLLABORATIONS] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.EVENTS] });
+      queryClient.refetchQueries({ queryKey: [QUERY_KEYS.COLLABORATIONS], type: 'active' });
+      queryClient.refetchQueries({ queryKey: [QUERY_KEYS.EVENTS], type: 'active' });
     },
   });
 }

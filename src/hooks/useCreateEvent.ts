@@ -12,7 +12,7 @@ export function useCreateEvent() {
   return useMutation<EventListItem, Error, CreateEventInput>({
     mutationFn: createEvent,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.EVENTS] });
+      queryClient.refetchQueries({ queryKey: [QUERY_KEYS.EVENTS], type: 'active' });
     },
   });
 }

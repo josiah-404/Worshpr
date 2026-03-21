@@ -5,6 +5,7 @@ import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useUsers, EMPTY_USER_FORM } from '@/hooks/useUsers';
+import { useConfirm } from '@/hooks/useConfirm';
 import { UserDialog } from '@/app/users/UserDialog';
 import type { User, UserFormState, Organization } from '@/types';
 
@@ -28,6 +29,13 @@ const ROLE_LABEL: Record<string, string> = {
 export const UsersTable: FC<UsersTableProps> = ({ initialUsers, organizations }) => {
   const { users, loading, error, setError, createUser, updateUser, deleteUser } =
     useUsers(initialUsers);
+
+  const [confirm, ConfirmDialogEl] = useConfirm({
+    title: 'Remove User',
+    description: 'This will permanently remove the user from the system.',
+    confirmLabel: 'Remove',
+    variant: 'destructive',
+  });
 
   const [open, setOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -68,6 +76,12 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers, organizations })
     } catch {
       // error is already set by the hook
     }
+  }
+
+  async function handleDelete(user: User) {
+    const ok = await confirm();
+    if (!ok) return;
+    await deleteUser(user.id);
   }
 
   return (
@@ -127,7 +141,7 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers, organizations })
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => deleteUser(user.id)}
+                    onClick={() => handleDelete(user)}
                     className="text-destructive hover:text-destructive hover:bg-destructive/10"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -150,6 +164,8 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers, organizations })
         error={error}
         organizations={organizations}
       />
+
+      {ConfirmDialogEl}
     </>
   );
 };

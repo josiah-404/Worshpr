@@ -47,7 +47,6 @@ export function useUsers(initialUsers: User[]) {
   }
 
   async function handleDeleteUser(id: string) {
-    if (!confirm('Are you sure you want to remove this user?')) return;
     try {
       await deleteUser(id);
       setUsers((prev) => prev.filter((u) => u.id !== id));
