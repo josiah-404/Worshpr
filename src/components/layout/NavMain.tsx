@@ -29,6 +29,7 @@ interface NavItem {
   title: string;
   url: string;
   icon: LucideIcon;
+  badge?: number;
   items?: NavSubItem[];
 }
 
@@ -57,6 +58,11 @@ export function NavMain({ label, items }: NavMainProps) {
                   <Link href={item.url}>
                     <item.icon />
                     <span>{item.title}</span>
+                    {item.badge != null && item.badge > 0 && (
+                      <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[11px] font-bold text-white">
+                        {item.badge}
+                      </span>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

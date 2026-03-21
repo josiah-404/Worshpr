@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 
 import { NavMain } from '@/components/layout/NavMain';
 import { NavUser } from '@/components/layout/NavUser';
+import { useCollaborationBadge } from '@/hooks/useCollaborationBadge';
 import {
   Sidebar,
   SidebarContent,
@@ -56,11 +57,17 @@ export default function AppSidebar({
 }: React.ComponentProps<typeof Sidebar>) {
   const { data: session } = useSession();
   const role = session?.user?.role ?? 'officer';
+  const collaborationBadge = useCollaborationBadge();
   const navGroups = ALL_NAV_GROUPS
     .filter((g) => g.roles.includes(role))
     .map((g) => ({
       ...g,
-      items: g.items.filter((item) => !('roles' in item) || (item.roles as string[]).includes(role)),
+      items: g.items
+        .filter((item) => !('roles' in item) || (item.roles as string[]).includes(role))
+        .map((item) => ({
+          ...item,
+          badge: item.title === 'Collaborations' ? collaborationBadge : undefined,
+        })),
     }))
     .filter((g) => g.items.length > 0);
 
