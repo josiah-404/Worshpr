@@ -11,8 +11,7 @@ export function useInviteOrg(eventId: string) {
   return useMutation<void, Error, InviteOrgInput>({
     mutationFn: (input) => inviteOrg(eventId, input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.EVENTS] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.EVENT, eventId] });
+      queryClient.refetchQueries({ queryKey: [QUERY_KEYS.EVENTS], type: 'active' });
     },
   });
 }

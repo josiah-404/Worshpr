@@ -11,9 +11,8 @@ export function useUpdateEvent(id: string) {
 
   return useMutation<EventListItem, Error, UpdateEventInput>({
     mutationFn: (data) => updateEvent(id, data),
-    onSuccess: (updated) => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.EVENTS] });
-      queryClient.setQueryData([QUERY_KEYS.EVENT, id], updated);
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: [QUERY_KEYS.EVENTS], type: 'active' });
     },
   });
 }

@@ -16,6 +16,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGetEvents } from '@/hooks/useGetEvents';
 import { useDeleteEvent } from '@/hooks/useDeleteEvent';
+import { useConfirm } from '@/hooks/useConfirm';
 import { useOrgContext } from '@/providers/OrgContext';
 import { EventCard } from './EventCard';
 import { EventDialog } from './EventDialog';
@@ -52,7 +53,14 @@ export const EventsGrid: FC<EventsGridProps> = ({
 
   const { data: events = initialEvents, isLoading } = useGetEvents(activeOrgId, initialEvents);
   const inviteEvent = inviteEventId ? (events.find((e) => e.id === inviteEventId) ?? null) : null;
-  const { mutate: deleteEvent, isPending: isDeleting } = useDeleteEvent();
+  const { mutate: deleteEvent } = useDeleteEvent();
+
+  const [confirm, ConfirmDialogEl] = useConfirm({
+    title: 'Delete Event',
+    description: 'This will permanently delete the event and all its collaboration records.',
+    confirmLabel: 'Delete',
+    variant: 'destructive',
+  });
 
   const canEdit = role !== 'officer';
   const isSuperAdmin = role === 'super_admin';
@@ -77,7 +85,9 @@ export const EventsGrid: FC<EventsGridProps> = ({
 
   const hasFilters = search || typeFilter !== 'ALL' || statusFilter !== 'ALL';
 
-  const handleDelete = (event: EventListItem) => {
+  const handleDelete = async (event: EventListItem) => {
+    const ok = await confirm();
+    if (!ok) return;
     deleteEvent(event.id, {
       onSuccess: () => toast.success(`"${event.title}" deleted`),
       onError: () => toast.error('Failed to delete event'),
@@ -242,6 +252,8 @@ export const EventsGrid: FC<EventsGridProps> = ({
           organizations={organizations}
         />
       )}
+
+      {ConfirmDialogEl}
     </div>
   );
 };
