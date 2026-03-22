@@ -53,19 +53,24 @@ export function buildDisplaySlides(
       continue;
     }
 
-    const body = (songBodies[bodyIdx] ?? '').trim();
-    bodyIdx++;
-
     allSlides.push(
       `${TITLE_SLIDE_MARKER}\n${song.title}\n${song.artist}\n${song.role ?? ''}`,
     );
 
-    if (body) {
-      const lyricSlides = body
-        .split(/\n{2,}/)
-        .map((b) => b.trim())
-        .filter(Boolean);
-      allSlides.push(...lyricSlides);
+    // Only consume a body slot when the song has stored lyrics.
+    // Songs added without lyrics (title-only) don't occupy a slot so that
+    // subsequent songs' lyrics stay correctly aligned.
+    if (song.lyrics?.trim()) {
+      const body = (songBodies[bodyIdx] ?? '').trim();
+      bodyIdx++;
+
+      if (body) {
+        const lyricSlides = body
+          .split(/\n{2,}/)
+          .map((b) => b.trim())
+          .filter(Boolean);
+        allSlides.push(...lyricSlides);
+      }
     }
   }
 
