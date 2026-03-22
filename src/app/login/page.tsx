@@ -1,95 +1,106 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { Button }   from "@/components/ui/button";
-import { Input }    from "@/components/ui/input";
-import { Label }    from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Controller, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { useLogin } from '@/hooks/useLogin';
+import { loginSchema, type LoginInput } from '@/validations/auth.schema';
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [form, setForm]       = useState({ email: "", password: "" });
-  const [error, setError]     = useState("");
-  const [loading, setLoading] = useState(false);
+  const { mutate: login, isPending } = useLogin();
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    const result = await signIn("credentials", {
-      email:    form.email,
-      password: form.password,
-      redirect: false,
-    });
-
-    if (result?.error) {
-      setError("Invalid email or password.");
-    } else {
-      router.push("/");
-      router.refresh();
-    }
-    setLoading(false);
-  }
+  const form = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-sm space-y-6">
-
+    <div className='min-h-screen flex items-center justify-center px-4'>
+      <div className='w-full max-w-sm space-y-6'>
         {/* Logo */}
-        <div className="text-center">
-          <h1 className="text-4xl font-bold tracking-tight">
-            <span className="text-primary tracking-wide">EMBR</span>
+        <div className='text-center'>
+          <h1 className='text-4xl font-bold tracking-tight'>
+            <span className='text-primary tracking-wide'>EMBR</span>
           </h1>
-          <p className="text-muted-foreground mt-2 text-sm">Worship Media Team Portal</p>
+          <p className='text-muted-foreground mt-2 text-sm'>
+            Worship Media Team Portal
+          </p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle>Sign in</CardTitle>
-            <CardDescription>Enter your credentials to access the portal</CardDescription>
+            <CardDescription>
+              Enter your credentials to access the portal
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  required
-                  placeholder="you@church.com"
-                  value={form.email}
-                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+            <form onSubmit={form.handleSubmit((data) => login(data))}>
+              <FieldGroup>
+                <Controller
+                  name='email'
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor='login-email'>Email</FieldLabel>
+                      <Input
+                        {...field}
+                        id='login-email'
+                        type='email'
+                        placeholder='you@church.com'
+                        aria-invalid={fieldState.invalid}
+                      />
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
+                  )}
                 />
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                <Controller
+                  name='password'
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor='login-password'>Password</FieldLabel>
+                      <Input
+                        {...field}
+                        id='login-password'
+                        type='password'
+                        placeholder='••••••••'
+                        aria-invalid={fieldState.invalid}
+                      />
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
+                  )}
                 />
-              </div>
-
-              {error && (
-                <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
-                  {error}
-                </p>
-              )}
-
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Signing in..." : "Sign In"}
+              </FieldGroup>
+              <Button
+                type='submit'
+                className='w-full mt-6'
+                disabled={isPending}
+              >
+                {isPending ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
           </CardContent>
         </Card>
-
       </div>
     </div>
   );

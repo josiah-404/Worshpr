@@ -5,7 +5,6 @@ import { SessionProvider } from 'next-auth/react';
 import { ThemeProvider } from 'next-themes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ProgressProvider } from '@bprogress/next/app';
-import { EdgeStoreProvider } from '@/lib/edgestore-client';
 import { OrgProvider } from '@/providers/OrgContext';
 
 interface AppProvidersProps {
@@ -32,9 +31,7 @@ export const AppProviders: FC<AppProvidersProps> = ({ children }) => {
             options={{ showSpinner: false }}
             shallowRouting
           >
-            <EdgeStoreProvider>
-              <OrgProvider>{children}</OrgProvider>
-            </EdgeStoreProvider>
+            <OrgProvider>{children}</OrgProvider>
           </ProgressProvider>
         </SessionProvider>
       </ThemeProvider>

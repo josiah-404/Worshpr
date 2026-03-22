@@ -5,6 +5,13 @@ import AppSidebar from "@/components/layout/AppSidebar";
 import { OrgBar } from "@/components/layout/OrgBar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import { EdgeStoreProvider } from "@/lib/edgestore-client";
+import { useIdleTimeout } from "@/hooks/useIdleTimeout";
+
+function IdleGuard() {
+  useIdleTimeout();
+  return null;
+}
 
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -13,6 +20,8 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
   if (hideSidebar) return <>{children}</>;
 
   return (
+    <EdgeStoreProvider>
+      <IdleGuard />
     <SidebarProvider className="h-svh overflow-hidden">
       <AppSidebar />
       <SidebarInset>
@@ -31,5 +40,6 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
         </div>
       </SidebarInset>
     </SidebarProvider>
+    </EdgeStoreProvider>
   );
 }
