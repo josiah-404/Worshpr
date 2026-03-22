@@ -8,6 +8,7 @@ import {
   buildSongBlock,
   buildDisplaySlides,
 } from '@/types/worship.types';
+import { parseLyrics } from '@/lib/lyricsParser';
 
 export type LyricsMode = 'paste' | 'ai';
 export type AddMode = 'choose' | 'manual' | 'ai' | 'section';
@@ -222,7 +223,7 @@ export function useEditorState({
         if (alreadyQueued) return prev;
         if (prev.length === 0) prequeueLyricsRef.current = lyrics;
         const next = [...prev, song];
-        setLyrics(next.map(buildSongBlock).join('\n\n\n'));
+        setLyrics(parseLyrics(next.map(buildSongBlock).join('\n\n\n')));
         return next;
       });
       setLyricsMode('paste');
@@ -240,7 +241,7 @@ export function useEditorState({
           setLyrics(prequeueLyricsRef.current ?? '');
           prequeueLyricsRef.current = null;
         } else {
-          setLyrics(next.map(buildSongBlock).join('\n\n\n'));
+          setLyrics(parseLyrics(next.map(buildSongBlock).join('\n\n\n')));
         }
         return next;
       });
@@ -269,7 +270,7 @@ export function useEditorState({
           const next = prev.map((s) =>
             s.title === song.title && s.artist === song.artist ? updatedSong : s,
           );
-          setLyrics(next.map(buildSongBlock).join('\n\n\n'));
+          setLyrics(parseLyrics(next.map(buildSongBlock).join('\n\n\n')));
           return next;
         });
       } catch (err) {
@@ -289,7 +290,7 @@ export function useEditorState({
           setLyrics(prequeueLyricsRef.current ?? '');
           prequeueLyricsRef.current = null;
         } else {
-          setLyrics(next.map(buildSongBlock).join('\n\n\n'));
+          setLyrics(parseLyrics(next.map(buildSongBlock).join('\n\n\n')));
         }
         return next;
       });
@@ -324,7 +325,7 @@ export function useEditorState({
           role: editRole.trim() || undefined,
         };
       });
-      setLyrics(next.map(buildSongBlock).join('\n\n\n'));
+      setLyrics(parseLyrics(next.map(buildSongBlock).join('\n\n\n')));
       return next;
     });
     setEditingIdx(null);
@@ -371,13 +372,13 @@ export function useEditorState({
 
         const next = arrayMove(prev, oldIdx, newIdx);
 
-        // Rebuild lyrics: only non-section songs have body slots
-        // Collect old body order (skip sections) then remap to new order
+        // Rebuild lyrics: only non-section songs WITH stored lyrics have body slots.
+        // This mirrors buildDisplaySlides so body slots stay aligned.
         const oldBodies = lyrics.split(/\n{3,}/);
         let oldBodyIdx = 0;
         const bodiesByOldIdx: Record<number, string> = {};
         for (let i = 0; i < prev.length; i++) {
-          if (!prev[i].isSection) {
+          if (!prev[i].isSection && !!prev[i].lyrics?.trim()) {
             bodiesByOldIdx[i] = oldBodies[oldBodyIdx] ?? '';
             oldBodyIdx++;
           }
@@ -386,7 +387,7 @@ export function useEditorState({
         let newBodyIdx = 0;
         const newBodies: string[] = [];
         for (let i = 0; i < next.length; i++) {
-          if (!next[i].isSection) {
+          if (!next[i].isSection && !!next[i].lyrics?.trim()) {
             // Find where this song was in prev
             const prevIdx = prev.findIndex(
               (s) => s.title === next[i].title && s.artist === next[i].artist,
@@ -396,7 +397,7 @@ export function useEditorState({
           }
         }
 
-        setLyrics(newBodies.join('\n\n\n'));
+        setLyrics(parseLyrics(newBodies.join('\n\n\n')));
         return next;
       });
     },
