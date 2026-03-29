@@ -38,6 +38,7 @@ export function usePresentation(presentationId: string | null) {
 
   /* ── UI state ── */
   const [mode, setMode] = useState<"editor" | "controller">("editor");
+  const [isPresenterOpen, setIsPresenterOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [titleError, setTitleError] = useState(false);
@@ -88,6 +89,7 @@ export function usePresentation(presentationId: string | null) {
   /* ── Load existing presentation ── */
   useEffect(() => {
     if (!presentationId) return;
+    setCurrent(0); // Reset to slide 1 when loading a different presentation
     api
       .get<{ data: Presentation }>(`/presentations/${presentationId}`)
       .then(({ data: res }) => {
@@ -107,8 +109,32 @@ export function usePresentation(presentationId: string | null) {
   /* ── Parse lyrics → slides ── */
   useEffect(() => {
     setSlides(parseLyrics(lyrics));
-    setCurrent(0);
+    // Do NOT reset current here — that would jump to slide 1 on every keystroke.
   }, [lyrics]);
+
+  /* ── Keep current in bounds when the slides array shrinks ── */
+  useEffect(() => {
+    if (slides.length > 0) {
+      setCurrent((c) => Math.min(c, slides.length - 1));
+    }
+  }, [slides]);
+
+  /* ── Live-edit sync: broadcast current slide whenever lyrics are re-parsed ── */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      channelRef.current?.postMessage({
+        type: "UPDATE",
+        slide: slides[currentRef.current] ?? "",
+        bg: bgIdRef.current,
+        transition: transRef.current,
+        font: fontRef.current,
+        size: sizeRef.current,
+        transSpeed: transSpeedRef.current,
+        animSpeed: animSpeedRef.current,
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [slides]);
 
   /* ── BroadcastChannel setup ── */
   useEffect(() => {
@@ -269,9 +295,22 @@ export function usePresentation(presentationId: string | null) {
     }
   };
 
+  /* ── Close presenter when the editor tab is closed (not SPA navigation) ── */
+  useEffect(() => {
+    const handlePageHide = () => {
+      channelRef.current?.postMessage({ type: "CLOSE" });
+    };
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
+  }, []);
+
   /* ── Presenter window ── */
   const openPresenter = async () => {
     setMode("controller");
+    setIsPresenterOpen(true);
+    if (presentationDbId) {
+      sessionStorage.setItem("worship-live-pres", presentationDbId);
+    }
     let features = `left=${window.screen.width},top=0,width=${window.screen.width},height=${window.screen.height}`;
     try {
       if ("getScreenDetails" in window) {
@@ -302,6 +341,8 @@ export function usePresentation(presentationId: string | null) {
 
   const endPresentation = () => {
     channelRef.current?.postMessage({ type: "CLOSE" });
+    sessionStorage.removeItem("worship-live-pres");
+    setIsPresenterOpen(false);
     setMode("editor");
   };
 
@@ -330,6 +371,7 @@ export function usePresentation(presentationId: string | null) {
     animSpeed,
     mode,
     setMode,
+    isPresenterOpen,
     isSaving,
     saved,
     titleError,

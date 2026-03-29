@@ -1,11 +1,12 @@
 'use client';
 
-import { type FC } from 'react';
+import { type FC, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Pencil, Trash2, Monitor, Play } from 'lucide-react';
+import { Pencil, Trash2, Monitor, Play, Radio } from 'lucide-react';
 import { BACKGROUNDS, BG_BADGE_COLORS, FONT_LABELS } from '@/lib/constants';
 import { usePresentations } from '@/hooks/usePresentations';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useIsPresentationActive } from '@/hooks/useIsPresentationActive';
 import type { Presentation } from '@/types';
 
 interface PresentationsTableProps {
@@ -36,6 +37,14 @@ function timeAgo(dateStr: string): string {
 export const PresentationsTable: FC<PresentationsTableProps> = ({ presentations: initial }) => {
   const router = useRouter();
   const { presentations, deleting, deletePresentation } = usePresentations(initial);
+  const isLive = useIsPresentationActive();
+  const [livePresentationId, setLivePresentationId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isLive) {
+      setLivePresentationId(sessionStorage.getItem('worship-live-pres'));
+    }
+  }, [isLive]);
 
   const [confirm, ConfirmDialogEl] = useConfirm({
     title: 'Delete Presentation',
@@ -64,6 +73,23 @@ export const PresentationsTable: FC<PresentationsTableProps> = ({ presentations:
 
   return (
     <>
+      {isLive && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3">
+          <div className="flex items-center gap-2 text-sm text-green-500 font-medium">
+            <Radio className="h-4 w-4 animate-pulse" />
+            A presentation is currently live
+          </div>
+          {livePresentationId && (
+            <button
+              onClick={() => router.push(`/worship/editor?id=${livePresentationId}&present=1`)}
+              className="text-xs font-medium text-green-500 hover:text-green-400 underline underline-offset-2 transition-colors"
+            >
+              Return to Presenter
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="rounded-lg border border-border overflow-hidden">
         <table className="w-full text-sm">
           <thead>

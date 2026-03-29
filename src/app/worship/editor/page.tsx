@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { usePresentation } from '@/hooks/usePresentation';
 import { useEditorState } from '@/hooks/useEditorState';
+import { useConfirm } from '@/hooks/useConfirm';
 import { EditorSkeleton } from '@/app/worship/components/editor/EditorSkeleton';
 import { SlidesPanel } from '@/app/worship/components/editor/SlidesPanel';
 import { LyricsPanel } from '@/app/worship/components/editor/LyricsPanel';
@@ -65,6 +66,7 @@ function WorshipEditorInner() {
     animSpeed,
     mode,
     setMode,
+    isPresenterOpen,
     isSaving,
     saved,
     titleError,
@@ -91,12 +93,38 @@ function WorshipEditorInner() {
 
   const handleSave = () => _handleSave(editor.songQueue);
 
+  const [confirmEnd, ConfirmEndDialog] = useConfirm({
+    title: 'Presentation is Running',
+    description: 'A presentation is currently live. Leaving will end it for the audience.',
+    confirmLabel: 'End & Leave',
+    variant: 'destructive',
+  });
+
+  const handleBack = async () => {
+    if (isPresenterOpen) {
+      const ok = await confirmEnd();
+      if (!ok) return;
+      endPresentation();
+    }
+    router.push('/worship');
+  };
+
   // Auto-launch presenter when navigated here with ?present=1
   const autoPresent = searchParams.get('present') === '1';
   useEffect(() => {
     if (autoPresent && !isLoading) void openPresenter();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading]);
+
+  // End presentation and remove ?present=1 from the URL so a page reload
+  // doesn't auto-reopen the presenter.
+  const handleEndPresentation = () => {
+    endPresentation();
+    const cleanUrl = presentationId
+      ? `/worship/editor?id=${presentationId}`
+      : '/worship/editor';
+    router.replace(cleanUrl);
+  };
 
   if (isLoading) return <EditorSkeleton />;
 
@@ -131,18 +159,20 @@ function WorshipEditorInner() {
         onChangeTransSpeed={changeTransSpeed}
         onChangeAnimSpeed={changeAnimSpeed}
         onOpenPresenter={openPresenter}
-        onEndPresentation={endPresentation}
+        onEndPresentation={handleEndPresentation}
       />
     );
   }
 
   return (
+    <>
+    {ConfirmEndDialog}
     <div className='flex flex-col gap-5 flex-1 min-h-0'>
       {/* Header */}
       <div className='flex items-center justify-between gap-4 shrink-0'>
         <div className='flex items-center gap-3 min-w-0'>
           <button
-            onClick={() => router.push('/worship')}
+            onClick={handleBack}
             className='flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0'
           >
             <ArrowLeft className='h-4 w-4' />
@@ -276,6 +306,7 @@ function WorshipEditorInner() {
         />
       </div>
     </div>
+    </>
   );
 }
 

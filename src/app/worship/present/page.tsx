@@ -47,6 +47,10 @@ export default function WorshipPresentPage() {
         document.exitFullscreen().catch(() => {}).finally(() => window.close());
         return;
       }
+      if (e.data?.type === "PING") {
+        channel.postMessage({ type: "PRESENTER_HEARTBEAT" });
+        return;
+      }
       if (e.data?.type === "UPDATE") {
         if (typeof e.data.slide       === "string") { setSlide(e.data.slide); setSlideKey((k) => k + 1); }
         if (typeof e.data.bg          === "string") setBgId(e.data.bg);
@@ -59,7 +63,15 @@ export default function WorshipPresentPage() {
     };
 
     channel.postMessage({ type: "REQUEST_STATE" });
-    return () => channel.close();
+    // Announce presence immediately and every 5s so other tabs can detect this presenter
+    channel.postMessage({ type: "PRESENTER_HEARTBEAT" });
+    const heartbeat = setInterval(() => channel.postMessage({ type: "PRESENTER_HEARTBEAT" }), 5_000);
+
+    return () => {
+      clearInterval(heartbeat);
+      channel.postMessage({ type: "PRESENTER_CLOSED" });
+      channel.close();
+    };
   }, []);
 
   /* Auto-fullscreen — browsers allow this for popups opened from a user click */
