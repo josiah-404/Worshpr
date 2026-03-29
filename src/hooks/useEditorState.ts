@@ -10,6 +10,29 @@ import {
 } from '@/types/worship.types';
 import { parseLyrics } from '@/lib/lyricsParser';
 
+/**
+ * Extracts the current body text for each song from the textarea `lyrics` string.
+ * Returns a map of queue-index → current body, based only on the live `lyrics` string
+ * (not `song.lyrics`, which may be stale after user edits).
+ * Only songs with an initial `song.lyrics` value consume a body slot — sections and
+ * title-only songs do not, matching the slot allocation in `buildDisplaySlides`.
+ */
+function extractBodyMap(
+  lyricsText: string,
+  queue: SongResult[],
+): Record<number, string> {
+  const bodies = lyricsText.split(/\n{3,}/);
+  const map: Record<number, string> = {};
+  let bodyIdx = 0;
+  for (let i = 0; i < queue.length; i++) {
+    if (!queue[i].isSection && !!queue[i].lyrics?.trim()) {
+      map[i] = bodies[bodyIdx] ?? '';
+      bodyIdx++;
+    }
+  }
+  return map;
+}
+
 export type LyricsMode = 'paste' | 'ai';
 export type AddMode = 'choose' | 'manual' | 'ai' | 'section';
 
@@ -221,10 +244,25 @@ export function useEditorState({
           (s) => s.title === song.title && s.artist === song.artist,
         );
         if (alreadyQueued) return prev;
-        if (prev.length === 0) prequeueLyricsRef.current = lyrics;
-        const next = [...prev, song];
-        setLyrics(parseLyrics(next.map(buildSongBlock).join('\n\n\n')));
-        return next;
+
+        const isFirstSong = prev.length === 0;
+        if (isFirstSong) prequeueLyricsRef.current = lyrics;
+
+        const newBody = buildSongBlock(song);
+        if (isFirstSong) {
+          // First song: start the lyrics fresh so pre-queue free-text doesn't
+          // end up as the body for this song.
+          if (newBody) setLyrics(parseLyrics(newBody));
+        } else {
+          // Subsequent songs: append to the LIVE lyrics string so any
+          // textarea edits the user made to earlier songs are preserved.
+          if (newBody) {
+            const base = lyrics.trim();
+            setLyrics(parseLyrics(base ? `${base}\n\n\n${newBody}` : newBody));
+          }
+        }
+
+        return [...prev, song];
       });
       setLyricsMode('paste');
     },
@@ -234,19 +272,26 @@ export function useEditorState({
   const handleRemoveFromQueue = useCallback(
     (song: SongResult) => {
       setSongQueue((prev) => {
-        const next = prev.filter(
-          (s) => !(s.title === song.title && s.artist === song.artist),
+        const removeIdx = prev.findIndex(
+          (s) => s.title === song.title && s.artist === song.artist,
         );
+        const next = prev.filter((_, i) => i !== removeIdx);
         if (next.length === 0) {
           setLyrics(prequeueLyricsRef.current ?? '');
           prequeueLyricsRef.current = null;
         } else {
-          setLyrics(parseLyrics(next.map(buildSongBlock).join('\n\n\n')));
+          // Use the live textarea content as source of truth, not song.lyrics
+          const bodyMap = extractBodyMap(lyrics, prev);
+          const newBodies = Object.entries(bodyMap)
+            .filter(([idx]) => Number(idx) !== removeIdx)
+            .map(([, body]) => body)
+            .filter(Boolean);
+          setLyrics(parseLyrics(newBodies.join('\n\n\n')));
         }
         return next;
       });
     },
-    [setLyrics],
+    [lyrics, setLyrics],
   );
 
   const handleFetchLyrics = useCallback(
@@ -263,14 +308,33 @@ export function useEditorState({
         const updatedSong: SongResult = { ...song, lyrics: res.data.lyrics };
         setAiResults((prev) => prev.map((s, i) => (i === idx ? updatedSong : s)));
         setSongQueue((prev) => {
-          const inQueue = prev.some(
+          const queueIdx = prev.findIndex(
             (s) => s.title === song.title && s.artist === song.artist,
           );
-          if (!inQueue) return prev;
+          if (queueIdx === -1) return prev;
+
           const next = prev.map((s) =>
             s.title === song.title && s.artist === song.artist ? updatedSong : s,
           );
-          setLyrics(parseLyrics(next.map(buildSongBlock).join('\n\n\n')));
+
+          // Rebuild lyrics by replacing ONLY the target song's body slot.
+          // All other songs' current textarea content (which may have been
+          // edited by the user) is preserved from the live `lyrics` string.
+          const currentBodies = lyrics.split(/\n{3,}/);
+          let prevBodyIdx = 0;
+          const newBodies: string[] = [];
+          for (let i = 0; i < next.length; i++) {
+            if (next[i].isSection || !next[i].lyrics?.trim()) continue;
+            if (i === queueIdx) {
+              newBodies.push(updatedSong.lyrics?.trim() ?? '');
+              // Advance past the old slot only if this song already had one
+              if (prev[i].lyrics?.trim()) prevBodyIdx++;
+            } else {
+              newBodies.push(currentBodies[prevBodyIdx] ?? '');
+              prevBodyIdx++;
+            }
+          }
+          setLyrics(parseLyrics(newBodies.join('\n\n\n')));
           return next;
         });
       } catch (err) {
@@ -279,7 +343,7 @@ export function useEditorState({
         setFetchingIdx(null);
       }
     },
-    [aiResults, setLyrics],
+    [aiResults, lyrics, setLyrics],
   );
 
   const handleRemoveSong = useCallback(
@@ -290,12 +354,18 @@ export function useEditorState({
           setLyrics(prequeueLyricsRef.current ?? '');
           prequeueLyricsRef.current = null;
         } else {
-          setLyrics(parseLyrics(next.map(buildSongBlock).join('\n\n\n')));
+          // Use the live textarea content as source of truth, not song.lyrics
+          const bodyMap = extractBodyMap(lyrics, prev);
+          const newBodies = Object.entries(bodyMap)
+            .filter(([qIdx]) => Number(qIdx) !== idx)
+            .map(([, body]) => body)
+            .filter(Boolean);
+          setLyrics(parseLyrics(newBodies.join('\n\n\n')));
         }
         return next;
       });
     },
-    [setLyrics],
+    [lyrics, setLyrics],
   );
 
   const handleStartEdit = useCallback(
@@ -314,8 +384,10 @@ export function useEditorState({
     if (editingIdx === null) return;
     const title = editTitle.trim();
     if (!title) return;
-    setSongQueue((prev) => {
-      const next = prev.map((s, i) => {
+    // Only title/artist/role change — song.lyrics is untouched, so the
+    // lyrics textarea content must not be rebuilt (that would discard user edits).
+    setSongQueue((prev) =>
+      prev.map((s, i) => {
         if (i !== editingIdx) return s;
         if (s.isSection) return { ...s, title };
         return {
@@ -324,12 +396,10 @@ export function useEditorState({
           artist: editArtist.trim() || 'Unknown',
           role: editRole.trim() || undefined,
         };
-      });
-      setLyrics(parseLyrics(next.map(buildSongBlock).join('\n\n\n')));
-      return next;
-    });
+      }),
+    );
     setEditingIdx(null);
-  }, [editingIdx, editTitle, editArtist, editRole, setLyrics]);
+  }, [editingIdx, editTitle, editArtist, editRole]);
 
   const handleCancelEdit = useCallback(() => setEditingIdx(null), []);
 

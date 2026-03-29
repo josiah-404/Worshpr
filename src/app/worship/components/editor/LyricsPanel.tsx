@@ -145,23 +145,22 @@ export const LyricsPanel: FC<LyricsPanelProps> = (props) => {
               <ClipboardPaste className='h-3.5 w-3.5' />
               Paste
             </button>
-            <button
-              onClick={() => {
-                setLyricsMode('ai');
-                setAiError(null);
-              }}
-              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                lyricsMode === 'ai'
-                  ? 'bg-accent text-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Sparkles className='h-3.5 w-3.5' />
-              AI Search
-              {quotaExhausted && (
-                <span className='ml-0.5 h-1.5 w-1.5 rounded-full bg-destructive shrink-0' />
-              )}
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className='cursor-not-allowed'>
+                  <button
+                    disabled
+                    className='flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground opacity-40 pointer-events-none'
+                  >
+                    <Sparkles className='h-3.5 w-3.5' />
+                    AI Search
+                  </button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className='bg-popover text-popover-foreground border border-border shadow-md'>
+                Not yet stable — coming soon
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
 
@@ -254,7 +253,10 @@ export const LyricsPanel: FC<LyricsPanelProps> = (props) => {
                       )}
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side='bottom' className='max-w-[260px]'>
+                  <TooltipContent
+                    side='bottom'
+                    className='max-w-[260px] bg-popover text-popover-foreground border border-border shadow-md'
+                  >
                     <p className='text-[11px] font-medium mb-1'>Auto-format lyrics</p>
                     <p className='text-[11px] text-muted-foreground'>
                       Normalizes spacing and line breaks so slides split correctly.
@@ -277,7 +279,7 @@ export const LyricsPanel: FC<LyricsPanelProps> = (props) => {
                 <TooltipContent
                   side='left'
                   align='end'
-                  className='max-w-[280px] p-3'
+                  className='max-w-[280px] p-3 bg-popover text-popover-foreground border border-border shadow-md'
                 >
                   <p className='text-[11px] font-medium mb-1.5'>Lyrics formatting guide</p>
                   <pre className='text-[10px] text-muted-foreground whitespace-pre-wrap font-sans leading-relaxed'>

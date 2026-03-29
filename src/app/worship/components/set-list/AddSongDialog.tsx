@@ -3,6 +3,12 @@
 import { type FC } from 'react';
 import { ClipboardPaste, Sparkles, BookOpen, Wand2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { parseLyrics, needsParsing } from '@/lib/lyricsParser';
 import type { AddMode } from '@/hooks/useEditorState';
 
@@ -47,7 +53,7 @@ export const AddSongDialog: FC<AddSongDialogProps> = ({
   sectionLabel,
   setSectionLabel,
   onAddSection,
-  onSwitchToAi,
+  // onSwitchToAi,
 }) => {
   return (
     <div className='rounded-lg border border-border bg-background shadow-sm shrink-0'>
@@ -75,18 +81,29 @@ export const AddSongDialog: FC<AddSongDialogProps> = ({
                 </span>
               </span>
             </button>
-            <button
-              onClick={onSwitchToAi}
-              className='flex items-center gap-2.5 rounded-md border border-border px-3 py-2 text-left hover:bg-accent/60 transition-colors'
-            >
-              <Sparkles className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
-              <span className='flex flex-col gap-0.5'>
-                <span className='text-xs font-medium'>AI Search</span>
-                <span className='text-[11px] text-muted-foreground'>
-                  Find lyrics automatically
-                </span>
-              </span>
-            </button>
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className='cursor-not-allowed'>
+                    <button
+                      disabled
+                      className='flex w-full items-center gap-2.5 rounded-md border border-border px-3 py-2 text-left opacity-40 pointer-events-none'
+                    >
+                      <Sparkles className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
+                      <span className='flex flex-col gap-0.5'>
+                        <span className='text-xs font-medium'>AI Search</span>
+                        <span className='text-[11px] text-muted-foreground'>
+                          Find lyrics automatically
+                        </span>
+                      </span>
+                    </button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className='bg-popover text-popover-foreground border border-border shadow-md'>
+                  Not yet stable — coming soon
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <button
               onClick={() => {
                 setAddMode('section');
@@ -147,7 +164,9 @@ export const AddSongDialog: FC<AddSongDialogProps> = ({
             />
           </div>
           <Textarea
-            placeholder={'Paste lyrics here…\n\nSeparate slides with a blank line'}
+            placeholder={
+              'Paste lyrics here…\n\nSeparate slides with a blank line'
+            }
             value={manualLyricsText}
             onChange={(e) => setManualLyricsText(e.target.value)}
             rows={5}
@@ -156,7 +175,9 @@ export const AddSongDialog: FC<AddSongDialogProps> = ({
           <div className='flex items-center justify-between gap-2'>
             {needsParsing(manualLyricsText) ? (
               <button
-                onClick={() => setManualLyricsText(parseLyrics(manualLyricsText))}
+                onClick={() =>
+                  setManualLyricsText(parseLyrics(manualLyricsText))
+                }
                 className='flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium bg-amber-500/15 border border-amber-500/30 text-amber-500 hover:bg-amber-500/25 transition-colors'
               >
                 <Wand2 className='h-3 w-3' />
