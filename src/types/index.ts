@@ -1,5 +1,19 @@
 import type { SongResult } from '@/types/worship.types';
 
+export type {
+  FinanceEntryType,
+  FinanceCategory,
+  OrgFundDetail,
+  UpdateOrgFundPayload,
+  LedgerEntry,
+  LedgerEntryPayload,
+  UpdateLedgerEntryPayload,
+  EventFinanceSummaryItem,
+  FinanceSummary,
+  LedgerQueryParams,
+} from '@/types/finance.types';
+export { INCOME_CATEGORIES, EXPENSE_CATEGORIES, FINANCE_CATEGORY_LABELS } from '@/types/finance.types';
+
 export type { EventType, EventStatus, EventOrgRole, EventInviteStatus, EventOrg, EventListItem, CollaborationInvite } from '@/types/event.types';
 export type {
   RegistrationStatus,

@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutDashboard, Users, Monitor, Flame, Building2, CalendarDays, Handshake, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Users, Monitor, Flame, Building2, CalendarDays, Handshake, ClipboardList, Wallet } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 
 import { NavMain } from '@/components/layout/NavMain';
@@ -39,6 +39,7 @@ const ALL_NAV_GROUPS = [
     items: [
       { title: 'Events', url: '/events', icon: CalendarDays },
       { title: 'Registrations', url: '/registrations', icon: ClipboardList, roles: ['super_admin', 'org_admin'] },
+      { title: 'Finance', url: '/finance', icon: Wallet, roles: ['super_admin', 'org_admin'] },
       { title: 'Collaborations', url: '/collaborations', icon: Handshake, roles: ['org_admin'] },
       {
         title: 'Worship Screen',
@@ -58,13 +59,23 @@ export default function AppSidebar({
 }: React.ComponentProps<typeof Sidebar>) {
   const { data: session } = useSession();
   const role = session?.user?.role ?? 'officer';
+  const title = session?.user?.title ?? '';
   const collaborationBadge = useCollaborationBadge();
+  const isTreasurer = role === 'officer' && title === 'Treasurer';
+
   const navGroups = ALL_NAV_GROUPS
     .filter((g) => g.roles.includes(role))
     .map((g) => ({
       ...g,
       items: g.items
-        .filter((item) => !('roles' in item) || (item.roles as string[]).includes(role))
+        .filter((item) => {
+          if (!('roles' in item)) return true;
+          const roles = item.roles as string[];
+          if (roles.includes(role)) return true;
+          // Treasurer officers can see Finance
+          if (item.title === 'Finance' && isTreasurer) return true;
+          return false;
+        })
         .map((item) => ({
           ...item,
           badge: item.title === 'Collaborations' ? collaborationBadge : undefined,

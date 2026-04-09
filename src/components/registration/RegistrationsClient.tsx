@@ -36,7 +36,6 @@ const STATUS_CONFIG: Record<RegistrationStatus, { label: string; icon: React.Ele
 
 interface RegistrationsClientProps {
   initialData: RegistrationListItem[];
-  orgId: string | null;
   events: EventListItem[];
 }
 
@@ -44,7 +43,6 @@ interface RegistrationsClientProps {
 
 export const RegistrationsClient: FC<RegistrationsClientProps> = ({
   initialData,
-  orgId,
   events,
 }) => {
   const [search, setSearch] = useState('');
@@ -52,13 +50,17 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
   const [eventFilter, setEventFilter] = useState('ALL');
   const [selected, setSelected] = useState<RegistrationListItem | null>(null);
 
+  const hasActiveFilters = statusFilter !== 'ALL' || eventFilter !== 'ALL';
+
   const params = useMemo(() => ({
-    ...(orgId ? { orgId } : {}),
     ...(statusFilter !== 'ALL' ? { status: statusFilter } : {}),
     ...(eventFilter !== 'ALL' ? { eventId: eventFilter } : {}),
-  }), [orgId, statusFilter, eventFilter]);
+  }), [statusFilter, eventFilter]);
 
-  const { data: registrations = initialData, isLoading } = useGetRegistrations(params, initialData);
+  // Never pass initialData into the hook — it causes staleTime to suppress re-fetches on filter change.
+  // Fall back to SSR data only when no filters are active (avoids showing stale unfiltered data).
+  const { data: fetchedRegistrations, isLoading } = useGetRegistrations(params);
+  const registrations = fetchedRegistrations ?? (hasActiveFilters ? [] : initialData);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return registrations;

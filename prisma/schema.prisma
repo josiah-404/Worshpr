@@ -25,6 +25,8 @@ model Organization {
   users              User[]
   eventOrganizations EventOrganization[]
   registrations      Registration[]
+  orgFund            OrgFund?
+  financeLedger      FinanceLedger[]
 
   @@map("organizations")
 }
@@ -45,10 +47,11 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  organization  Organization? @relation(fields: [orgId], references: [id])
-  accounts      Account[]
-  sessions      Session[]
-  createdEvents Event[]       @relation("CreatedEvents")
+  organization          Organization? @relation(fields: [orgId], references: [id])
+  accounts              Account[]
+  sessions              Session[]
+  createdEvents         Event[]         @relation("CreatedEvents")
+  financeLedgerEntries  FinanceLedger[] @relation("LedgerEnteredBy")
 
   @@map("users")
 }
@@ -182,6 +185,7 @@ model Event {
   organizations      EventOrganization[]
   registrationGroups RegistrationGroup[]
   registrations      Registration[]
+  financeLedger      FinanceLedger[]
 
   @@index([status, startDate])
   @@map("events")
@@ -293,6 +297,48 @@ model EventOrganization {
   @@map("event_organizations")
 }
 
+model OrgFund {
+  id             String   @id @default(cuid())
+  orgId          String   @unique
+  initialBalance Float    @default(0)
+  currency       String   @default("PHP")
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@map("org_funds")
+}
+
+model FinanceLedger {
+  id          String           @id @default(cuid())
+  orgId       String
+  eventId     String?
+  type        FinanceEntryType
+  category    FinanceCategory
+  amount      Float
+  description String
+  referenceId    String?
+  customCategory String?  @map("custom_category")
+  payee          String?
+  requestedBy    String?
+  receiptUrl     String?
+  enteredBy      String
+  date        DateTime
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  organization  Organization @relation(fields: [orgId], references: [id])
+  event         Event?       @relation(fields: [eventId], references: [id])
+  enteredByUser User         @relation("LedgerEnteredBy", fields: [enteredBy], references: [id])
+
+  @@index([orgId, type])
+  @@index([orgId, date])
+  @@index([eventId])
+  @@map("finance_ledger")
+}
+
 // ─── Enums ─────────────────────────────────────────────────────────────────
 
 enum ItemType {
@@ -361,4 +407,26 @@ enum PaymentStatus {
   PENDING
   VERIFIED
   REJECTED
+}
+
+enum FinanceEntryType {
+  INCOME
+  EXPENSE
+}
+
+enum FinanceCategory {
+  // Income categories
+  REGISTRATION
+  OFFERTORY
+  DONATION
+  OTHER_INCOME
+  // Expense categories
+  PRIZES
+  DESIGN_PRINTING
+  FOOD_BEVERAGE
+  TRANSPORTATION
+  VENUE
+  SUPPLIES
+  MARKETING
+  OTHER_EXPENSE
 }
