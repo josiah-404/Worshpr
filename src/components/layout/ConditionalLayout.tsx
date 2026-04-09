@@ -15,9 +15,12 @@ function IdleGuard() {
 
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const hideSidebar = pathname === "/login" || pathname === "/worship/present";
+  const hideSidebar =
+    pathname === "/login" ||
+    pathname === "/worship/present" ||
+    pathname.startsWith("/register");
 
-  if (hideSidebar) return <>{children}</>;
+  if (hideSidebar) return <EdgeStoreProvider>{children}</EdgeStoreProvider>;
 
   return (
     <EdgeStoreProvider>

@@ -24,6 +24,7 @@ model Organization {
 
   users              User[]
   eventOrganizations EventOrganization[]
+  registrations      Registration[]
 
   @@map("organizations")
 }
@@ -177,11 +178,101 @@ model Event {
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
 
-  creator       User                @relation("CreatedEvents", fields: [createdBy], references: [id])
-  organizations EventOrganization[]
+  creator            User                @relation("CreatedEvents", fields: [createdBy], references: [id])
+  organizations      EventOrganization[]
+  registrationGroups RegistrationGroup[]
+  registrations      Registration[]
 
   @@index([status, startDate])
   @@map("events")
+}
+
+model Registrant {
+  id                    String   @id @default(cuid())
+  fullName              String
+  nickname              String?
+  email                 String   @unique
+  phone                 String
+  birthday              DateTime
+  address               String   @db.Text
+  church                String?
+  organization          String?
+  emergencyContactName  String
+  emergencyContactPhone String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  registrations Registration[]
+
+  @@map("registrants")
+}
+
+model RegistrationGroup {
+  id               String   @id @default(cuid())
+  eventId          String
+  confirmationCode String   @unique
+  submittedByName  String
+  submittedByEmail String
+  headcount        Int
+  createdAt        DateTime @default(now())
+
+  event         Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  registrations Registration[]
+  sharedPayment Payment?       @relation("GroupPayment")
+
+  @@index([eventId])
+  @@map("registration_groups")
+}
+
+model Registration {
+  id            String             @id @default(cuid())
+  eventId       String
+  registrantId  String
+  groupId       String
+  orgId         String
+  status        RegistrationStatus @default(PENDING)
+  paymentIntent PaymentIntent
+  approvedBy    String?
+  approvedAt    DateTime?
+  rejectedBy    String?
+  rejectedAt    DateTime?
+  notes         String?            @db.Text
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  event        Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  registrant   Registrant        @relation(fields: [registrantId], references: [id])
+  group        RegistrationGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  organization Organization      @relation(fields: [orgId], references: [id])
+  payment      Payment?          @relation("IndividualPayment")
+
+  @@unique([eventId, registrantId])
+  @@index([eventId, status])
+  @@index([orgId, status])
+  @@index([groupId])
+  @@map("registrations")
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  amount        Float
+  method        PaymentMethod
+  receiptUrl    String?
+  referenceNo   String?
+  status        PaymentStatus @default(PENDING)
+  verifiedBy    String?
+  verifiedAt    DateTime?
+  notes         String?       @db.Text
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  registrationId String?       @unique
+  registration   Registration? @relation("IndividualPayment", fields: [registrationId], references: [id])
+
+  groupId String?            @unique
+  group   RegistrationGroup? @relation("GroupPayment", fields: [groupId], references: [id])
+
+  @@map("payments")
 }
 
 model EventOrganization {
@@ -243,4 +334,31 @@ enum EventInviteStatus {
   PENDING
   ACCEPTED
   DECLINED
+}
+
+enum RegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum PaymentIntent {
+  CASH
+  ONLINE
+  FREE
+}
+
+enum PaymentMethod {
+  CASH
+  GCASH
+  MAYA
+  BANK_TRANSFER
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
 }

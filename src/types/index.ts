@@ -1,6 +1,21 @@
 import type { SongResult } from '@/types/worship.types';
 
 export type { EventType, EventStatus, EventOrgRole, EventInviteStatus, EventOrg, EventListItem, CollaborationInvite } from '@/types/event.types';
+export type {
+  RegistrationStatus,
+  PaymentIntent,
+  PaymentMethod,
+  PaymentStatus,
+  RegistrantData,
+  PaymentPayload,
+  RegistrationGroupPayload,
+  EventOrgOption,
+  PublicEventData,
+  PaymentDetail,
+  RegistrantDetail,
+  RegistrationListItem,
+  RegistrationGroupResult,
+} from '@/types/registration.types';
 
 export type OrgRole = 'super_admin' | 'org_admin' | 'officer';
 
