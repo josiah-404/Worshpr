@@ -1,12 +1,13 @@
 'use client';
 
-import { type FC } from 'react';
+import { type FC, useState } from 'react';
 import {
   CalendarDays, MapPin, Building2, Users,
-  Pencil, Trash2, TreePine, Heart, BookOpen, Music2, UserPlus,
+  Pencil, Trash2, TreePine, Heart, BookOpen, Music2, UserPlus, QrCode,
 } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { QRModal } from '@/components/events/QRModal';
 import { cn } from '@/lib/utils';
 import type { EventListItem, EventType, EventStatus } from '@/types';
 
@@ -69,6 +70,13 @@ interface EventCardProps {
 
 export const EventCard: FC<EventCardProps> = ({ event, canEdit, onEdit, onDelete, onInvite }) => {
   const hostOrg = event.organizations.find((o) => o.role === 'HOST');
+  const [qrOpen, setQrOpen] = useState(false);
+  const registrationUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/register/${event.slug}`
+    : `/register/${event.slug}`;
+
+  const dateRange = formatDateRange(event.startDate, event.endDate);
+
   const collaborators = event.organizations.filter(
     (o) => o.role === 'COLLABORATOR' && o.inviteStatus === 'ACCEPTED',
   );
@@ -191,21 +199,32 @@ export const EventCard: FC<EventCardProps> = ({ event, canEdit, onEdit, onDelete
             )}
           </div>
 
-          {canEdit && (
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onEdit}>
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={onDelete}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              onClick={() => setQrOpen(true)}
+              title="Show QR code"
+            >
+              <QrCode className="h-3.5 w-3.5" />
+            </Button>
+            {canEdit && (
+              <>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onEdit}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={onDelete}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Row 2: invite collaborators button */}
@@ -227,6 +246,16 @@ export const EventCard: FC<EventCardProps> = ({ event, canEdit, onEdit, onDelete
           </Button>
         )}
       </CardFooter>
+
+      <QRModal
+        open={qrOpen}
+        onClose={() => setQrOpen(false)}
+        eventTitle={event.title}
+        orgName={hostOrg?.orgName ?? ''}
+        dateRange={dateRange}
+        venue={event.venue}
+        registrationUrl={registrationUrl}
+      />
     </Card>
   );
 };

@@ -1,0 +1,83 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+
+const updateStatusSchema = z.object({
+  status: z.enum(['APPROVED', 'REJECTED', 'CANCELLED']),
+  notes: z.string().optional(),
+});
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (session.user.role === 'officer') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { id } = await params;
+    const body = await req.json();
+    const parsed = updateStatusSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    }
+
+    const { status, notes } = parsed.data;
+
+    // Verify the registration belongs to the user's org (unless super_admin)
+    const existing = await prisma.registration.findUnique({
+      where: { id },
+      select: { id: true, orgId: true, status: true },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
+    }
+    if (session.user.role !== 'super_admin' && existing.orgId !== session.user.orgId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const now = new Date();
+    const updated = await prisma.registration.update({
+      where: { id },
+      data: {
+        status,
+        notes: notes ?? null,
+        ...(status === 'APPROVED'
+          ? { approvedBy: session.user.id, approvedAt: now, rejectedBy: null, rejectedAt: null }
+          : status === 'REJECTED'
+            ? { rejectedBy: session.user.id, rejectedAt: now, approvedBy: null, approvedAt: null }
+            : {}),
+      },
+      select: {
+        id: true,
+        status: true,
+        approvedBy: true,
+        approvedAt: true,
+        rejectedBy: true,
+        rejectedAt: true,
+        notes: true,
+        updatedAt: true,
+      },
+    });
+
+    return NextResponse.json({
+      data: {
+        ...updated,
+        approvedAt: updated.approvedAt?.toISOString() ?? null,
+        rejectedAt: updated.rejectedAt?.toISOString() ?? null,
+        updatedAt: updated.updatedAt.toISOString(),
+      },
+    }, { status: 200 });
+  } catch {
+    return NextResponse.json({ error: 'Failed to update registration' }, { status: 500 });
+  }
+}

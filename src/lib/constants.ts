@@ -6,6 +6,8 @@ export const QUERY_KEYS = {
   EVENTS: 'events',
   EVENT: 'event',
   COLLABORATIONS: 'collaborations',
+  REGISTRATIONS: 'registrations',
+  REGISTRATION: 'registration',
 } as const;
 
 export const OFFICER_TITLES = [
