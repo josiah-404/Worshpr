@@ -8,6 +8,9 @@ export const QUERY_KEYS = {
   COLLABORATIONS: 'collaborations',
   REGISTRATIONS: 'registrations',
   REGISTRATION: 'registration',
+  ORG_FUND: 'org-fund',
+  LEDGER: 'ledger',
+  FINANCE_SUMMARY: 'finance-summary',
 } as const;
 
 export const OFFICER_TITLES = [

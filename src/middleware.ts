@@ -3,10 +3,12 @@ import { NextResponse } from 'next/server';
 
 const SUPER_ADMIN_ONLY_PATHS = ['/organizations'];
 const ADMIN_ONLY_PATHS = ['/users'];
+const FINANCE_PATHS = ['/finance'];
 
 export default withAuth(
   function middleware(req) {
     const role = req.nextauth.token?.role as string | undefined;
+    const title = req.nextauth.token?.title as string | undefined;
     const { pathname } = req.nextUrl;
 
     if (role !== 'super_admin') {
@@ -17,8 +19,14 @@ export default withAuth(
     }
 
     if (role === 'officer') {
-      const isBlocked = ADMIN_ONLY_PATHS.some((p) => pathname.startsWith(p));
-      if (isBlocked) {
+      const isAdminBlocked = ADMIN_ONLY_PATHS.some((p) => pathname.startsWith(p));
+      if (isAdminBlocked) {
+        return NextResponse.redirect(new URL('/', req.url));
+      }
+
+      // Only Treasurer officers can access finance routes
+      const isFinancePath = FINANCE_PATHS.some((p) => pathname.startsWith(p));
+      if (isFinancePath && title !== 'Treasurer') {
         return NextResponse.redirect(new URL('/', req.url));
       }
     }

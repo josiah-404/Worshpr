@@ -182,7 +182,6 @@ export default async function RegistrationsPage() {
       </div>
       <RegistrationsClient
         initialData={registrations}
-        orgId={userOrgId}
         events={events}
       />
     </div>

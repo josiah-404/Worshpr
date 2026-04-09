@@ -4,6 +4,67 @@
 @tailwind components;
 @tailwind utilities;
 
+@media print {
+  /* Zero page margins — the report itself handles internal padding */
+  @page {
+    margin: 0;
+    size: A4 portrait;
+  }
+
+  /* Strip every element's background — kills the dark layout wrappers */
+  * {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  /* White page base */
+  html,
+  body {
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide everything except the report */
+  body {
+    visibility: hidden;
+  }
+
+  .finance-report-printable,
+  .finance-report-printable * {
+    visibility: visible;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Fill the full A4 page — padding replaces @page margin */
+  .finance-report-printable {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: white !important;
+    padding: 0.7cm 1cm !important;
+    margin: 0;
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+    box-sizing: border-box !important;
+    overflow: hidden;
+  }
+
+  .finance-report-printable table {
+    font-size: 12px !important;
+    width: 100% !important;
+  }
+
+  .finance-report-printable th,
+  .finance-report-printable td {
+    padding-top: 5px !important;
+    padding-bottom: 5px !important;
+  }
+}
+
 @layer base {
   /* ── Light theme — shadcn Orange (oklch) ── */
   :root {
