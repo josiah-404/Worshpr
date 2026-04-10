@@ -118,16 +118,16 @@ export const RegistrationDrawer: FC<RegistrationDrawerProps> = ({ registration, 
                     <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                     <span>{reg.registrant.address}</span>
                   </div>
-                  {reg.registrant.church && (
+                  {reg.registrant.churchName && (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Church className="h-3.5 w-3.5 shrink-0" />
-                      <span>{reg.registrant.church}</span>
+                      <span>{reg.registrant.churchName}</span>
                     </div>
                   )}
-                  {reg.registrant.organization && (
+                  {reg.registrant.divisionOrgName && (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Building2 className="h-3.5 w-3.5 shrink-0" />
-                      <span>{reg.registrant.organization}</span>
+                      <span>{reg.registrant.divisionOrgName}</span>
                     </div>
                   )}
                 </div>

@@ -1,3 +1,5 @@
+import type { PaymentAccountSummary } from '@/types/payment-account.types';
+
 export type EventType = 'CAMP' | 'FELLOWSHIP' | 'SEMINAR' | 'WORSHIP_NIGHT';
 export type EventStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'CANCELLED' | 'COMPLETED';
 export type EventOrgRole = 'HOST' | 'COLLABORATOR';
@@ -55,6 +57,8 @@ export interface EventListItem {
   maxSlots: number | null;
   status: EventStatus;
   coverImage: string | null;
+  themeColor: string | null;
+  paymentAccount: PaymentAccountSummary | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;

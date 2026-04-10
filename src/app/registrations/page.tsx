@@ -43,8 +43,10 @@ export default async function RegistrationsPage() {
           phone: true,
           birthday: true,
           address: true,
-          church: true,
-          organization: true,
+          churchId: true,
+          churchRef: { select: { name: true } },
+          divisionOrgId: true,
+          divisionOrg: { select: { name: true } },
           emergencyContactName: true,
           emergencyContactPhone: true,
         },
@@ -103,6 +105,8 @@ export default async function RegistrationsPage() {
       registrant: {
         ...r.registrant,
         birthday: r.registrant.birthday.toISOString(),
+        churchName: r.registrant.churchRef?.name ?? null,
+        divisionOrgName: r.registrant.divisionOrg?.name ?? null,
       },
       group: {
         ...groupRest,
@@ -140,9 +144,22 @@ export default async function RegistrationsPage() {
       maxSlots: true,
       status: true,
       coverImage: true,
+      themeColor: true,
       createdBy: true,
       createdAt: true,
       updatedAt: true,
+      paymentAccount: {
+        select: {
+          id: true,
+          method: true,
+          label: true,
+          accountName: true,
+          accountNumber: true,
+          bankName: true,
+          qrCodeUrl: true,
+          instructions: true,
+        },
+      },
       organizations: {
         select: {
           id: true,

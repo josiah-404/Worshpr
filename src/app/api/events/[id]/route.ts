@@ -55,7 +55,7 @@ export async function PATCH(
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { coverImage, registrationDeadline, maxSlots, startDate, endDate, ...rest } =
+    const { coverImage, themeColor, paymentAccountId, registrationDeadline, maxSlots, startDate, endDate, ...rest } =
       parsed.data;
 
     const updated = await prisma.event.update({
@@ -69,6 +69,10 @@ export async function PATCH(
           : {}),
         ...(maxSlots !== undefined ? { maxSlots: maxSlots ?? null } : {}),
         ...(coverImage !== undefined ? { coverImage: coverImage || null } : {}),
+        ...(themeColor !== undefined ? { themeColor: themeColor || null } : {}),
+        ...(paymentAccountId !== undefined
+          ? { paymentAccountId: paymentAccountId || null }
+          : {}),
       },
       select: {
         id: true,
@@ -84,9 +88,22 @@ export async function PATCH(
         maxSlots: true,
         status: true,
         coverImage: true,
+        themeColor: true,
         createdBy: true,
         createdAt: true,
         updatedAt: true,
+        paymentAccount: {
+          select: {
+            id: true,
+            method: true,
+            label: true,
+            accountName: true,
+            accountNumber: true,
+            bankName: true,
+            qrCodeUrl: true,
+            instructions: true,
+          },
+        },
         organizations: {
           select: {
             id: true,

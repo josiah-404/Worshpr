@@ -26,6 +26,19 @@ async function getEvent(slug: string): Promise<PublicEventData | null> {
       maxSlots: true,
       status: true,
       coverImage: true,
+      themeColor: true,
+      paymentAccount: {
+        select: {
+          id: true,
+          method: true,
+          label: true,
+          accountName: true,
+          accountNumber: true,
+          bankName: true,
+          qrCodeUrl: true,
+          instructions: true,
+        },
+      },
       organizations: {
         where: { inviteStatus: 'ACCEPTED' },
         select: {
@@ -34,6 +47,13 @@ async function getEvent(slug: string): Promise<PublicEventData | null> {
           organization: { select: { name: true, logoUrl: true } },
         },
         orderBy: { role: 'asc' },
+      },
+      eventChurches: {
+        select: {
+          church: {
+            select: { id: true, name: true, orgId: true, organization: { select: { name: true } } },
+          },
+        },
       },
     },
   });
@@ -60,6 +80,8 @@ async function getEvent(slug: string): Promise<PublicEventData | null> {
     maxSlots: event.maxSlots,
     status: event.status,
     coverImage: event.coverImage,
+    themeColor: event.themeColor,
+    paymentAccount: event.paymentAccount ?? null,
     hostOrg: hostOrg
       ? {
           orgId: hostOrg.orgId,
@@ -72,6 +94,12 @@ async function getEvent(slug: string): Promise<PublicEventData | null> {
       orgName: o.organization.name,
       orgLogoUrl: o.organization.logoUrl,
       role: o.role as 'HOST' | 'COLLABORATOR',
+    })),
+    churches: event.eventChurches.map((ec) => ({
+      id: ec.church.id,
+      name: ec.church.name,
+      orgName: ec.church.organization.name,
+      orgId: ec.church.orgId,
     })),
     registrationCount,
   };
@@ -89,8 +117,9 @@ export default async function RegistrationPage({ params }: Props) {
   const slotsLeft =
     event.maxSlots !== null ? event.maxSlots - event.registrationCount : null;
   const isFull = slotsLeft !== null && slotsLeft <= 0;
+  const noChurches = event.churches.length === 0;
 
-  const canRegister = !isClosed && !deadlinePassed && !isFull;
+  const canRegister = !isClosed && !deadlinePassed && !isFull && !noChurches;
 
   function formatDate(iso: string) {
     return new Date(iso).toLocaleDateString('en-PH', {
@@ -100,8 +129,13 @@ export default async function RegistrationPage({ params }: Props) {
     });
   }
 
+  const tc = event.themeColor ?? null;
+
   return (
     <div className="min-h-screen bg-background">
+      {/* Theme accent bar */}
+      {tc && <div className="h-1 w-full" style={{ backgroundColor: tc }} />}
+
       {/* Cover */}
       {event.coverImage && (
         // eslint-disable-next-line @next/next/no-img-element
@@ -127,6 +161,7 @@ export default async function RegistrationPage({ params }: Props) {
             )}
           </div>
           <h1 className="text-3xl font-bold">{event.title}</h1>
+          {tc && <div className="h-1 w-12 rounded-full" style={{ backgroundColor: tc }} />}
           {event.hostOrg && (
             <p className="text-muted-foreground text-sm">
               Hosted by <span className="font-medium text-foreground">{event.hostOrg.orgName}</span>
@@ -134,12 +169,12 @@ export default async function RegistrationPage({ params }: Props) {
           )}
           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <CalendarDays className="h-4 w-4" />
+              <CalendarDays className="h-4 w-4" style={tc ? { color: tc } : undefined} />
               {formatDate(event.startDate)} — {formatDate(event.endDate)}
             </span>
             {event.venue && (
               <span className="flex items-center gap-1.5">
-                <MapPin className="h-4 w-4" />
+                <MapPin className="h-4 w-4" style={tc ? { color: tc } : undefined} />
                 {event.venue}
               </span>
             )}
@@ -156,9 +191,16 @@ export default async function RegistrationPage({ params }: Props) {
 
         {/* Form or closed message */}
         {canRegister ? (
-          <div className="border rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-6">Register</h2>
-            <RegistrationStepper event={event} />
+          <div className="border rounded-xl overflow-hidden">
+            <div
+              className="px-6 py-4 flex items-center gap-2.5 bg-primary"
+              style={tc ? { backgroundColor: tc } : undefined}
+            >
+              <h2 className="text-base font-semibold text-white">Registration Form</h2>
+            </div>
+            <div className="p-6">
+              <RegistrationStepper event={event} />
+            </div>
           </div>
         ) : (
           <div className="border rounded-xl p-8 text-center space-y-2">
@@ -167,14 +209,18 @@ export default async function RegistrationPage({ params }: Props) {
                 ? 'Registration Full'
                 : deadlinePassed
                   ? 'Registration Closed'
-                  : 'Registration Not Available'}
+                  : noChurches
+                    ? 'Registration Not Yet Open'
+                    : 'Registration Not Available'}
             </p>
             <p className="text-sm text-muted-foreground">
               {isFull
                 ? 'All slots have been filled for this event.'
                 : deadlinePassed
                   ? 'The registration deadline has passed.'
-                  : 'Registration for this event is currently unavailable.'}
+                  : noChurches
+                    ? 'The event organizer has not yet configured the participating churches. Please check back later.'
+                    : 'Registration for this event is currently unavailable.'}
             </p>
           </div>
         )}

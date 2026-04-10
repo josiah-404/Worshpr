@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { useGetLedger } from '@/hooks/useGetLedger';
 import { useDeleteLedgerEntry } from '@/hooks/useDeleteLedgerEntry';
@@ -123,48 +126,45 @@ export const LedgerTable: FC<LedgerTableProps> = ({ initialData, events, filterE
         </div>
       ) : (
         <div className="rounded-lg border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 border-b">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Date</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Description</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Category</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">Event</th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Amount</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead className="hidden md:table-cell">Category</TableHead>
+                <TableHead className="hidden lg:table-cell">Event</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {entries.map((entry) => (
-                <tr key={entry.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                <TableRow key={entry.id}>
+                  <TableCell className="text-muted-foreground whitespace-nowrap">
                     {format(new Date(entry.date), 'MMM d, yyyy')}
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell>
                     <p className="font-medium leading-tight">{entry.description}</p>
                     {entry.payee && <p className="text-xs text-muted-foreground">To: {entry.payee}</p>}
-                  </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <div className="flex flex-col gap-0.5">
                       <Badge variant="outline" className={cn('gap-1 text-xs w-fit', entry.type === 'INCOME' ? 'text-emerald-500 border-emerald-500/30 bg-emerald-500/10' : 'text-destructive border-destructive/30 bg-destructive/10')}>
-                        {entry.type === 'INCOME'
-                          ? <TrendingUp className="h-3 w-3" />
-                          : <TrendingDown className="h-3 w-3" />
-                        }
+                        {entry.type === 'INCOME' ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                         {FINANCE_CATEGORY_LABELS[entry.category]}
                       </Badge>
                       {entry.customCategory && (
                         <span className="text-xs text-muted-foreground pl-0.5">{entry.customCategory}</span>
                       )}
                     </div>
-                  </td>
-                  <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground text-xs">
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell text-muted-foreground text-xs">
                     {entry.eventTitle ?? <span className="italic">Standalone</span>}
-                  </td>
-                  <td className={cn('px-4 py-3 text-right font-semibold tabular-nums', entry.type === 'INCOME' ? 'text-emerald-500' : 'text-destructive')}>
+                  </TableCell>
+                  <TableCell className={cn('text-right font-semibold tabular-nums', entry.type === 'INCOME' ? 'text-emerald-500' : 'text-destructive')}>
                     {entry.type === 'INCOME' ? '+' : '-'}{formatCurrency(entry.amount)}
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell>
                     <div className="flex items-center gap-1 justify-end">
                       {entry.receiptUrl && (
                         <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
@@ -180,11 +180,11 @@ export const LedgerTable: FC<LedgerTableProps> = ({ initialData, events, filterE
                         </Button>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
       <ConfirmDialog

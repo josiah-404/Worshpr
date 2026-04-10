@@ -61,8 +61,10 @@ export async function GET(req: NextRequest) {
             phone: true,
             birthday: true,
             address: true,
-            church: true,
-            organization: true,
+            churchId: true,
+            churchRef: { select: { name: true } },
+            divisionOrgId: true,
+            divisionOrg: { select: { name: true } },
             emergencyContactName: true,
             emergencyContactPhone: true,
           },
@@ -122,6 +124,8 @@ export async function GET(req: NextRequest) {
         registrant: {
           ...r.registrant,
           birthday: r.registrant.birthday.toISOString(),
+          churchName: r.registrant.churchRef?.name ?? null,
+          divisionOrgName: r.registrant.divisionOrg?.name ?? null,
         },
         group: {
           ...groupRest,
@@ -217,8 +221,8 @@ export async function POST(req: NextRequest) {
               phone: r.phone,
               birthday: new Date(r.birthday),
               address: r.address,
-              church: r.church?.trim() || null,
-              organization: r.organization?.trim() || null,
+              churchId: r.churchId || null,
+              divisionOrgId: r.divisionOrgId || null,
               emergencyContactName: r.emergencyContactName,
               emergencyContactPhone: r.emergencyContactPhone,
             },
@@ -228,8 +232,8 @@ export async function POST(req: NextRequest) {
               phone: r.phone,
               birthday: new Date(r.birthday),
               address: r.address,
-              church: r.church?.trim() || null,
-              organization: r.organization?.trim() || null,
+              churchId: r.churchId || null,
+              divisionOrgId: r.divisionOrgId || null,
               emergencyContactName: r.emergencyContactName,
               emergencyContactPhone: r.emergencyContactPhone,
             },
@@ -255,16 +259,16 @@ export async function POST(req: NextRequest) {
         throw new Error(`Already registered: ${dupeNames}`);
       }
 
-      // Check for duplicate registrations by fullName + birthday + organization (per event)
+      // Check for duplicate registrations by fullName + birthday + divisionOrgId (per event)
       for (const r of registrants) {
-        const normalizedOrg = r.organization?.trim() || null;
+        const normalizedDivisionOrgId = r.divisionOrgId || null;
         const duplicate = await tx.registration.findFirst({
           where: {
             eventId,
             registrant: {
               fullName: { equals: r.fullName.trim(), mode: 'insensitive' },
               birthday: new Date(r.birthday),
-              organization: normalizedOrg,
+              divisionOrgId: normalizedDivisionOrgId,
             },
           },
           select: { id: true },

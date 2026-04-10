@@ -4,6 +4,9 @@ import { useState, type FC } from 'react';
 import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
 import { useUsers, EMPTY_USER_FORM } from '@/hooks/useUsers';
 import { useConfirm } from '@/hooks/useConfirm';
 import { UserDialog } from '@/app/users/UserDialog';
@@ -96,61 +99,55 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers, organizations })
       </div>
 
       <div className="rounded-lg border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="border-b bg-muted/50">
-            <tr className="text-muted-foreground uppercase text-xs tracking-wider">
-              <th className="px-6 py-3 text-left font-medium">Name</th>
-              <th className="px-6 py-3 text-left font-medium">Email</th>
-              <th className="px-6 py-3 text-left font-medium">Organization</th>
-              <th className="px-6 py-3 text-left font-medium">Role</th>
-              <th className="px-6 py-3 text-left font-medium">Title</th>
-              <th className="px-6 py-3 text-left font-medium">Joined</th>
-              <th className="px-6 py-3 text-right font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Organization</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Title</TableHead>
+              <TableHead>Joined</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {users.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+              <TableRow>
+                <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
                   No users yet. Add your first team member.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
             {users.map((user) => (
-              <tr key={user.id} className="hover:bg-muted/30 transition-colors">
-                <td className="px-6 py-4 font-medium">{user.name}</td>
-                <td className="px-6 py-4 text-muted-foreground">{user.email}</td>
-                <td className="px-6 py-4 text-muted-foreground">
+              <TableRow key={user.id}>
+                <TableCell className="font-medium">{user.name}</TableCell>
+                <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                <TableCell className="text-muted-foreground">
                   {user.orgId ? orgMap[user.orgId] ?? '—' : '—'}
-                </td>
-                <td className="px-6 py-4">
+                </TableCell>
+                <TableCell>
                   <Badge variant="outline" className={ROLE_BADGE_CLASS[user.role]}>
                     {ROLE_LABEL[user.role] ?? user.role}
                   </Badge>
-                </td>
-                <td className="px-6 py-4 text-muted-foreground">
-                  {user.title ?? '—'}
-                </td>
-                <td className="px-6 py-4 text-muted-foreground">
+                </TableCell>
+                <TableCell className="text-muted-foreground">{user.title ?? '—'}</TableCell>
+                <TableCell className="text-muted-foreground">
                   {new Date(user.createdAt).toLocaleDateString()}
-                </td>
-                <td className="px-6 py-4 text-right space-x-2">
+                </TableCell>
+                <TableCell className="text-right space-x-1">
                   <Button variant="ghost" size="icon" onClick={() => openEdit(user)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(user)}
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  >
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(user)}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10">
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       <UserDialog

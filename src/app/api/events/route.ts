@@ -39,9 +39,22 @@ export async function GET(req: NextRequest) {
         maxSlots: true,
         status: true,
         coverImage: true,
+        themeColor: true,
         createdBy: true,
         createdAt: true,
         updatedAt: true,
+        paymentAccount: {
+          select: {
+            id: true,
+            method: true,
+            label: true,
+            accountName: true,
+            accountNumber: true,
+            bankName: true,
+            qrCodeUrl: true,
+            instructions: true,
+          },
+        },
         organizations: {
           select: {
             id: true,
@@ -95,7 +108,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { hostOrgId, coverImage, registrationDeadline, maxSlots, ...rest } = parsed.data;
+    const { hostOrgId, coverImage, themeColor, paymentAccountId, registrationDeadline, maxSlots, ...rest } = parsed.data;
 
     // org_admin can only create events for their own org
     if (session.user.role === 'org_admin' && hostOrgId !== session.user.orgId) {
@@ -115,6 +128,8 @@ export async function POST(req: NextRequest) {
         registrationDeadline: registrationDeadline ? new Date(registrationDeadline) : null,
         maxSlots: maxSlots ?? null,
         coverImage: coverImage || null,
+        themeColor: themeColor || null,
+        paymentAccountId: paymentAccountId || null,
         createdBy: session.user.id,
         organizations: {
           create: {
@@ -139,9 +154,22 @@ export async function POST(req: NextRequest) {
         maxSlots: true,
         status: true,
         coverImage: true,
+        themeColor: true,
         createdBy: true,
         createdAt: true,
         updatedAt: true,
+        paymentAccount: {
+          select: {
+            id: true,
+            method: true,
+            label: true,
+            accountName: true,
+            accountNumber: true,
+            bankName: true,
+            qrCodeUrl: true,
+            instructions: true,
+          },
+        },
         organizations: {
           select: {
             id: true,

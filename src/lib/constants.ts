@@ -11,6 +11,9 @@ export const QUERY_KEYS = {
   ORG_FUND: 'org-fund',
   LEDGER: 'ledger',
   FINANCE_SUMMARY: 'finance-summary',
+  PAYMENT_ACCOUNTS: 'payment-accounts',
+  CHURCHES: 'churches',
+  EVENT_CHURCHES: 'event-churches',
 } as const;
 
 export const OFFICER_TITLES = [
