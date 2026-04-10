@@ -1,3 +1,6 @@
+import type { PaymentAccountSummary } from '@/types/payment-account.types';
+import type { ChurchOption } from '@/types/church.types';
+
 export type RegistrationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 export type PaymentIntent = 'CASH' | 'ONLINE' | 'FREE';
 export type PaymentMethod = 'CASH' | 'GCASH' | 'MAYA' | 'BANK_TRANSFER' | 'OTHER';
@@ -10,8 +13,8 @@ export interface RegistrantData {
   phone: string;
   birthday: string; // ISO date string
   address: string;
-  church?: string;
-  organization?: string;
+  churchId?: string;
+  divisionOrgId?: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
 }
@@ -54,6 +57,8 @@ export interface PublicEventData {
   maxSlots: number | null;
   status: string;
   coverImage: string | null;
+  themeColor: string | null;
+  paymentAccount: PaymentAccountSummary | null;
   hostOrg: {
     orgId: string;
     orgName: string;
@@ -63,6 +68,8 @@ export interface PublicEventData {
   organizations: EventOrgOption[];
   /** Approved registration count — used to check remaining slots. */
   registrationCount: number;
+  /** Churches participating in this event — empty means registration is blocked. */
+  churches: ChurchOption[];
 }
 
 export interface PaymentDetail {
@@ -86,8 +93,10 @@ export interface RegistrantDetail {
   phone: string;
   birthday: string;
   address: string;
-  church: string | null;
-  organization: string | null;
+  churchId: string | null;
+  churchName: string | null;
+  divisionOrgId: string | null;
+  divisionOrgName: string | null;
   emergencyContactName: string;
   emergencyContactPhone: string;
 }

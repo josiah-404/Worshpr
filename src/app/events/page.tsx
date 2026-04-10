@@ -35,9 +35,22 @@ export default async function EventsPage() {
       maxSlots: true,
       status: true,
       coverImage: true,
+      themeColor: true,
       createdBy: true,
       createdAt: true,
       updatedAt: true,
+      paymentAccount: {
+        select: {
+          id: true,
+          method: true,
+          label: true,
+          accountName: true,
+          accountNumber: true,
+          bankName: true,
+          qrCodeUrl: true,
+          instructions: true,
+        },
+      },
       organizations: {
         select: {
           id: true,

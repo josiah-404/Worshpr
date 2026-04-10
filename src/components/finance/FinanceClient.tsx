@@ -8,6 +8,7 @@ import { LedgerTable } from '@/components/finance/LedgerTable';
 import { EventFinanceSummary } from '@/components/finance/EventFinanceSummary';
 import { FinanceReport } from '@/components/finance/FinanceReport';
 import { AddEntryDialog } from '@/components/finance/AddEntryDialog';
+import { PaymentAccountsClient } from '@/app/payment-accounts/PaymentAccountsClient';
 import { useGetFinanceSummary } from '@/hooks/useGetFinanceSummary';
 import { useGetLedger } from '@/hooks/useGetLedger';
 import { useGetOrgFund } from '@/hooks/useGetOrgFund';
@@ -15,22 +16,25 @@ import { useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import type { OrgFundDetail, FinanceSummary, LedgerEntry } from '@/types/finance.types';
+import type { PaymentAccount } from '@/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = 'overview' | 'ledger' | 'reports';
+type Tab = 'overview' | 'ledger' | 'reports' | 'payment-accounts';
 
 interface FinanceClientProps {
   initialFund: OrgFundDetail | null;
   initialSummary: FinanceSummary | null;
   initialEntries: LedgerEntry[];
   events: { id: string; title: string }[];
+  initialAccounts: PaymentAccount[];
+  orgId: string;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export const FinanceClient: FC<FinanceClientProps> = ({
-  initialFund, initialSummary, initialEntries, events,
+  initialFund, initialSummary, initialEntries, events, initialAccounts, orgId,
 }) => {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [addOpen, setAddOpen] = useState(false);
@@ -53,6 +57,7 @@ export const FinanceClient: FC<FinanceClientProps> = ({
     { key: 'overview', label: 'Overview' },
     { key: 'ledger', label: 'Ledger' },
     { key: 'reports', label: 'Reports' },
+    { key: 'payment-accounts', label: 'Payment Accounts' },
   ];
 
   return (
@@ -74,15 +79,17 @@ export const FinanceClient: FC<FinanceClientProps> = ({
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={handleRefresh} disabled={refreshing} className="gap-2">
-            <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
-            Refresh
-          </Button>
-          <Button size="sm" className="gap-2" onClick={() => setAddOpen(true)}>
-            <Plus className="h-4 w-4" /> Add Entry
-          </Button>
-        </div>
+        {activeTab !== 'payment-accounts' && (
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={handleRefresh} disabled={refreshing} className="gap-2">
+              <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
+              Refresh
+            </Button>
+            <Button size="sm" className="gap-2" onClick={() => setAddOpen(true)}>
+              <Plus className="h-4 w-4" /> Add Entry
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Overview */}
@@ -120,6 +127,11 @@ export const FinanceClient: FC<FinanceClientProps> = ({
           events={events}
           summaries={summary?.eventBreakdowns ?? []}
         />
+      )}
+
+      {/* Payment Accounts */}
+      {activeTab === 'payment-accounts' && (
+        <PaymentAccountsClient orgId={orgId} initialAccounts={initialAccounts} />
       )}
 
       {/* Add Entry Dialog */}

@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { RegistrationGroupInput } from '@/validations/registration.schema';
-import type { EventOrgOption } from '@/types';
+import type { ChurchOption, EventOrgOption } from '@/types';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -60,14 +60,109 @@ const AgeDisplay: FC<AgeDisplayProps> = ({ index }) => {
   );
 };
 
+// ─── DivisionChurchFields ──────────────────────────────────────────────────
+
+interface DivisionChurchFieldsProps {
+  index: number;
+  eventOrgs: EventOrgOption[];
+  churches: ChurchOption[];
+}
+
+const DivisionChurchFields: FC<DivisionChurchFieldsProps> = ({ index, eventOrgs, churches }) => {
+  const form = useFormContext<RegistrationGroupInput>();
+  const divisionOrgId = useWatch({ control: form.control, name: `registrants.${index}.divisionOrgId` }) as string;
+
+  const filteredChurches = divisionOrgId
+    ? churches.filter((c) => c.orgId === divisionOrgId)
+    : churches;
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {eventOrgs.length > 0 && (
+        <FormField
+          control={form.control}
+          name={`registrants.${index}.divisionOrgId`}
+          render={({ field: f }) => (
+            <FormItem>
+              <FormLabel>Division <span className="text-muted-foreground">(optional)</span></FormLabel>
+              <Select
+                onValueChange={(v) => {
+                  f.onChange(v === 'none' ? '' : v);
+                  // Reset church when division changes
+                  form.setValue(`registrants.${index}.churchId`, '');
+                }}
+                value={f.value ?? ''}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a division" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="none">— None —</SelectItem>
+                  {eventOrgs.map((org) => (
+                    <SelectItem key={org.orgId} value={org.orgId}>
+                      {org.orgName}
+                      {org.role === 'HOST' && (
+                        <span className="ml-1.5 text-xs text-muted-foreground">(Host)</span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
+      {filteredChurches.length > 0 && (
+        <FormField
+          control={form.control}
+          name={`registrants.${index}.churchId`}
+          render={({ field: f }) => (
+            <FormItem>
+              <FormLabel>Church <span className="text-muted-foreground">(optional)</span></FormLabel>
+              <Select
+                onValueChange={(v) => f.onChange(v === 'none' ? '' : v)}
+                value={f.value ?? ''}
+                disabled={eventOrgs.length > 0 && !divisionOrgId}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={
+                      eventOrgs.length > 0 && !divisionOrgId
+                        ? 'Select a division first'
+                        : 'Select a church'
+                    } />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="none">— None —</SelectItem>
+                  {filteredChurches.map((church) => (
+                    <SelectItem key={church.id} value={church.id}>
+                      {church.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
+    </div>
+  );
+};
+
 // ─── Component ─────────────────────────────────────────────────────────────
 
 interface RegistrantInfoStepProps {
   registrationType: 'individual' | 'group';
   eventOrgs: EventOrgOption[];
+  churches: ChurchOption[];
 }
 
-export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({ registrationType, eventOrgs }) => {
+export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({ registrationType, eventOrgs, churches }) => {
   const form = useFormContext<RegistrationGroupInput>();
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -82,8 +177,8 @@ export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({ registrationTy
       phone: '',
       birthday: '',
       address: '',
-      church: '',
-      organization: '',
+      churchId: '',
+      divisionOrgId: '',
       emergencyContactName: '',
       emergencyContactPhone: '',
     });
@@ -201,50 +296,7 @@ export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({ registrationTy
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name={`registrants.${index}.church`}
-                render={({ field: f }) => (
-                  <FormItem>
-                    <FormLabel>Church <span className="text-muted-foreground">(optional)</span></FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Victory Alabang" {...f} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {eventOrgs.length > 0 && (
-                <FormField
-                  control={form.control}
-                  name={`registrants.${index}.organization`}
-                  render={({ field: f }) => (
-                    <FormItem>
-                      <FormLabel>Organization <span className="text-muted-foreground">(optional)</span></FormLabel>
-                      <Select onValueChange={f.onChange} value={f.value ?? ''}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select an organization" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {eventOrgs.map((org) => (
-                            <SelectItem key={org.orgId} value={org.orgName}>
-                              {org.orgName}
-                              {org.role === 'HOST' && (
-                                <span className="ml-1.5 text-xs text-muted-foreground">(Host)</span>
-                              )}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-            </div>
+            <DivisionChurchFields index={index} eventOrgs={eventOrgs} churches={churches} />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}

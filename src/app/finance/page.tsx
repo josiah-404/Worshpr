@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { FinanceClient } from '@/components/finance/FinanceClient';
 import type { OrgFundDetail, FinanceSummary, LedgerEntry, FinanceCategory, FinanceEntryType } from '@/types/finance.types';
+import type { PaymentAccount } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +19,7 @@ export default async function FinancePage() {
   if (!orgId && role !== 'super_admin') redirect('/');
 
   // Fetch all data in parallel
-  const [fund, rawEntries, events, categoryTotals] = await Promise.all([
+  const [fund, rawEntries, events, categoryTotals, rawAccounts] = await Promise.all([
     orgId ? prisma.orgFund.findUnique({ where: { orgId } }) : null,
     orgId ? prisma.financeLedger.findMany({
       where: { orgId },
@@ -42,7 +43,22 @@ export default async function FinancePage() {
       where: { orgId },
       _sum: { amount: true },
     }) : [],
+    orgId ? prisma.paymentAccount.findMany({
+      where: { orgId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true, orgId: true, method: true, label: true, accountName: true,
+        accountNumber: true, bankName: true, qrCodeUrl: true, instructions: true,
+        isActive: true, createdAt: true, updatedAt: true,
+      },
+    }) : [],
   ]);
+
+  const initialAccounts: PaymentAccount[] = rawAccounts.map((a) => ({
+    ...a,
+    createdAt: a.createdAt.toISOString(),
+    updatedAt: a.updatedAt.toISOString(),
+  }));
 
   // Build OrgFund with computed COH
   const totalIncome = categoryTotals.filter((r) => r.type === 'INCOME').reduce((s, r) => s + (r._sum.amount ?? 0), 0);
@@ -138,6 +154,8 @@ export default async function FinancePage() {
         initialSummary={initialSummary}
         initialEntries={initialEntries}
         events={events}
+        initialAccounts={initialAccounts}
+        orgId={orgId ?? ''}
       />
     </div>
   );

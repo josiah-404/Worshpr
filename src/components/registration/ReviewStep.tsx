@@ -49,9 +49,12 @@ export const ReviewStep: FC<ReviewStepProps> = ({ event }) => {
                 {r.fullName}{r.nickname ? ` (${r.nickname})` : ''}
               </p>
               <p className="text-muted-foreground">{r.email} · {r.phone}</p>
-              {(r.church || r.organization) && (
+              {(r.churchId || r.divisionOrgId) && (
                 <p className="text-muted-foreground text-xs">
-                  {[r.church, r.organization].filter(Boolean).join(' · ')}
+                  {[
+                    r.churchId ? (event.churches.find((c) => c.id === r.churchId)?.name ?? r.churchId) : null,
+                    r.divisionOrgId ? (event.organizations.find((o) => o.orgId === r.divisionOrgId)?.orgName ?? r.divisionOrgId) : null,
+                  ].filter(Boolean).join(' · ')}
                 </p>
               )}
               <p className="text-muted-foreground text-xs">{r.address}</p>

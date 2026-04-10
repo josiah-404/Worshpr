@@ -15,6 +15,8 @@ export type {
 export { INCOME_CATEGORIES, EXPENSE_CATEGORIES, FINANCE_CATEGORY_LABELS } from '@/types/finance.types';
 
 export type { EventType, EventStatus, EventOrgRole, EventInviteStatus, EventOrg, EventListItem, CollaborationInvite } from '@/types/event.types';
+export type { Church, ChurchOption } from '@/types/church.types';
+export type { PaymentAccount, PaymentAccountSummary } from '@/types/payment-account.types';
 export type {
   RegistrationStatus,
   PaymentIntent,

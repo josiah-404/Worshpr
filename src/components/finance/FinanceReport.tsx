@@ -6,6 +6,9 @@ import { Printer, TrendingUp, TrendingDown, ChevronRight, X, Users } from 'lucid
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
 import { FINANCE_CATEGORY_LABELS } from '@/types/finance.types';
 import { cn } from '@/lib/utils';
 import type { LedgerEntry, EventFinanceSummaryItem } from '@/types/finance.types';
@@ -75,26 +78,26 @@ const IncomeTable: FC<{ entries: LedgerEntry[]; total: number }> = ({ entries, t
 
   return (
     <>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b text-xs text-muted-foreground">
-            <th className="text-left py-2 font-medium w-28">Date</th>
-            <th className="text-left py-2 font-medium">Description</th>
-            <th className="text-left py-2 font-medium w-32 hidden sm:table-cell">Category</th>
-            <th className="text-right py-2 font-medium w-28">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-28">Date</TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead className="w-32 hidden sm:table-cell">Category</TableHead>
+            <TableHead className="text-right w-28">Amount</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {/* Registration — grouped row */}
           {registrationEntries.length > 0 && (
-            <tr
-              className="border-b hover:bg-muted/30 cursor-pointer group print:hover:bg-transparent"
+            <TableRow
+              className="cursor-pointer group print:hover:bg-transparent"
               onClick={() => setBreakdownOpen(true)}
             >
-              <td className="py-2.5 text-muted-foreground text-xs align-top">
+              <TableCell className="text-muted-foreground text-xs align-top">
                 {format(new Date(registrationEntries[0].date), 'MMM d, yyyy')}
-              </td>
-              <td className="py-2.5">
+              </TableCell>
+              <TableCell>
                 <div className="flex items-center gap-1.5">
                   <span className="font-medium">
                     Registrations
@@ -105,40 +108,40 @@ const IncomeTable: FC<{ entries: LedgerEntry[]; total: number }> = ({ entries, t
                   <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors print:hidden" />
                 </div>
                 <p className="text-xs text-muted-foreground print:hidden">Click to view breakdown</p>
-              </td>
-              <td className="py-2.5 text-xs text-muted-foreground hidden sm:table-cell">Registration</td>
-              <td className="py-2.5 text-right font-semibold text-emerald-500 tabular-nums">
+              </TableCell>
+              <TableCell className="text-xs text-muted-foreground hidden sm:table-cell">Registration</TableCell>
+              <TableCell className="text-right font-semibold text-emerald-500 tabular-nums">
                 +{fmt(registrationTotal)}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           )}
 
           {/* Other income entries */}
           {otherIncome.map((e) => (
-            <tr key={e.id} className="border-b last:border-0">
-              <td className="py-2.5 text-muted-foreground text-xs align-top">
+            <TableRow key={e.id}>
+              <TableCell className="text-muted-foreground text-xs align-top">
                 {format(new Date(e.date), 'MMM d, yyyy')}
-              </td>
-              <td className="py-2.5 font-medium">{e.description}</td>
-              <td className="py-2.5 text-xs text-muted-foreground hidden sm:table-cell">
+              </TableCell>
+              <TableCell className="font-medium">{e.description}</TableCell>
+              <TableCell className="text-xs text-muted-foreground hidden sm:table-cell">
                 {e.customCategory
                   ? <>{FINANCE_CATEGORY_LABELS[e.category]} <span className="text-foreground/70">· {e.customCategory}</span></>
                   : FINANCE_CATEGORY_LABELS[e.category]
                 }
-              </td>
-              <td className="py-2.5 text-right font-semibold text-emerald-500 tabular-nums">
+              </TableCell>
+              <TableCell className="text-right font-semibold text-emerald-500 tabular-nums">
                 +{fmt(e.amount)}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colSpan={3} className="pt-3 font-bold text-sm border-t">Total Income</td>
-            <td className="pt-3 text-right font-bold text-emerald-500 tabular-nums border-t">{fmt(total)}</td>
-          </tr>
-        </tfoot>
-      </table>
+        </TableBody>
+        <TableFooter>
+          <TableRow>
+            <TableCell colSpan={3} className="font-bold text-sm">Total Income</TableCell>
+            <TableCell className="text-right font-bold text-emerald-500 tabular-nums">{fmt(total)}</TableCell>
+          </TableRow>
+        </TableFooter>
+      </Table>
 
       <RegistrationBreakdownDialog
         open={breakdownOpen}
@@ -152,44 +155,44 @@ const IncomeTable: FC<{ entries: LedgerEntry[]; total: number }> = ({ entries, t
 // ─── Expense Table ────────────────────────────────────────────────────────────
 
 const ExpenseTable: FC<{ entries: LedgerEntry[]; total: number }> = ({ entries, total }) => (
-  <table className="w-full text-sm">
-    <thead>
-      <tr className="border-b text-xs text-muted-foreground">
-        <th className="text-left py-2 font-medium w-28">Date</th>
-        <th className="text-left py-2 font-medium">Description</th>
-        <th className="text-left py-2 font-medium w-32 hidden sm:table-cell">Category</th>
-        <th className="text-right py-2 font-medium w-28">Amount</th>
-      </tr>
-    </thead>
-    <tbody>
+  <Table>
+    <TableHeader>
+      <TableRow>
+        <TableHead className="w-28">Date</TableHead>
+        <TableHead>Description</TableHead>
+        <TableHead className="w-32 hidden sm:table-cell">Category</TableHead>
+        <TableHead className="text-right w-28">Amount</TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
       {entries.map((e) => (
-        <tr key={e.id} className="border-b last:border-0">
-          <td className="py-2.5 text-muted-foreground text-xs align-top">
+        <TableRow key={e.id}>
+          <TableCell className="text-muted-foreground text-xs align-top">
             {format(new Date(e.date), 'MMM d, yyyy')}
-          </td>
-          <td className="py-2.5">
+          </TableCell>
+          <TableCell>
             <p className="font-medium">{e.description}</p>
             {e.payee && <p className="text-xs text-muted-foreground">To: {e.payee}</p>}
-          </td>
-          <td className="py-2.5 text-xs text-muted-foreground hidden sm:table-cell">
+          </TableCell>
+          <TableCell className="text-xs text-muted-foreground hidden sm:table-cell">
             {e.customCategory
               ? <>{FINANCE_CATEGORY_LABELS[e.category]} <span className="text-foreground/70">· {e.customCategory}</span></>
               : FINANCE_CATEGORY_LABELS[e.category]
             }
-          </td>
-          <td className="py-2.5 text-right font-semibold text-destructive tabular-nums">
+          </TableCell>
+          <TableCell className="text-right font-semibold text-destructive tabular-nums">
             -{fmt(e.amount)}
-          </td>
-        </tr>
+          </TableCell>
+        </TableRow>
       ))}
-    </tbody>
-    <tfoot>
-      <tr>
-        <td colSpan={3} className="pt-3 font-bold text-sm border-t">Total Expenses</td>
-        <td className="pt-3 text-right font-bold text-destructive tabular-nums border-t">{fmt(total)}</td>
-      </tr>
-    </tfoot>
-  </table>
+    </TableBody>
+    <TableFooter>
+      <TableRow>
+        <TableCell colSpan={3} className="font-bold text-sm">Total Expenses</TableCell>
+        <TableCell className="text-right font-bold text-destructive tabular-nums">{fmt(total)}</TableCell>
+      </TableRow>
+    </TableFooter>
+  </Table>
 );
 
 // ─── Component ────────────────────────────────────────────────────────────────

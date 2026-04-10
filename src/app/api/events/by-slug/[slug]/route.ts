@@ -24,6 +24,19 @@ export async function GET(
         maxSlots: true,
         status: true,
         coverImage: true,
+        themeColor: true,
+        paymentAccount: {
+          select: {
+            id: true,
+            method: true,
+            label: true,
+            accountName: true,
+            accountNumber: true,
+            bankName: true,
+            qrCodeUrl: true,
+            instructions: true,
+          },
+        },
         organizations: {
           where: { inviteStatus: 'ACCEPTED' },
           select: {
@@ -32,6 +45,13 @@ export async function GET(
             organization: { select: { name: true, logoUrl: true } },
           },
           orderBy: { role: 'asc' }, // HOST before COLLABORATOR
+        },
+        eventChurches: {
+          select: {
+            church: {
+              select: { id: true, name: true, orgId: true, organization: { select: { name: true } } },
+            },
+          },
         },
       },
     });
@@ -60,6 +80,8 @@ export async function GET(
       maxSlots: event.maxSlots,
       status: event.status,
       coverImage: event.coverImage,
+      themeColor: event.themeColor,
+      paymentAccount: event.paymentAccount ?? null,
       hostOrg: hostOrg
         ? {
             orgId: hostOrg.orgId,
@@ -72,6 +94,12 @@ export async function GET(
         orgName: o.organization.name,
         orgLogoUrl: o.organization.logoUrl,
         role: o.role as 'HOST' | 'COLLABORATOR',
+      })),
+      churches: event.eventChurches.map((ec) => ({
+        id: ec.church.id,
+        name: ec.church.name,
+        orgName: ec.church.organization.name,
+        orgId: ec.church.orgId,
       })),
       registrationCount,
     };

@@ -8,7 +8,7 @@ import type { RegistrationListItem } from '@/types';
 
 export function useGetRegistrations(
   params: Omit<GetRegistrationsParams, 'orgId'>,
-  initialData?: RegistrationListItem[],
+  options?: { enabled?: boolean; initialData?: RegistrationListItem[] },
 ) {
   const { activeOrgId } = useOrgContext();
   const mergedParams: GetRegistrationsParams = {
@@ -19,7 +19,8 @@ export function useGetRegistrations(
   return useQuery<RegistrationListItem[]>({
     queryKey: [QUERY_KEYS.REGISTRATIONS, mergedParams],
     queryFn: () => getRegistrations(mergedParams),
-    initialData,
+    initialData: options?.initialData,
+    enabled: options?.enabled ?? true,
     staleTime: 30_000,
   });
 }

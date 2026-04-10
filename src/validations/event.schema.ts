@@ -18,6 +18,8 @@ const eventBaseSchema = z.object({
   ),
   status: z.enum(['DRAFT', 'OPEN', 'CLOSED', 'CANCELLED', 'COMPLETED']).default('DRAFT'),
   coverImage: z.string().optional(),
+  themeColor: z.string().optional(),
+  paymentAccountId: z.string().optional(),
   hostOrgId: z.string().min(1, 'Host organization is required'),
 });
 

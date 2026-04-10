@@ -7,6 +7,9 @@ import { BACKGROUNDS, BG_BADGE_COLORS, FONT_LABELS } from '@/lib/constants';
 import { usePresentations } from '@/hooks/usePresentations';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useIsPresentationActive } from '@/hooks/useIsPresentationActive';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
 import type { Presentation } from '@/types';
 
 interface PresentationsTableProps {
@@ -90,74 +93,52 @@ export const PresentationsTable: FC<PresentationsTableProps> = ({ presentations:
         </div>
       )}
 
-      <div className="rounded-lg border border-border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/40">
-              <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Title
-              </th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Background
-              </th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Font
-              </th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Slides
-              </th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Updated
-              </th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
+      <div className="rounded-lg border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Title</TableHead>
+              <TableHead>Background</TableHead>
+              <TableHead>Font</TableHead>
+              <TableHead>Slides</TableHead>
+              <TableHead>Updated</TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {presentations.map((p) => (
-              <tr key={p.id} className="hover:bg-muted/30 transition-colors">
-                <td className="px-4 py-3 font-medium">{p.title}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      BG_BADGE_COLORS[p.bgId] ?? 'bg-muted text-muted-foreground'
-                    }`}
-                  >
+              <TableRow key={p.id}>
+                <TableCell className="font-medium">{p.title}</TableCell>
+                <TableCell>
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                    BG_BADGE_COLORS[p.bgId] ?? 'bg-muted text-muted-foreground'
+                  }`}>
                     {BG_LABELS[p.bgId] ?? p.bgId}
                   </span>
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">{FONT_LABELS[p.fontId] ?? p.fontId}</td>
-                <td className="px-4 py-3 text-muted-foreground">{slideCount(p.lyrics)}</td>
-                <td className="px-4 py-3 text-muted-foreground text-xs">{timeAgo(p.updatedAt)}</td>
-                <td className="px-4 py-3">
+                </TableCell>
+                <TableCell className="text-muted-foreground">{FONT_LABELS[p.fontId] ?? p.fontId}</TableCell>
+                <TableCell className="text-muted-foreground">{slideCount(p.lyrics)}</TableCell>
+                <TableCell className="text-muted-foreground text-xs">{timeAgo(p.updatedAt)}</TableCell>
+                <TableCell>
                   <div className="flex items-center justify-end gap-1">
-                    <button
-                      onClick={() => router.push(`/worship/editor?id=${p.id}&present=1`)}
-                      className="rounded-md p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                      title="Present"
-                    >
+                    <button onClick={() => router.push(`/worship/editor?id=${p.id}&present=1`)}
+                      className="rounded-md p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Present">
                       <Play className="h-3.5 w-3.5" />
                     </button>
-                    <button
-                      onClick={() => router.push(`/worship/editor?id=${p.id}`)}
-                      className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                      title="Edit"
-                    >
+                    <button onClick={() => router.push(`/worship/editor?id=${p.id}`)}
+                      className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors" title="Edit">
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
-                    <button
-                      onClick={() => handleDelete(p.id)}
-                      disabled={deleting === p.id}
-                      className="rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-40"
-                      title="Delete"
-                    >
+                    <button onClick={() => handleDelete(p.id)} disabled={deleting === p.id}
+                      className="rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-40" title="Delete">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {ConfirmDialogEl}

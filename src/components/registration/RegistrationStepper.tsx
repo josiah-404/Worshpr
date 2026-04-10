@@ -3,7 +3,7 @@
 import { type FC, useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ChevronLeft, ChevronRight, Loader2, User, Users } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2, User, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RegistrantInfoStep } from '@/components/registration/RegistrantInfoStep';
 import { PaymentStep } from '@/components/registration/PaymentStep';
@@ -28,6 +28,8 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
   const [result, setResult] = useState<RegistrationGroupResult | null>(null);
   const [registrationType, setRegistrationType] = useState<RegistrationType>('individual');
 
+  const tc = event.themeColor ?? null;
+
   const isFree = event.fee === 0;
 
   const form = useForm<RegistrationGroupInput>({
@@ -44,8 +46,8 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
           phone: '',
           birthday: '',
           address: '',
-          church: '',
-          organization: '',
+          churchId: '',
+          divisionOrgId: '',
           emergencyContactName: '',
           emergencyContactPhone: '',
         },
@@ -124,11 +126,16 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
               type="button"
               onClick={() => handleRegistrationTypeChange(type)}
               className={cn(
-                'flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-sm font-medium transition-colors',
+                'flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-sm font-medium transition-all duration-200',
                 registrationType === type
-                  ? 'border-primary bg-primary/5 text-primary'
+                  ? tc ? 'shadow-sm' : 'border-primary bg-primary/10 text-primary shadow-sm'
                   : 'border-border text-muted-foreground hover:border-primary/40 hover:text-foreground',
               )}
+              style={registrationType === type && tc ? {
+                borderColor: tc,
+                backgroundColor: `${tc}1a`,
+                color: tc,
+              } : undefined}
             >
               {type === 'individual' ? (
                 <User className="h-6 w-6" />
@@ -149,25 +156,37 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
         {STEPS.map((label, i) => (
           <div key={label} className="flex items-center gap-2">
             <div
-              className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-colors ${
-                i < step
-                  ? 'bg-primary text-primary-foreground'
-                  : i === step
-                    ? 'bg-primary text-primary-foreground ring-2 ring-primary/30'
-                    : 'bg-muted text-muted-foreground'
-              }`}
+              className={cn(
+                'flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-all duration-200',
+                i > step
+                  ? 'bg-muted text-muted-foreground'
+                  : tc ? '' : i === step
+                    ? 'bg-primary text-primary-foreground ring-[3px] ring-primary/20'
+                    : 'bg-primary text-primary-foreground',
+              )}
+              style={i <= step && tc ? {
+                backgroundColor: tc,
+                color: 'white',
+                boxShadow: i === step ? `0 0 0 3px ${tc}33` : undefined,
+              } : undefined}
             >
-              {i + 1}
+              {i < step ? <Check className="h-3.5 w-3.5 stroke-[2.5]" /> : i + 1}
             </div>
             <span
-              className={`text-sm ${
-                i === step ? 'font-semibold' : 'text-muted-foreground'
-              }`}
+              className={cn(
+                'text-sm transition-colors',
+                i === step ? 'font-semibold' : 'text-muted-foreground',
+                i === step && !tc ? 'text-primary' : '',
+              )}
+              style={i === step && tc ? { color: tc } : undefined}
             >
               {label}
             </span>
             {i < STEPS.length - 1 && (
-              <div className="h-px w-6 bg-border" />
+              <div
+                className={cn('h-px w-8 transition-colors duration-500', i < step && !tc ? 'bg-primary' : 'bg-border')}
+                style={i < step && tc ? { backgroundColor: tc } : undefined}
+              />
             )}
           </div>
         ))}
@@ -176,7 +195,7 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
       {/* Step content */}
       <FormProvider {...form}>
         <form onSubmit={(e) => e.preventDefault()}>
-          {step === 0 && <RegistrantInfoStep registrationType={registrationType} eventOrgs={event.organizations} />}
+          {step === 0 && <RegistrantInfoStep registrationType={registrationType} eventOrgs={event.organizations} churches={event.churches} />}
           {step === 1 && <PaymentStep event={event} />}
           {step === 2 && <ReviewStep event={event} />}
 
@@ -194,12 +213,23 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
             </Button>
 
             {step < STEPS.length - 1 ? (
-              <Button type="button" onClick={handleNext} className="gap-1">
+              <Button
+                type="button"
+                onClick={handleNext}
+                className="gap-1"
+                style={tc ? { backgroundColor: tc, borderColor: tc } : undefined}
+              >
                 Next
                 <ChevronRight className="h-4 w-4" />
               </Button>
             ) : (
-              <Button type="button" disabled={isPending} className="gap-2" onClick={handleSubmit}>
+              <Button
+                type="button"
+                disabled={isPending}
+                className="gap-2"
+                onClick={handleSubmit}
+                style={tc ? { backgroundColor: tc, borderColor: tc } : undefined}
+              >
                 {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Submit Registration
               </Button>

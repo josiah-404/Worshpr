@@ -1,9 +1,9 @@
 'use client';
 
-import { type FC, useEffect, useRef } from 'react';
+import { type FC, useEffect, useRef, useState } from 'react';
 import { useForm, Controller, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ImagePlus, Loader2, X } from 'lucide-react';
+import { Church, ImagePlus, Loader2, Pipette, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,8 +28,24 @@ import { cn } from '@/lib/utils';
 import { useLogoUpload } from '@/hooks/useLogoUpload';
 import { useCreateEvent } from '@/hooks/useCreateEvent';
 import { useUpdateEvent } from '@/hooks/useUpdateEvent';
+import { useGetPaymentAccounts } from '@/hooks/useGetPaymentAccounts';
+import { useGetEventChurches } from '@/hooks/useGetEventChurches';
+import { useSetEventChurches } from '@/hooks/useSetEventChurches';
 import { createEventSchema, type CreateEventInput } from '@/validations/event.schema';
 import type { EventListItem, Organization } from '@/types';
+
+// ─── Constants ─────────────────────────────────────────────────────────────
+
+const THEME_PRESETS = [
+  '#f97316', // Orange
+  '#ef4444', // Red
+  '#ec4899', // Pink
+  '#8b5cf6', // Violet
+  '#6366f1', // Indigo
+  '#3b82f6', // Blue
+  '#10b981', // Emerald
+  '#f59e0b', // Amber
+];
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -65,8 +82,13 @@ export const EventDialog: FC<EventDialogProps> = ({
   const { mutate: updateMutate, isPending: isUpdating } = useUpdateEvent(
     editingEvent?.id ?? '',
   );
+  const { mutate: setChurches } = useSetEventChurches(editingEvent?.id ?? '');
 
   const isPending = isCreating || isUpdating;
+
+  // ── Church selection (edit mode only) ──────────────────────────────────────
+  const [selectedChurchIds, setSelectedChurchIds] = useState<string[]>([]);
+  const { data: churchData } = useGetEventChurches(editingEvent?.id ?? null);
 
   const form = useForm<CreateEventInput>({
     resolver: zodResolver(createEventSchema) as unknown as Resolver<CreateEventInput>,
@@ -82,12 +104,30 @@ export const EventDialog: FC<EventDialogProps> = ({
       maxSlots: undefined,
       status: 'DRAFT',
       coverImage: '',
+      themeColor: '',
+      paymentAccountId: '',
       hostOrgId,
     },
   });
 
   const { register, control, handleSubmit, reset, setValue, watch, formState: { errors } } = form;
   const coverImage = watch('coverImage');
+  const themeColor = watch('themeColor');
+  const fee = watch('fee');
+  const watchedHostOrgId = watch('hostOrgId');
+
+  const { data: paymentAccounts = [] } = useGetPaymentAccounts(
+    isSuperAdmin ? (watchedHostOrgId || null) : hostOrgId,
+  );
+
+  // Sync church selection when data loads
+  useEffect(() => {
+    if (churchData) {
+      setSelectedChurchIds(churchData.participating.map((c) => c.id));
+    } else if (!editingEvent) {
+      setSelectedChurchIds([]);
+    }
+  }, [churchData, editingEvent]);
 
   // Populate form when editing
   useEffect(() => {
@@ -104,6 +144,8 @@ export const EventDialog: FC<EventDialogProps> = ({
         maxSlots: editingEvent.maxSlots ?? undefined,
         status: editingEvent.status,
         coverImage: editingEvent.coverImage ?? '',
+        themeColor: editingEvent.themeColor ?? '',
+        paymentAccountId: editingEvent.paymentAccount?.id ?? '',
         hostOrgId: editingEvent.organizations.find((o) => o.role === 'HOST')?.orgId ?? hostOrgId,
       });
     } else {
@@ -119,16 +161,26 @@ export const EventDialog: FC<EventDialogProps> = ({
         maxSlots: undefined,
         status: 'DRAFT',
         coverImage: '',
+        themeColor: '',
+        paymentAccountId: '',
         hostOrgId,
       });
     }
   }, [editingEvent, open, reset, hostOrgId]);
+
+  function toggleChurch(churchId: string) {
+    setSelectedChurchIds((prev) =>
+      prev.includes(churchId) ? prev.filter((id) => id !== churchId) : [...prev, churchId],
+    );
+  }
 
   const onSubmit = (data: CreateEventInput) => {
     if (editingEvent) {
       const { hostOrgId: _host, ...updateData } = data;
       updateMutate(updateData, {
         onSuccess: () => {
+          // Save church selections alongside the event update
+          setChurches(selectedChurchIds);
           toast.success('Event updated');
           onOpenChange(false);
         },
@@ -220,6 +272,74 @@ export const EventDialog: FC<EventDialogProps> = ({
               >
                 <X className="h-3 w-3" /> Remove cover image
               </button>
+            )}
+          </div>
+
+          {/* ── Theme Color ── */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">
+                Theme Color{' '}
+                <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+              </span>
+              {themeColor && (
+                <button
+                  type="button"
+                  onClick={() => setValue('themeColor', '')}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <X className="h-3 w-3" /> Clear
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {THEME_PRESETS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => setValue('themeColor', color)}
+                  className={cn(
+                    'h-7 w-7 rounded-full border-2 transition-all hover:scale-110',
+                    themeColor === color ? 'border-foreground scale-110' : 'border-transparent',
+                  )}
+                  style={{ backgroundColor: color }}
+                  title={color}
+                />
+              ))}
+              {/* Custom color picker */}
+              <div
+                className={cn(
+                  'relative h-7 w-7 rounded-full border-2 cursor-pointer overflow-hidden transition-all hover:scale-110',
+                  themeColor && !THEME_PRESETS.includes(themeColor)
+                    ? 'border-foreground scale-110'
+                    : 'border-dashed border-border',
+                )}
+                style={
+                  themeColor && !THEME_PRESETS.includes(themeColor)
+                    ? { backgroundColor: themeColor }
+                    : undefined
+                }
+                title="Custom color"
+              >
+                {(!themeColor || THEME_PRESETS.includes(themeColor)) && (
+                  <Pipette className="absolute inset-0 m-auto h-3 w-3 text-muted-foreground pointer-events-none" />
+                )}
+                <input
+                  type="color"
+                  value={themeColor?.startsWith('#') ? themeColor : '#f97316'}
+                  onChange={(e) => setValue('themeColor', e.target.value)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+              </div>
+            </div>
+            {themeColor && (
+              <div className="flex items-center gap-2">
+                <div
+                  className="h-4 w-4 rounded-full border border-border shrink-0"
+                  style={{ backgroundColor: themeColor }}
+                />
+                <span className="font-mono text-xs text-muted-foreground">{themeColor}</span>
+              </div>
             )}
           </div>
 
@@ -375,6 +495,94 @@ export const EventDialog: FC<EventDialogProps> = ({
               )}
             </FormField>
           </div>
+
+          {/* ── Payment Account (only when fee > 0) ── */}
+          {Number(fee) > 0 && (
+            <FormField label="Payment Account" htmlFor="paymentAccountId" hint="(optional)">
+              <Controller
+                name="paymentAccountId"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value ?? ''}
+                    onValueChange={(v) => field.onChange(v === 'none' ? '' : v)}
+                  >
+                    <SelectTrigger id="paymentAccountId">
+                      <SelectValue placeholder="Select payment account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {paymentAccounts
+                        .filter((a) => a.isActive)
+                        .map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.label} · {a.accountNumber}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <p className="text-xs text-muted-foreground">
+                Where registrants will send their online payment
+              </p>
+            </FormField>
+          )}
+
+          {/* ── Participating Churches (edit mode only) ── */}
+          {editingEvent && (
+            <div className="space-y-2">
+              <div>
+                <p className="text-sm font-medium">Participating Churches</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Select churches from this event&apos;s organizations whose members can register
+                </p>
+              </div>
+
+              {!churchData ? (
+                <p className="text-xs text-muted-foreground">Loading churches…</p>
+              ) : churchData.participating.length === 0 && churchData.available.length === 0 ? (
+                <div className="rounded-md border border-dashed p-4 flex items-center gap-3 text-muted-foreground">
+                  <Church className="h-4 w-4 shrink-0" />
+                  <p className="text-xs">
+                    No churches configured for this event&apos;s organizations yet.
+                    Add churches under <span className="font-medium">Management → Churches</span>.
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-md border p-3 space-y-1.5 max-h-48 overflow-y-auto">
+                  {[...churchData.participating, ...churchData.available].map((church) => {
+                    const isSelected = selectedChurchIds.includes(church.id);
+                    return (
+                      <button
+                        key={church.id}
+                        type="button"
+                        onClick={() => toggleChurch(church.id)}
+                        className={cn(
+                          'w-full flex items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors',
+                          isSelected
+                            ? 'bg-primary/10 text-primary border border-primary/20'
+                            : 'hover:bg-muted/50 border border-transparent',
+                        )}
+                      >
+                        <div>
+                          <span className="font-medium">{church.name}</span>
+                          {church.location && (
+                            <span className="text-xs text-muted-foreground ml-1.5">{church.location}</span>
+                          )}
+                        </div>
+                        {isSelected && (
+                          <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20 shrink-0">
+                            Selected
+                          </Badge>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           <DialogFooter className="pt-2">
             <Button

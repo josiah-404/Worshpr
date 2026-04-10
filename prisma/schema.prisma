@@ -27,8 +27,39 @@ model Organization {
   registrations      Registration[]
   orgFund            OrgFund?
   financeLedger      FinanceLedger[]
+  paymentAccounts    PaymentAccount[]
+  churches           Church[]
+  registrantDivisions Registrant[] @relation("RegistrantDivision")
 
   @@map("organizations")
+}
+
+model Church {
+  id        String   @id @default(cuid())
+  orgId     String
+  name      String
+  location  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  eventChurches EventChurch[]
+  registrants   Registrant[]
+
+  @@index([orgId, isActive])
+  @@map("churches")
+}
+
+model EventChurch {
+  eventId  String
+  churchId String
+
+  event  Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  church Church @relation(fields: [churchId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, churchId])
+  @@map("event_churches")
 }
 
 model User {
@@ -177,12 +208,16 @@ model Event {
   maxSlots             Int?
   status               EventStatus  @default(DRAFT)
   coverImage           String?
+  themeColor           String?
+  paymentAccountId     String?
   createdBy            String
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
 
   creator            User                @relation("CreatedEvents", fields: [createdBy], references: [id])
+  paymentAccount     PaymentAccount?     @relation(fields: [paymentAccountId], references: [id])
   organizations      EventOrganization[]
+  eventChurches      EventChurch[]
   registrationGroups RegistrationGroup[]
   registrations      Registration[]
   financeLedger      FinanceLedger[]
@@ -199,13 +234,19 @@ model Registrant {
   phone                 String
   birthday              DateTime
   address               String   @db.Text
+  // Legacy text fields — kept for backward compat with existing data
   church                String?
   organization          String?
+  // FK fields — used for new registrations
+  churchId              String?
+  divisionOrgId         String?
   emergencyContactName  String
   emergencyContactPhone String
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
+  churchRef    Church?       @relation(fields: [churchId], references: [id])
+  divisionOrg  Organization? @relation("RegistrantDivision", fields: [divisionOrgId], references: [id])
   registrations Registration[]
 
   @@map("registrants")
@@ -295,6 +336,27 @@ model EventOrganization {
   @@unique([eventId, orgId])
   @@index([orgId, inviteStatus])
   @@map("event_organizations")
+}
+
+model PaymentAccount {
+  id            String        @id @default(cuid())
+  orgId         String
+  method        PaymentMethod
+  label         String
+  accountName   String
+  accountNumber String
+  bankName      String?
+  qrCodeUrl     String?
+  instructions  String?       @db.Text
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  organization  Organization  @relation(fields: [orgId], references: [id])
+  events        Event[]
+
+  @@index([orgId, isActive])
+  @@map("payment_accounts")
 }
 
 model OrgFund {

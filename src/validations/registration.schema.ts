@@ -7,8 +7,8 @@ export const registrantSchema = z.object({
   phone: z.string().min(1, 'Phone number is required'),
   birthday: z.string().min(1, 'Birthday is required'),
   address: z.string().min(1, 'Address is required'),
-  church: z.string().optional(),
-  organization: z.string().optional(),
+  churchId: z.string().optional(),
+  divisionOrgId: z.string().optional(),
   emergencyContactName: z.string().min(1, 'Emergency contact name is required'),
   emergencyContactPhone: z.string().min(1, 'Emergency contact phone is required'),
 });
