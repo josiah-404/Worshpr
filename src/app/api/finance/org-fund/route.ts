@@ -58,7 +58,6 @@ export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (session.user.role === 'officer') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const orgId = session.user.orgId;
     if (!orgId) return NextResponse.json({ error: 'No organization' }, { status: 400 });

@@ -225,10 +225,7 @@ export const EventsGrid: FC<EventsGridProps> = ({
             <EventCard
               key={event.id}
               event={event}
-              canEdit={canEdit}
-              onEdit={() => handleEdit(event)}
-              onDelete={() => handleDelete(event)}
-              onInvite={() => handleInvite(event)}
+              onDelete={canEdit ? handleDelete : undefined}
             />
           ))}
         </div>

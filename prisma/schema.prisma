@@ -43,9 +43,10 @@ model Church {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  organization  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  organization  Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
   eventChurches EventChurch[]
   registrants   Registrant[]
+  programItems  ProgramItem[]
 
   @@index([orgId, isActive])
   @@map("churches")
@@ -221,9 +222,46 @@ model Event {
   registrationGroups RegistrationGroup[]
   registrations      Registration[]
   financeLedger      FinanceLedger[]
+  program            EventProgram?
 
   @@index([status, startDate])
   @@map("events")
+}
+
+model EventProgram {
+  id        String        @id @default(cuid())
+  eventId   String        @unique
+  status    ProgramStatus @default(DRAFT)
+  totalDays Int           @default(1)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  event Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  items ProgramItem[]
+
+  @@map("event_programs")
+}
+
+model ProgramItem {
+  id            String          @id @default(cuid())
+  programId     String
+  day           Int             @default(1)
+  type          ProgramItemType @default(ITEM)
+  session       ProgramSession?
+  order         Int
+  title         String
+  description   String?         @db.Text
+  time          String?
+  churchId      String?
+  presenterName String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  program EventProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  church  Church?      @relation(fields: [churchId], references: [id])
+
+  @@index([programId, day, order])
+  @@map("program_items")
 }
 
 model Registrant {
@@ -474,6 +512,23 @@ enum PaymentStatus {
 enum FinanceEntryType {
   INCOME
   EXPENSE
+}
+
+enum ProgramStatus {
+  DRAFT
+  PENDING
+  FINAL
+}
+
+enum ProgramItemType {
+  SESSION_HEADER
+  ITEM
+}
+
+enum ProgramSession {
+  MORNING
+  AFTERNOON
+  EVENING
 }
 
 enum FinanceCategory {

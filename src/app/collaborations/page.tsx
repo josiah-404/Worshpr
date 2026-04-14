@@ -10,8 +10,7 @@ export const dynamic = 'force-dynamic';
 export default async function CollaborationsPage() {
   const session = await getServerSession(authOptions);
 
-  // Only org_admin can manage collaboration invites
-  if (!session || session.user.role === 'officer') redirect('/');
+  if (!session) redirect('/login');
   if (session.user.role === 'super_admin' || !session.user.orgId) redirect('/events');
 
   const orgId = session.user.orgId;

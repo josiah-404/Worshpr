@@ -39,9 +39,9 @@ const ALL_NAV_GROUPS = [
     roles: ['super_admin', 'org_admin', 'officer'],
     items: [
       { title: 'Events', url: '/events', icon: CalendarDays },
-      { title: 'Registrations', url: '/registrations', icon: ClipboardList, roles: ['super_admin', 'org_admin'] },
-      { title: 'Finance', url: '/finance', icon: Wallet, roles: ['super_admin', 'org_admin'] },
-      { title: 'Collaborations', url: '/collaborations', icon: Handshake, roles: ['org_admin'] },
+      { title: 'Registrations', url: '/registrations', icon: ClipboardList, roles: ['super_admin', 'org_admin', 'officer'] },
+      { title: 'Finance', url: '/finance', icon: Wallet, roles: ['super_admin', 'org_admin', 'officer'] },
+      { title: 'Collaborations', url: '/collaborations', icon: Handshake, roles: ['org_admin', 'officer'] },
       {
         title: 'Worship Screen',
         url: '/worship',
@@ -62,8 +62,6 @@ export default function AppSidebar({
   const role = session?.user?.role ?? 'officer';
   const title = session?.user?.title ?? '';
   const collaborationBadge = useCollaborationBadge();
-  const isTreasurer = role === 'officer' && title === 'Treasurer';
-
   const navGroups = ALL_NAV_GROUPS
     .filter((g) => g.roles.includes(role))
     .map((g) => ({
@@ -72,10 +70,7 @@ export default function AppSidebar({
         .filter((item) => {
           if (!('roles' in item)) return true;
           const roles = item.roles as string[];
-          if (roles.includes(role)) return true;
-          // Treasurer officers can see Finance
-          if (item.title === 'Finance' && isTreasurer) return true;
-          return false;
+          return roles.includes(role);
         })
         .map((item) => ({
           ...item,

@@ -18,10 +18,6 @@ export async function PATCH(
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (session.user.role === 'officer') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const { id } = await params;
     const body = await req.json();
     const parsed = updateStatusSchema.safeParse(body);

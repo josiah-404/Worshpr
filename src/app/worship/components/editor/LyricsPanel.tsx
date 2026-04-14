@@ -14,7 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { parseLyrics, needsParsing } from '@/lib/lyricsParser';
+import { parseLyrics, needsParsing, autoFormatByLines } from '@/lib/lyricsParser';
 import type { DragEndEvent } from '@dnd-kit/core';
 
 interface LyricsPanelProps {
@@ -266,6 +266,34 @@ export const LyricsPanel: FC<LyricsPanelProps> = (props) => {
                     </p>
                   </TooltipContent>
                 </Tooltip>
+
+                {/* Divider */}
+                <span className='w-px h-3.5 bg-border shrink-0' />
+
+                {/* Auto-split by line count */}
+                <span className='text-[10px] text-muted-foreground/60 shrink-0'>Split:</span>
+                {([2, 3, 4] as const).map((n) => (
+                  <Tooltip key={n}>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setLyrics(autoFormatByLines(lyrics, n))}
+                        disabled={!lyrics}
+                        className='flex items-center gap-0.5 rounded-md px-2 py-1 text-[11px] font-medium border border-border text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
+                      >
+                        {n}L
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side='bottom'
+                      className='bg-popover text-popover-foreground border border-border shadow-md'
+                    >
+                      <p className='text-[11px] font-medium'>{n} lines per slide</p>
+                      <p className='text-[11px] text-muted-foreground'>
+                        Re-chunks all lyrics into {n}-line slides
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
               </div>
 
               {/* Guide tooltip */}

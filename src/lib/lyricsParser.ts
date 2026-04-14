@@ -31,6 +31,37 @@ export function parseLyrics(raw: string): string {
 }
 
 /**
+ * Re-chunks lyrics so each slide contains exactly `linesPerSlide` lines.
+ *
+ * Song sections (separated by 2 blank lines / \n\n\n) are preserved as
+ * separate units — chunking is applied within each section independently.
+ * Within a section every non-empty line is collected, then grouped into
+ * chunks of N, and the chunks are joined with a single blank line (slide
+ * boundary).
+ */
+export function autoFormatByLines(raw: string, linesPerSlide: number): string {
+  // Split on song boundaries (2+ blank lines)
+  const sections = raw.split(/\n{3,}/);
+
+  const formatted = sections.map((section) => {
+    const lines = section
+      .split('\n')
+      .map((l) => l.trimEnd())
+      .filter((l) => l.length > 0);
+
+    if (lines.length === 0) return '';
+
+    const chunks: string[] = [];
+    for (let i = 0; i < lines.length; i += linesPerSlide) {
+      chunks.push(lines.slice(i, i + linesPerSlide).join('\n'));
+    }
+    return chunks.join('\n\n');
+  });
+
+  return formatted.filter((s) => s.length > 0).join('\n\n\n').trim();
+}
+
+/**
  * Returns true only when the text has issues that would cause slides to split
  * incorrectly — 3+ consecutive blank lines (collapses song boundaries) or
  * leading/trailing blank lines (adds phantom empty slides).
