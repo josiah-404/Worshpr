@@ -15,7 +15,6 @@ export default async function FinancePage() {
   const role = session.user.role;
   const orgId = session.user.orgId;
 
-  if (role === 'officer' && session.user.title !== 'Treasurer') redirect('/');
   if (!orgId && role !== 'super_admin') redirect('/');
 
   // Fetch all data in parallel

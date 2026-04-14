@@ -16,6 +16,17 @@ export { INCOME_CATEGORIES, EXPENSE_CATEGORIES, FINANCE_CATEGORY_LABELS } from '
 
 export type { EventType, EventStatus, EventOrgRole, EventInviteStatus, EventOrg, EventListItem, CollaborationInvite } from '@/types/event.types';
 export type { Church, ChurchOption } from '@/types/church.types';
+export type {
+  ProgramStatus,
+  ProgramSession,
+  ProgramItemType,
+  ProgramItemData,
+  EventProgramData,
+  CreateProgramItemPayload,
+  UpdateProgramItemPayload,
+  UpsertProgramPayload,
+  EventDetails,
+} from '@/types/program.types';
 export type { PaymentAccount, PaymentAccountSummary } from '@/types/payment-account.types';
 export type {
   RegistrationStatus,

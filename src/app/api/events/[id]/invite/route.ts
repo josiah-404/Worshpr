@@ -13,10 +13,6 @@ export async function POST(
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (session.user.role === 'officer') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const event = await prisma.event.findUnique({
       where: { id: params.id },
       include: { organizations: true },

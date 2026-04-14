@@ -14,6 +14,7 @@ export const QUERY_KEYS = {
   PAYMENT_ACCOUNTS: 'payment-accounts',
   CHURCHES: 'churches',
   EVENT_CHURCHES: 'event-churches',
+  PROGRAM: 'program',
 } as const;
 
 export const OFFICER_TITLES = [

@@ -35,10 +35,6 @@ export async function PATCH(
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (session.user.role === 'officer') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const { event, allowed } = await getEventAndCheckOwnership(
       params.id,
       session.user.id,
@@ -148,10 +144,6 @@ export async function DELETE(
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (session.user.role === 'officer') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const { event, allowed } = await getEventAndCheckOwnership(
       params.id,
       session.user.id,

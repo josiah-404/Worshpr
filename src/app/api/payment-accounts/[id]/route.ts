@@ -28,10 +28,6 @@ export async function PATCH(
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (session.user.role === 'officer') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const { account, allowed } = await getAccountAndCheckOwnership(
       params.id,
       session.user.role,
@@ -92,10 +88,6 @@ export async function DELETE(
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (session.user.role === 'officer') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const { account, allowed } = await getAccountAndCheckOwnership(
       params.id,
       session.user.role,

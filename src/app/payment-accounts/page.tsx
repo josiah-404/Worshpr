@@ -13,7 +13,6 @@ export default async function PaymentAccountsPage() {
 
   const { role, orgId } = session.user;
 
-  if (role === 'officer') redirect('/');
   if (!orgId && role !== 'super_admin') redirect('/');
 
   const raw = orgId
