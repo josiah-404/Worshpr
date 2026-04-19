@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutDashboard, Users, Monitor, Flame, Building2, CalendarDays, Handshake, ClipboardList, Wallet, Church } from 'lucide-react';
+import { LayoutDashboard, Users, Monitor, Flame, Building2, CalendarDays, Handshake, ClipboardList, Wallet, Church, BookOpen } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 
 import { NavMain } from '@/components/layout/NavMain';
@@ -38,6 +38,7 @@ const ALL_NAV_GROUPS = [
     label: 'Modules',
     roles: ['super_admin', 'org_admin', 'officer'],
     items: [
+      { title: 'Bible', url: '/bible', icon: BookOpen },
       { title: 'Events', url: '/events', icon: CalendarDays },
       { title: 'Registrations', url: '/registrations', icon: ClipboardList, roles: ['super_admin', 'org_admin', 'officer'] },
       { title: 'Finance', url: '/finance', icon: Wallet, roles: ['super_admin', 'org_admin', 'officer'] },

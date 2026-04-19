@@ -6,6 +6,7 @@ import { ThemeProvider } from 'next-themes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ProgressProvider } from '@bprogress/next/app';
 import { OrgProvider } from '@/providers/OrgContext';
+import { BibleProvider } from '@/providers/BibleProvider';
 
 interface AppProvidersProps {
   children: React.ReactNode;
@@ -31,7 +32,9 @@ export const AppProviders: FC<AppProvidersProps> = ({ children }) => {
             options={{ showSpinner: false }}
             shallowRouting
           >
-            <OrgProvider>{children}</OrgProvider>
+            <OrgProvider>
+              <BibleProvider>{children}</BibleProvider>
+            </OrgProvider>
           </ProgressProvider>
         </SessionProvider>
       </ThemeProvider>
