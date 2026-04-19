@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, type FC } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import { useBible } from '@/providers/BibleProvider';
 import { useBibleVersions } from '@/hooks/useBibleVersions';
 import { useBibleBooks } from '@/hooks/useBibleBooks';
@@ -23,6 +24,7 @@ const parseChapterId = (id: string): { bookId: string; chapter: string } | null 
 
 export const BibleReader: FC = () => {
   const {
+    hydrated,
     versionId,
     setVersionId,
     bookId,
@@ -49,8 +51,9 @@ export const BibleReader: FC = () => {
     [books, bookId],
   );
 
-  const chapterId = `${versionId}.${bookId}.${chapterNumber}`;
-  const { data: chapter, isLoading, isError } = useBibleChapter(chapterId);
+  const chapterId = hydrated ? `${versionId}.${bookId}.${chapterNumber}` : undefined;
+  const { data: chapter, isLoading, isFetching, isError } = useBibleChapter(chapterId);
+  const showSkeleton = !hydrated || isLoading || isFetching;
 
   // If current book/chapter isn't valid for the active version, clamp to book Gen 1 / first book ch 1.
   useEffect(() => {
@@ -91,17 +94,32 @@ export const BibleReader: FC = () => {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <BibleHeader book={currentBook} version={currentVersion} />
+      <BibleHeader book={currentBook} version={currentVersion} loading={showSkeleton} />
 
       <main className="relative flex-1">
         <div className="mx-auto w-full max-w-3xl px-4 py-8 pb-40 sm:px-8">
-          {isLoading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-10 w-56" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-5/6" />
-              <Skeleton className="h-4 w-full" />
+          {showSkeleton ? (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-48" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+              <div className="space-y-2.5">
+                {Array.from({ length: 14 }).map((_, i) => (
+                  <Skeleton
+                    key={i}
+                    className={cn('h-4', i % 6 === 5 ? 'w-3/4' : i % 6 === 2 ? 'w-5/6' : 'w-full')}
+                  />
+                ))}
+              </div>
+              <div className="space-y-2.5 pt-2">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <Skeleton
+                    key={i}
+                    className={cn('h-4', i % 5 === 4 ? 'w-4/5' : 'w-full')}
+                  />
+                ))}
+              </div>
             </div>
           ) : isError || !chapter ? (
             <p className="text-sm text-muted-foreground">
@@ -118,7 +136,7 @@ export const BibleReader: FC = () => {
           )}
         </div>
 
-        {chapter ? (
+        {chapter && !showSkeleton ? (
           <ChapterNav
             onPrev={() => goNeighbor(chapter.prevId)}
             onNext={() => goNeighbor(chapter.nextId)}
@@ -128,7 +146,7 @@ export const BibleReader: FC = () => {
         ) : null}
       </main>
 
-      {chapter && currentVersion ? (
+      {chapter && !showSkeleton && currentVersion ? (
         <VerseActionBar
           chapter={chapter}
           versionAbbreviation={currentVersion.abbreviation}

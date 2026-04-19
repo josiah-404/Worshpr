@@ -20,6 +20,8 @@ interface BibleLocation {
 }
 
 interface BibleContextValue {
+  hydrated: boolean;
+
   versionId: string;
   setVersionId: (id: string) => void;
 
@@ -72,6 +74,7 @@ interface BibleProviderProps {
 }
 
 export const BibleProvider: FC<BibleProviderProps> = ({ children }) => {
+  const [hydrated, setHydrated] = useState(false);
   const [versionId, setVersionIdState] = useState<string>(DEFAULT_VERSION);
   const [location, setLocationState] = useState<BibleLocation>(DEFAULT_LOCATION);
   const [fontSize, setFontSizeState] = useState<BibleFontSize>(DEFAULT_FONTSIZE);
@@ -82,6 +85,7 @@ export const BibleProvider: FC<BibleProviderProps> = ({ children }) => {
     setVersionIdState(readLocal<string>(LS_VERSION, DEFAULT_VERSION));
     setLocationState(readLocal<BibleLocation>(LS_LOCATION, DEFAULT_LOCATION));
     setFontSizeState(readLocal<BibleFontSize>(LS_FONTSIZE, DEFAULT_FONTSIZE));
+    setHydrated(true);
   }, []);
 
   const setVersionId = useCallback((id: string) => {
@@ -112,6 +116,7 @@ export const BibleProvider: FC<BibleProviderProps> = ({ children }) => {
 
   const value = useMemo<BibleContextValue>(
     () => ({
+      hydrated,
       versionId,
       setVersionId,
       bookId: location.bookId,
@@ -126,6 +131,7 @@ export const BibleProvider: FC<BibleProviderProps> = ({ children }) => {
       setFontSize,
     }),
     [
+      hydrated,
       versionId,
       setVersionId,
       location,

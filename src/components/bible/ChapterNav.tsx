@@ -3,6 +3,7 @@
 import { type FC } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useSidebar } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 
 interface ChapterNavProps {
@@ -13,6 +14,15 @@ interface ChapterNavProps {
 }
 
 export const ChapterNav: FC<ChapterNavProps> = ({ onPrev, onNext, prevDisabled, nextDisabled }) => {
+  const { state, isMobile } = useSidebar();
+
+  const leftClass =
+    isMobile
+      ? 'left-2'
+      : state === 'expanded'
+        ? 'left-[calc(var(--sidebar-width)+0.5rem)]'
+        : 'left-[calc(var(--sidebar-width-icon)+0.5rem)]';
+
   return (
     <>
       <Button
@@ -22,8 +32,8 @@ export const ChapterNav: FC<ChapterNavProps> = ({ onPrev, onNext, prevDisabled, 
         disabled={prevDisabled}
         aria-label="Previous chapter"
         className={cn(
-          'fixed left-2 top-1/2 z-10 -translate-y-1/2 rounded-full border bg-background/80 backdrop-blur',
-          'sm:left-4',
+          'fixed top-1/2 z-10 -translate-y-1/2 rounded-full border bg-background/80 backdrop-blur',
+          leftClass,
         )}
       >
         <ChevronLeft />

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { bibleIdSchema } from '@/validations/bible';
 import { serverEnv } from '@/lib/env';
-import { apiListBooks } from '@/services/server/bibleApi.server';
-import { fallbackListBooks } from '@/services/server/bibleFallback.server';
-import { KJV_BIBLE_ID } from '@/data/kjv';
+import { fallbackListBooks, isBundledBibleId } from '@/services/server/bibleFallback.server';
+import { yvListBooks, isYvId } from '@/services/server/youVersionApi.server';
 
 export const revalidate = 86400;
 
@@ -15,11 +14,19 @@ export async function GET(req: NextRequest) {
   const bibleId = parsed.data;
 
   try {
-    if (bibleId === KJV_BIBLE_ID || !serverEnv.BIBLE_API_KEY) {
-      return NextResponse.json({ data: fallbackListBooks(KJV_BIBLE_ID) }, { status: 200 });
+    if (isBundledBibleId(bibleId)) {
+      return NextResponse.json({ data: fallbackListBooks(bibleId) }, { status: 200 });
     }
-    const books = await apiListBooks(bibleId);
-    return NextResponse.json({ data: books }, { status: 200 });
+
+    if (isYvId(bibleId)) {
+      if (!serverEnv.YOUVERSION_API_KEY) {
+        return NextResponse.json({ error: 'YouVersion API not configured' }, { status: 503 });
+      }
+      const books = await yvListBooks(bibleId);
+      return NextResponse.json({ data: books }, { status: 200 });
+    }
+
+    return NextResponse.json({ error: 'Unknown Bible version' }, { status: 400 });
   } catch {
     return NextResponse.json({ error: 'Failed to load books' }, { status: 500 });
   }
