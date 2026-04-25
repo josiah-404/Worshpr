@@ -226,6 +226,7 @@ export const EventCard: FC<EventCardProps> = ({ event, onDelete }) => {
         dateRange={formatDateRange(event.startDate, event.endDate)}
         venue={event.venue}
         registrationUrl={registrationUrl}
+        themeColor={event.themeColor}
       />
     </>
   );

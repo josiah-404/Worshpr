@@ -100,10 +100,14 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const orgId = session.user.orgId;
+    const body = await req.json();
+
+    const orgId = session.user.role === 'super_admin'
+      ? (body.orgId ?? null)
+      : session.user.orgId;
+
     if (!orgId) return NextResponse.json({ error: 'No organization' }, { status: 400 });
 
-    const body = await req.json();
     const parsed = ledgerEntrySchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

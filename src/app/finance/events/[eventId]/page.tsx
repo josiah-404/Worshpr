@@ -4,11 +4,8 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { LedgerTable } from '@/components/finance/LedgerTable';
-import { FinanceReport } from '@/components/finance/FinanceReport';
-import { AddEntryDialog } from '@/components/finance/AddEntryDialog';
-import { EventFinanceHeader } from '@/components/finance/EventFinanceHeader';
-import type { LedgerEntry, FinanceCategory, FinanceEntryType, EventFinanceSummaryItem } from '@/types/finance.types';
+import { EventFinanceClient } from '@/components/finance/EventFinanceClient';
+import type { LedgerEntry, FinanceCategory, FinanceEntryType } from '@/types/finance.types';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,8 +31,12 @@ export default async function EventFinancePage({ params }: PageProps) {
         organizations: { select: { orgId: true } },
       },
     }),
-    orgId ? prisma.financeLedger.findMany({
-      where: { eventId, ...(role !== 'super_admin' && orgId ? { orgId } : {}) },
+    prisma.financeLedger.findMany({
+      where: {
+        eventId,
+        // super_admin sees all org entries for the event; others see only their org's
+        ...(role !== 'super_admin' && orgId ? { orgId } : {}),
+      },
       orderBy: { date: 'desc' },
       select: {
         id: true, orgId: true, eventId: true, type: true, category: true,
@@ -45,7 +46,7 @@ export default async function EventFinancePage({ params }: PageProps) {
         event: { select: { title: true } },
         enteredByUser: { select: { name: true } },
       },
-    }) : [],
+    }),
   ]);
 
   if (!event) notFound();
@@ -55,7 +56,7 @@ export default async function EventFinancePage({ params }: PageProps) {
     redirect('/finance');
   }
 
-  const entries: LedgerEntry[] = rawEntries.map((e) => ({
+  const initialEntries: LedgerEntry[] = rawEntries.map((e) => ({
     id: e.id,
     orgId: e.orgId,
     eventId: e.eventId,
@@ -76,46 +77,13 @@ export default async function EventFinancePage({ params }: PageProps) {
     updatedAt: e.updatedAt.toISOString(),
   }));
 
-  const totalIncome = entries.filter((e) => e.type === 'INCOME').reduce((s, e) => s + e.amount, 0);
-  const totalExpenses = entries.filter((e) => e.type === 'EXPENSE').reduce((s, e) => s + e.amount, 0);
-
-  const summary: EventFinanceSummaryItem = {
-    eventId: event.id,
-    eventTitle: event.title,
-    totalIncome,
-    totalExpenses,
-    net: totalIncome - totalExpenses,
-    registrationIncome: entries.filter((e) => e.category === 'REGISTRATION').reduce((s, e) => s + e.amount, 0),
-    offertoryIncome: entries.filter((e) => e.category === 'OFFERTORY').reduce((s, e) => s + e.amount, 0),
-    donationIncome: entries.filter((e) => e.category === 'DONATION').reduce((s, e) => s + e.amount, 0),
-    otherIncome: entries.filter((e) => e.category === 'OTHER_INCOME').reduce((s, e) => s + e.amount, 0),
-  };
-
   return (
     <div className="space-y-6">
-      {/* Back nav */}
       <Link href="/finance" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
         <ArrowLeft className="h-4 w-4" /> Back to Finance
       </Link>
 
-      {/* Header */}
-      <EventFinanceHeader event={event} summary={summary} defaultEventId={eventId} />
-
-      {/* Ledger */}
-      <div>
-        <h2 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Transactions</h2>
-        <LedgerTable initialData={entries} events={[{ id: event.id, title: event.title }]} filterEventId={eventId} />
-      </div>
-
-      {/* Report */}
-      <div>
-        <h2 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Report</h2>
-        <FinanceReport
-          entries={entries}
-          events={[{ id: event.id, title: event.title }]}
-          summaries={[summary]}
-        />
-      </div>
+      <EventFinanceClient event={event} initialEntries={initialEntries} />
     </div>
   );
 }

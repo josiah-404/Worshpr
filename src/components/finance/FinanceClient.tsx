@@ -1,6 +1,6 @@
 'use client';
 
-import { type FC, useState } from 'react';
+import { type FC, useState, useMemo } from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OrgFundCard } from '@/components/finance/OrgFundCard';
@@ -9,6 +9,7 @@ import { EventFinanceSummary } from '@/components/finance/EventFinanceSummary';
 import { FinanceReport } from '@/components/finance/FinanceReport';
 import { AddEntryDialog } from '@/components/finance/AddEntryDialog';
 import { PaymentAccountsClient } from '@/app/payment-accounts/PaymentAccountsClient';
+import { TourTrigger } from '@/components/guides/TourTrigger';
 import { useGetFinanceSummary } from '@/hooks/useGetFinanceSummary';
 import { useGetLedger } from '@/hooks/useGetLedger';
 import { useGetOrgFund } from '@/hooks/useGetOrgFund';
@@ -51,7 +52,19 @@ export const FinanceClient: FC<FinanceClientProps> = ({
 
   const { data: fund } = useGetOrgFund(initialFund);
   const { data: summary } = useGetFinanceSummary(initialSummary);
-  const { data: entries = initialEntries } = useGetLedger(undefined, initialEntries);
+  // No initialData — lets TanStack re-fetch immediately when activeOrgId changes.
+  // initialEntries is used as the default only when data is still undefined (loading).
+  const { data: entries = initialEntries } = useGetLedger();
+
+  // Derive events from live entries as fallback for super_admin (SSR events prop is empty)
+  const effectiveEvents = useMemo(() => {
+    if (events.length > 0) return events;
+    const map = new Map<string, string>();
+    entries.forEach((e) => {
+      if (e.eventId && e.eventTitle) map.set(e.eventId, e.eventTitle);
+    });
+    return Array.from(map.entries()).map(([id, title]) => ({ id, title }));
+  }, [events, entries]);
 
   const TABS: { key: Tab; label: string }[] = [
     { key: 'overview', label: 'Overview' },
@@ -64,7 +77,7 @@ export const FinanceClient: FC<FinanceClientProps> = ({
     <div className="space-y-6">
       {/* Tab bar + Add button */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex gap-1 rounded-lg border bg-muted/40 p-1">
+        <div className="flex gap-1 rounded-lg border bg-muted/40 p-1" data-tour="finance-tabs">
           {TABS.map((t) => (
             <button
               key={t.key}
@@ -81,11 +94,12 @@ export const FinanceClient: FC<FinanceClientProps> = ({
         </div>
         {activeTab !== 'payment-accounts' && (
           <div className="flex items-center gap-2">
+            <TourTrigger tourId="finance" />
             <Button size="sm" variant="outline" onClick={handleRefresh} disabled={refreshing} className="gap-2">
               <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
               Refresh
             </Button>
-            <Button size="sm" className="gap-2" onClick={() => setAddOpen(true)}>
+            <Button size="sm" className="gap-2" onClick={() => setAddOpen(true)} data-tour="finance-add-btn">
               <Plus className="h-4 w-4" /> Add Entry
             </Button>
           </div>
@@ -95,8 +109,8 @@ export const FinanceClient: FC<FinanceClientProps> = ({
       {/* Overview */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          <OrgFundCard initialData={fund} />
-          <div>
+          <div data-tour="finance-fund-card"><OrgFundCard initialData={fund} /></div>
+          <div data-tour="finance-event-breakdown">
             <h2 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
               Event Breakdown
             </h2>
@@ -117,14 +131,14 @@ export const FinanceClient: FC<FinanceClientProps> = ({
 
       {/* Ledger */}
       {activeTab === 'ledger' && (
-        <LedgerTable initialData={entries} events={events} />
+        <LedgerTable initialData={entries} events={effectiveEvents} />
       )}
 
       {/* Reports */}
       {activeTab === 'reports' && (
         <FinanceReport
           entries={entries}
-          events={events}
+          events={effectiveEvents}
           summaries={summary?.eventBreakdowns ?? []}
         />
       )}

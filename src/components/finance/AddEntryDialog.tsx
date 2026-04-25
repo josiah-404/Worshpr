@@ -1,7 +1,7 @@
 'use client';
 
 import { type FC, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { Loader2, Upload, CheckCircle2 } from 'lucide-react';
@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCreateLedgerEntry } from '@/hooks/useCreateLedgerEntry';
 import { useReceiptUpload } from '@/hooks/useReceiptUpload';
+import { useOrgContext } from '@/providers/OrgContext';
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, FINANCE_CATEGORY_LABELS } from '@/types/finance.types';
 import { ledgerEntrySchema, type LedgerEntryInput } from '@/validations/finance.schema';
 import type { EventFinanceSummaryItem } from '@/types/finance.types';
@@ -33,14 +34,15 @@ export const AddEntryDialog: FC<AddEntryDialogProps> = ({
 }) => {
   const { mutate: createEntry, isPending } = useCreateLedgerEntry();
   const { fileInputRef, uploading, uploadProgress, triggerFilePicker, handleFileChange } = useReceiptUpload();
+  const { activeOrgId } = useOrgContext();
 
   const form = useForm<LedgerEntryInput>({
-    resolver: zodResolver(ledgerEntrySchema),
+    resolver: zodResolver(ledgerEntrySchema) as unknown as Resolver<LedgerEntryInput>,
     defaultValues: {
       type: defaultType ?? 'EXPENSE',
       category: 'OTHER_EXPENSE',
       customCategory: '',
-      amount: 0,
+      amount: undefined,
       description: '',
       date: new Date().toISOString().split('T')[0],
       eventId: defaultEventId ?? '',
@@ -78,6 +80,7 @@ export const AddEntryDialog: FC<AddEntryDialogProps> = ({
         payee: data.payee || undefined,
         requestedBy: data.requestedBy || undefined,
         receiptUrl: data.receiptUrl || undefined,
+        orgId: activeOrgId ?? undefined,
       },
       {
         onSuccess: () => { toast.success('Entry added'); onClose(); },
@@ -154,8 +157,27 @@ export const AddEntryDialog: FC<AddEntryDialogProps> = ({
                   <FormItem>
                     <FormLabel>Amount (₱)</FormLabel>
                     <FormControl>
-                      <Input type="number" min={0} step="0.01" {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0.00"
+                        {...field}
+                        value={field.value ?? ''}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          if (raw === '' || raw === '.') {
+                            field.onChange(raw === '' ? undefined : raw);
+                          } else {
+                            const num = parseFloat(raw);
+                            field.onChange(isNaN(num) ? field.value : raw);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const num = parseFloat(e.target.value);
+                          field.onChange(isNaN(num) ? undefined : num);
+                          field.onBlur();
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

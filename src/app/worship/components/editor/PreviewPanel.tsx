@@ -165,7 +165,7 @@ export const PreviewPanel: FC<PreviewPanelProps> = ({
       </div>
 
       {/* Background */}
-      <div className='space-y-2 shrink-0'>
+      <div className='space-y-2 shrink-0' data-tour="worship-settings-btn">
         <div className='flex items-center justify-between'>
           <p className='text-[11px] font-medium text-muted-foreground/60 uppercase tracking-widest'>
             Background

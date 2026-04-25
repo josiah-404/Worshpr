@@ -14,6 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { RegistrationDrawer } from '@/components/registration/RegistrationDrawer';
+import { TourTrigger } from '@/components/guides/TourTrigger';
 import { useGetRegistrations } from '@/hooks/useGetRegistrations';
 import { cn } from '@/lib/utils';
 import type { RegistrationListItem, RegistrationStatus, EventListItem } from '@/types';
@@ -101,7 +102,7 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
       {/* Event selector — always visible, required */}
       <div className="flex flex-wrap items-center gap-2">
         <Select value={eventFilter} onValueChange={setEventFilter}>
-          <SelectTrigger className="w-[260px]">
+          <SelectTrigger className="w-[260px]" data-tour="reg-event-filter">
             <SelectValue placeholder="Select an event…" />
           </SelectTrigger>
           <SelectContent>
@@ -115,6 +116,9 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
             Showing registrations for <span className="font-medium text-foreground">{selectedEventTitle}</span>
           </span>
         )}
+        <div className="ml-auto">
+          <TourTrigger tourId="registrations" />
+        </div>
       </div>
 
       {/* Prompt state — no event selected */}
@@ -153,6 +157,7 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
             <div className="relative flex-1 min-w-[180px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
+                data-tour="reg-search"
                 placeholder="Search name, email, church, or code…"
                 className="pl-9"
                 value={search}
@@ -160,7 +165,7 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-[150px]" data-tour="reg-status-filter">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -200,7 +205,7 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
               )}
             </div>
           ) : (
-            <div className="rounded-lg border overflow-hidden">
+            <div className="rounded-lg border overflow-hidden" data-tour="reg-table">
               <Table>
                 <TableHeader>
                   <TableRow>
