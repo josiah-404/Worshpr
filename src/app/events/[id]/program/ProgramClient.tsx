@@ -31,6 +31,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ProgramItemDialog } from './ProgramItemDialog';
+import { TourTrigger } from '@/components/guides/TourTrigger';
 import { useGetProgram } from '@/hooks/useGetProgram';
 import { useUpsertProgram } from '@/hooks/useUpsertProgram';
 import { useCreateProgramItem } from '@/hooks/useCreateProgramItem';
@@ -657,13 +658,15 @@ export const ProgramClient: FC<ProgramClientProps> = ({
 
         {/* Status selector + export buttons */}
         <div className="flex items-center gap-2 flex-wrap">
+          <TourTrigger tourId="program" />
           <span className="text-xs text-muted-foreground">Status</span>
           <Select
             value={status}
             onValueChange={(v) => handleStatusChange(v as ProgramStatus)}
             disabled={isAnyPending}
+            data-tour="program-status"
           >
-            <SelectTrigger className="w-[130px] h-8 text-xs">
+            <SelectTrigger className="w-[130px] h-8 text-xs" data-tour="program-status">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -673,26 +676,28 @@ export const ProgramClient: FC<ProgramClientProps> = ({
             </SelectContent>
           </Select>
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs gap-1.5"
-            onClick={exportToCSV}
-            disabled={isAnyPending || !program}
-          >
-            <FileText className="h-3.5 w-3.5" />
-            CSV
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs gap-1.5"
-            onClick={handlePDFClick}
-            disabled={isAnyPending || !program}
-          >
-            <FileDown className="h-3.5 w-3.5" />
-            PDF
-          </Button>
+          <div className="flex items-center gap-1.5" data-tour="program-export">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs gap-1.5"
+              onClick={exportToCSV}
+              disabled={isAnyPending || !program}
+            >
+              <FileText className="h-3.5 w-3.5" />
+              CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs gap-1.5"
+              onClick={handlePDFClick}
+              disabled={isAnyPending || !program}
+            >
+              <FileDown className="h-3.5 w-3.5" />
+              PDF
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -700,7 +705,7 @@ export const ProgramClient: FC<ProgramClientProps> = ({
 
       {/* Day tabs — only for CAMP */}
       {isCamp && (
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap" data-tour="program-day-tabs">
           {Array.from({ length: totalDays }, (_, i) => (
             <Button
               key={i + 1}
@@ -738,7 +743,7 @@ export const ProgramClient: FC<ProgramClientProps> = ({
       )}
 
       {/* Session header buttons */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap" data-tour="program-session-btns">
         <span className="text-xs text-muted-foreground">Add separator:</span>
         {(['MORNING', 'AFTERNOON', 'EVENING'] as ProgramSession[]).map((s) => {
           const cfg = SESSION_CONFIG[s];
@@ -760,7 +765,7 @@ export const ProgramClient: FC<ProgramClientProps> = ({
       </div>
 
       {/* Program item list */}
-      <div className="space-y-2">
+      <div className="space-y-2" data-tour="program-item-list">
         {dayItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 rounded-lg border border-dashed gap-2">
             <p className="text-sm text-muted-foreground">
@@ -816,6 +821,7 @@ export const ProgramClient: FC<ProgramClientProps> = ({
           variant="outline"
           size="sm"
           className="gap-1.5"
+          data-tour="program-add-item"
           onClick={() => { setEditingItem(null); setDialogOpen(true); }}
           disabled={isAnyPending}
         >

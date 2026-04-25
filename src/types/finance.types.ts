@@ -106,6 +106,7 @@ export interface LedgerEntryPayload {
   payee?: string;
   requestedBy?: string;
   receiptUrl?: string;
+  orgId?: string;
 }
 
 export interface UpdateLedgerEntryPayload extends Partial<LedgerEntryPayload> {}

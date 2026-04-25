@@ -21,6 +21,7 @@ import { useOrgContext } from '@/providers/OrgContext';
 import { EventCard } from './EventCard';
 import { EventDialog } from './EventDialog';
 import { EventInvitePanel } from './EventInvitePanel';
+import { TourTrigger } from '@/components/guides/TourTrigger';
 import type { EventListItem, OrgRole, Organization } from '@/types';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -122,7 +123,7 @@ export const EventsGrid: FC<EventsGridProps> = ({
   return (
     <div className="space-y-4">
       {/* ── Toolbar ── */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-3" data-tour="events-toolbar">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -183,8 +184,10 @@ export const EventsGrid: FC<EventsGridProps> = ({
             </Button>
           )}
 
+          <TourTrigger tourId="events" />
           {canEdit && (
             <Button
+              data-tour="events-new-btn"
               onClick={handleCreate}
               disabled={isSuperAdmin && !activeOrgId}
             >
@@ -220,7 +223,7 @@ export const EventsGrid: FC<EventsGridProps> = ({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" data-tour="events-grid">
           {filtered.map((event) => (
             <EventCard
               key={event.id}

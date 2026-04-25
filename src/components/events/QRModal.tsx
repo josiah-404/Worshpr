@@ -24,9 +24,22 @@ interface QRModalProps {
   dateRange: string;
   venue: string | null;
   registrationUrl: string;
+  themeColor?: string | null;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
+
+function hexToRgb(hex: string): [number, number, number] | null {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
+    : null;
+}
+
+function adjustRgb(rgb: [number, number, number], factor: number): string {
+  const [r, g, b] = rgb.map((c) => Math.max(0, Math.min(255, Math.round(c * factor))));
+  return `rgb(${r},${g},${b})`;
+}
 
 function wrapText(
   ctx: CanvasRenderingContext2D,
@@ -73,7 +86,7 @@ function roundRect(
 // ─── Component ─────────────────────────────────────────────────────────────
 
 export const QRModal: FC<QRModalProps> = ({
-  open, onClose, eventTitle, orgName, dateRange, venue, registrationUrl,
+  open, onClose, eventTitle, orgName, dateRange, venue, registrationUrl, themeColor,
 }) => {
   const qrContainerRef = useRef<HTMLDivElement>(null);
   const hiddenQrRef = useRef<HTMLDivElement>(null);
@@ -98,9 +111,8 @@ export const QRModal: FC<QRModalProps> = ({
     // Calculate header height based on title length
     const HEADER_H = 210;
     const INFO_H = 70;
-    const QR_PADDING = 60;
     const QR_SIZE = 380;
-    const QR_SECTION_H = QR_SIZE + QR_PADDING * 2 + 50; // +50 for "Scan to Register" label
+    const QR_SECTION_H = 24 + QR_SIZE + 32 + 48; // top pad + QR + card bottom pad + label
     const URL_H = 90;
     const FOOTER_H = 60;
     const H = HEADER_H + INFO_H + QR_SECTION_H + URL_H + FOOTER_H;
@@ -111,14 +123,20 @@ export const QRModal: FC<QRModalProps> = ({
     const ctx = canvas.getContext('2d')!;
     ctx.scale(SCALE, SCALE);
 
+    // ── Theme color palette ──────────────────────────────────────────────────
+    const baseHex = themeColor ?? '#ea580c';
+    const baseRgb = hexToRgb(baseHex) ?? [234, 92, 12];
+    const colorDark  = adjustRgb(baseRgb, 0.82); // ~18% darker for gradient start
+    const colorLight = adjustRgb(baseRgb, 1.18); // ~18% lighter for gradient end
+
     // ── Background ──────────────────────────────────────────────────────────
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, W, H);
 
     // ── Header gradient ──────────────────────────────────────────────────────
     const headerGrad = ctx.createLinearGradient(0, 0, W, HEADER_H);
-    headerGrad.addColorStop(0, '#ea580c');
-    headerGrad.addColorStop(1, '#f97316');
+    headerGrad.addColorStop(0, colorDark);
+    headerGrad.addColorStop(1, colorLight);
     ctx.fillStyle = headerGrad;
     ctx.fillRect(0, 0, W, HEADER_H);
 
@@ -183,15 +201,9 @@ export const QRModal: FC<QRModalProps> = ({
     // ── QR Section ───────────────────────────────────────────────────────────
     const qrSectionTop = HEADER_H + INFO_H;
 
-    // "Scan to Register" label
-    ctx.fillStyle = '#111827';
-    ctx.font = 'bold 18px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Scan to Register', W / 2, qrSectionTop + 44);
-
     // QR card shadow + background
     const qrX = (W - QR_SIZE) / 2;
-    const qrY = qrSectionTop + 60;
+    const qrY = qrSectionTop + 24; // top padding only — label goes below
 
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.12)';
@@ -204,6 +216,12 @@ export const QRModal: FC<QRModalProps> = ({
 
     // Draw QR code
     ctx.drawImage(qrCanvas, qrX, qrY, QR_SIZE, QR_SIZE);
+
+    // "Scan to Register" label — below the QR card
+    ctx.fillStyle = '#111827';
+    ctx.font = 'bold 18px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Scan to Register', W / 2, qrY + QR_SIZE + 16 + 30);
 
     // ── URL Section ──────────────────────────────────────────────────────────
     const urlSectionTop = qrSectionTop + QR_SECTION_H;
@@ -230,8 +248,8 @@ export const QRModal: FC<QRModalProps> = ({
     // ── Footer ───────────────────────────────────────────────────────────────
     const footerTop = urlSectionTop + URL_H;
     const footerGrad = ctx.createLinearGradient(0, footerTop, W, footerTop + FOOTER_H);
-    footerGrad.addColorStop(0, '#ea580c');
-    footerGrad.addColorStop(1, '#f97316');
+    footerGrad.addColorStop(0, colorDark);
+    footerGrad.addColorStop(1, colorLight);
     ctx.fillStyle = footerGrad;
     ctx.fillRect(0, footerTop, W, FOOTER_H);
 

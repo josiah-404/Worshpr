@@ -20,7 +20,7 @@ export const ALL_FINANCE_CATEGORIES = [
 // ─── OrgFund ──────────────────────────────────────────────────────────────────
 
 export const orgFundSchema = z.object({
-  initialBalance: z.number().min(0, 'Balance cannot be negative'),
+  initialBalance: z.coerce.number().min(0, 'Balance cannot be negative'),
   notes: z.string().optional(),
 });
 
@@ -32,7 +32,7 @@ export const ledgerEntrySchema = z.object({
   type: z.enum(FINANCE_ENTRY_TYPES),
   category: z.enum(ALL_FINANCE_CATEGORIES),
   customCategory: z.string().optional(),
-  amount: z.number().min(0.01, 'Amount must be greater than 0'),
+  amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
   description: z.string().min(1, 'Description is required'),
   date: z.string().min(1, 'Date is required'),
   eventId: z.string().optional(),

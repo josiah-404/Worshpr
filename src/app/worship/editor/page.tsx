@@ -17,6 +17,7 @@ import { SlidesPanel } from '@/app/worship/components/editor/SlidesPanel';
 import { LyricsPanel } from '@/app/worship/components/editor/LyricsPanel';
 import { PreviewPanel } from '@/app/worship/components/editor/PreviewPanel';
 import { ControllerView } from '@/app/worship/components/editor/ControllerView';
+import { TourTrigger } from '@/components/guides/TourTrigger';
 
 function SaveButton({
   onSave,
@@ -169,7 +170,7 @@ function WorshipEditorInner() {
     {ConfirmEndDialog}
     <div className='flex flex-col gap-5 flex-1 min-h-0'>
       {/* Header */}
-      <div className='flex items-center justify-between gap-4 shrink-0'>
+      <div className='flex items-center justify-between gap-4 shrink-0' data-tour="worship-editor-header">
         <div className='flex items-center gap-3 min-w-0'>
           <button
             onClick={handleBack}
@@ -201,6 +202,7 @@ function WorshipEditorInner() {
           </div>
         </div>
         <div className='flex items-center gap-2 shrink-0'>
+          <TourTrigger tourId="worship-editor" />
           <SaveButton onSave={handleSave} isSaving={isSaving} saved={saved} />
           <button
             onClick={openPresenter}
@@ -215,95 +217,101 @@ function WorshipEditorInner() {
 
       {/* 3-panel body */}
       <div className='flex gap-5 flex-1 min-h-0'>
-        <SlidesPanel
-          slides={slides}
-          current={current}
-          activeSlideRef={activeSlideRef}
-          onGoTo={goTo}
-        />
+        <div data-tour="worship-slides-panel" className="flex flex-col min-h-0">
+          <SlidesPanel
+            slides={slides}
+            current={current}
+            activeSlideRef={activeSlideRef}
+            onGoTo={goTo}
+          />
+        </div>
 
-        <LyricsPanel
-          lyricsMode={editor.lyricsMode}
-          setLyricsMode={editor.setLyricsMode}
-          lyrics={lyrics}
-          setLyrics={setLyrics}
-          quotaExhausted={editor.quotaExhausted}
-          songQueue={editor.songQueue}
-          editingIdx={editor.editingIdx}
-          editTitle={editor.editTitle}
-          setEditTitle={editor.setEditTitle}
-          editArtist={editor.editArtist}
-          setEditArtist={editor.setEditArtist}
-          editRole={editor.editRole}
-          setEditRole={editor.setEditRole}
-          onStartEdit={editor.handleStartEdit}
-          onSaveEdit={editor.handleSaveEdit}
-          onCancelEdit={editor.handleCancelEdit}
-          onRemoveSong={editor.handleRemoveSong}
-          onDragEnd={editor.handleDragEnd}
-          addDialogOpen={editor.addDialogOpen}
-          setAddDialogOpen={editor.setAddDialogOpen}
-          addMode={editor.addMode}
-          setAddMode={editor.setAddMode}
-          manualRole={editor.manualRole}
-          setManualRole={editor.setManualRole}
-          manualTitle={editor.manualTitle}
-          setManualTitle={editor.setManualTitle}
-          manualArtist={editor.manualArtist}
-          setManualArtist={editor.setManualArtist}
-          manualLyricsText={editor.manualLyricsText}
-          setManualLyricsText={editor.setManualLyricsText}
-          onAddManualSong={editor.handleAddManualSong}
-          sectionLabel={editor.sectionLabel}
-          setSectionLabel={editor.setSectionLabel}
-          onAddSection={editor.handleAddSection}
-          aiDescription={editor.aiDescription}
-          setAiDescription={editor.setAiDescription}
-          aiLoading={editor.aiLoading}
-          aiError={editor.aiError}
-          setAiError={editor.setAiError}
-          aiResults={editor.aiResults}
-          expandedIdx={editor.expandedIdx}
-          setExpandedIdx={editor.setExpandedIdx}
-          fetchingIdx={editor.fetchingIdx}
-          aiRoleInputIdx={editor.aiRoleInputIdx}
-          setAiRoleInputIdx={editor.setAiRoleInputIdx}
-          aiRoleInputValue={editor.aiRoleInputValue}
-          setAiRoleInputValue={editor.setAiRoleInputValue}
-          quotaLoading={editor.quotaLoading}
-          quotaUsed={editor.quotaUsed}
-          quotaRemaining={editor.quotaRemaining}
-          quotaLimit={editor.quotaLimit}
-          isCoolingDown={editor.isCoolingDown}
-          cooldownSecsLeft={editor.cooldownSecsLeft}
-          onSearch={() => void editor.handleSearchLyrics()}
-          onFetchLyrics={(idx) => void editor.handleFetchLyrics(idx)}
-          onSelectSong={editor.handleSelectSong}
-          onRemoveFromQueue={editor.handleRemoveFromQueue}
-        />
+        <div data-tour="worship-lyrics-panel" className="flex flex-col flex-1 min-h-0 min-w-0">
+          <LyricsPanel
+            lyricsMode={editor.lyricsMode}
+            setLyricsMode={editor.setLyricsMode}
+            lyrics={lyrics}
+            setLyrics={setLyrics}
+            quotaExhausted={editor.quotaExhausted}
+            songQueue={editor.songQueue}
+            editingIdx={editor.editingIdx}
+            editTitle={editor.editTitle}
+            setEditTitle={editor.setEditTitle}
+            editArtist={editor.editArtist}
+            setEditArtist={editor.setEditArtist}
+            editRole={editor.editRole}
+            setEditRole={editor.setEditRole}
+            onStartEdit={editor.handleStartEdit}
+            onSaveEdit={editor.handleSaveEdit}
+            onCancelEdit={editor.handleCancelEdit}
+            onRemoveSong={editor.handleRemoveSong}
+            onDragEnd={editor.handleDragEnd}
+            addDialogOpen={editor.addDialogOpen}
+            setAddDialogOpen={editor.setAddDialogOpen}
+            addMode={editor.addMode}
+            setAddMode={editor.setAddMode}
+            manualRole={editor.manualRole}
+            setManualRole={editor.setManualRole}
+            manualTitle={editor.manualTitle}
+            setManualTitle={editor.setManualTitle}
+            manualArtist={editor.manualArtist}
+            setManualArtist={editor.setManualArtist}
+            manualLyricsText={editor.manualLyricsText}
+            setManualLyricsText={editor.setManualLyricsText}
+            onAddManualSong={editor.handleAddManualSong}
+            sectionLabel={editor.sectionLabel}
+            setSectionLabel={editor.setSectionLabel}
+            onAddSection={editor.handleAddSection}
+            aiDescription={editor.aiDescription}
+            setAiDescription={editor.setAiDescription}
+            aiLoading={editor.aiLoading}
+            aiError={editor.aiError}
+            setAiError={editor.setAiError}
+            aiResults={editor.aiResults}
+            expandedIdx={editor.expandedIdx}
+            setExpandedIdx={editor.setExpandedIdx}
+            fetchingIdx={editor.fetchingIdx}
+            aiRoleInputIdx={editor.aiRoleInputIdx}
+            setAiRoleInputIdx={editor.setAiRoleInputIdx}
+            aiRoleInputValue={editor.aiRoleInputValue}
+            setAiRoleInputValue={editor.setAiRoleInputValue}
+            quotaLoading={editor.quotaLoading}
+            quotaUsed={editor.quotaUsed}
+            quotaRemaining={editor.quotaRemaining}
+            quotaLimit={editor.quotaLimit}
+            isCoolingDown={editor.isCoolingDown}
+            cooldownSecsLeft={editor.cooldownSecsLeft}
+            onSearch={() => void editor.handleSearchLyrics()}
+            onFetchLyrics={(idx) => void editor.handleFetchLyrics(idx)}
+            onSelectSong={editor.handleSelectSong}
+            onRemoveFromQueue={editor.handleRemoveFromQueue}
+          />
+        </div>
 
-        <PreviewPanel
-          currentSlide={currentSlide}
-          bgCls={bgCls}
-          currentFamily={currentFamily}
-          sizeId={sizeId}
-          slides={slides}
-          current={current}
-          bgId={bgId}
-          transitionId={transitionId}
-          fontId={fontId}
-          transSpeed={transSpeed}
-          animSpeed={animSpeed}
-          bgDialogOpen={editor.bgDialogOpen}
-          setBgDialogOpen={editor.setBgDialogOpen}
-          onGoTo={goTo}
-          onChangeBg={changeBg}
-          onChangeTr={changeTr}
-          onChangeFont={changeFont}
-          onChangeSize={changeSize}
-          onChangeTransSpeed={changeTransSpeed}
-          onChangeAnimSpeed={changeAnimSpeed}
-        />
+        <div data-tour="worship-preview-panel" className="flex flex-col min-h-0">
+          <PreviewPanel
+            currentSlide={currentSlide}
+            bgCls={bgCls}
+            currentFamily={currentFamily}
+            sizeId={sizeId}
+            slides={slides}
+            current={current}
+            bgId={bgId}
+            transitionId={transitionId}
+            fontId={fontId}
+            transSpeed={transSpeed}
+            animSpeed={animSpeed}
+            bgDialogOpen={editor.bgDialogOpen}
+            setBgDialogOpen={editor.setBgDialogOpen}
+            onGoTo={goTo}
+            onChangeBg={changeBg}
+            onChangeTr={changeTr}
+            onChangeFont={changeFont}
+            onChangeSize={changeSize}
+            onChangeTransSpeed={changeTransSpeed}
+            onChangeAnimSpeed={changeAnimSpeed}
+          />
+        </div>
       </div>
     </div>
     </>

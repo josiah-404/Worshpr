@@ -29,8 +29,10 @@ import { useLogoUpload } from '@/hooks/useLogoUpload';
 import { useCreateEvent } from '@/hooks/useCreateEvent';
 import { useUpdateEvent } from '@/hooks/useUpdateEvent';
 import { useGetPaymentAccounts } from '@/hooks/useGetPaymentAccounts';
+import { useGetChurches } from '@/hooks/useGetChurches';
 import { useGetEventChurches } from '@/hooks/useGetEventChurches';
 import { useSetEventChurches } from '@/hooks/useSetEventChurches';
+import { setEventChurches } from '@/services/church.service';
 import { createEventSchema, type CreateEventInput } from '@/validations/event.schema';
 import type { EventListItem, Organization } from '@/types';
 
@@ -86,8 +88,9 @@ export const EventDialog: FC<EventDialogProps> = ({
 
   const isPending = isCreating || isUpdating;
 
-  // ── Church selection (edit mode only) ──────────────────────────────────────
+  // ── Church selection ───────────────────────────────────────────────────────
   const [selectedChurchIds, setSelectedChurchIds] = useState<string[]>([]);
+  const [churchError, setChurchError] = useState(false);
   const { data: churchData } = useGetEventChurches(editingEvent?.id ?? null);
 
   const form = useForm<CreateEventInput>({
@@ -100,7 +103,7 @@ export const EventDialog: FC<EventDialogProps> = ({
       startDate: '',
       endDate: '',
       registrationDeadline: '',
-      fee: 0,
+      fee: undefined,
       maxSlots: undefined,
       status: 'DRAFT',
       coverImage: '',
@@ -116,18 +119,20 @@ export const EventDialog: FC<EventDialogProps> = ({
   const fee = watch('fee');
   const watchedHostOrgId = watch('hostOrgId');
 
-  const { data: paymentAccounts = [] } = useGetPaymentAccounts(
-    isSuperAdmin ? (watchedHostOrgId || null) : hostOrgId,
-  );
+  const churchOrgId = isSuperAdmin ? (watchedHostOrgId || null) : hostOrgId;
 
-  // Sync church selection when data loads
+  const { data: paymentAccounts = [] } = useGetPaymentAccounts(churchOrgId);
+  const { data: allChurches = [] } = useGetChurches(churchOrgId);
+
+  // Sync church selection when data loads or dialog opens fresh
   useEffect(() => {
     if (churchData) {
       setSelectedChurchIds(churchData.participating.map((c) => c.id));
     } else if (!editingEvent) {
       setSelectedChurchIds([]);
     }
-  }, [churchData, editingEvent]);
+    setChurchError(false);
+  }, [churchData, editingEvent, open]);
 
   // Populate form when editing
   useEffect(() => {
@@ -157,7 +162,7 @@ export const EventDialog: FC<EventDialogProps> = ({
         startDate: '',
         endDate: '',
         registrationDeadline: '',
-        fee: 0,
+        fee: undefined,
         maxSlots: undefined,
         status: 'DRAFT',
         coverImage: '',
@@ -169,17 +174,22 @@ export const EventDialog: FC<EventDialogProps> = ({
   }, [editingEvent, open, reset, hostOrgId]);
 
   function toggleChurch(churchId: string) {
+    setChurchError(false);
     setSelectedChurchIds((prev) =>
       prev.includes(churchId) ? prev.filter((id) => id !== churchId) : [...prev, churchId],
     );
   }
 
   const onSubmit = (data: CreateEventInput) => {
+    if (selectedChurchIds.length === 0) {
+      setChurchError(true);
+      return;
+    }
+
     if (editingEvent) {
       const { hostOrgId: _host, ...updateData } = data;
       updateMutate(updateData, {
         onSuccess: () => {
-          // Save church selections alongside the event update
           setChurches(selectedChurchIds);
           toast.success('Event updated');
           onOpenChange(false);
@@ -188,7 +198,8 @@ export const EventDialog: FC<EventDialogProps> = ({
       });
     } else {
       createMutate(data, {
-        onSuccess: () => {
+        onSuccess: async (newEvent) => {
+          await setEventChurches(newEvent.id, selectedChurchIds);
           toast.success('Event created');
           onOpenChange(false);
         },
@@ -470,10 +481,9 @@ export const EventDialog: FC<EventDialogProps> = ({
             <FormField label="Registration Fee (₱)" htmlFor="fee">
               <Input
                 id="fee"
-                type="number"
-                min={0}
-                step={0.01}
-                placeholder="0"
+                type="text"
+                inputMode="decimal"
+                placeholder="0.00"
                 {...register('fee')}
               />
               {errors.fee && (
@@ -529,29 +539,42 @@ export const EventDialog: FC<EventDialogProps> = ({
             </FormField>
           )}
 
-          {/* ── Participating Churches (edit mode only) ── */}
-          {editingEvent && (
-            <div className="space-y-2">
-              <div>
-                <p className="text-sm font-medium">Participating Churches</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Select churches from this event&apos;s organizations whose members can register
-                </p>
-              </div>
+          {/* ── Participating Churches ── */}
+          <div className="space-y-2">
+            <div>
+              <p className="text-sm font-medium">
+                Participating Churches
+                <span className="text-destructive ml-1">*</span>
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Select churches whose members can register for this event
+              </p>
+            </div>
 
-              {!churchData ? (
-                <p className="text-xs text-muted-foreground">Loading churches…</p>
-              ) : churchData.participating.length === 0 && churchData.available.length === 0 ? (
-                <div className="rounded-md border border-dashed p-4 flex items-center gap-3 text-muted-foreground">
-                  <Church className="h-4 w-4 shrink-0" />
-                  <p className="text-xs">
-                    No churches configured for this event&apos;s organizations yet.
-                    Add churches under <span className="font-medium">Management → Churches</span>.
-                  </p>
-                </div>
-              ) : (
-                <div className="rounded-md border p-3 space-y-1.5 max-h-48 overflow-y-auto">
-                  {[...churchData.participating, ...churchData.available].map((church) => {
+            {(() => {
+              const churches = editingEvent
+                ? (churchData ? [...churchData.participating, ...churchData.available] : null)
+                : allChurches.filter((c) => c.isActive);
+
+              if (churches === null) {
+                return <p className="text-xs text-muted-foreground">Loading churches…</p>;
+              }
+
+              if (churches.length === 0) {
+                return (
+                  <div className="rounded-md border border-dashed p-4 flex items-center gap-3 text-muted-foreground">
+                    <Church className="h-4 w-4 shrink-0" />
+                    <p className="text-xs">
+                      No churches configured yet.
+                      Add churches under <span className="font-medium">Management → Churches</span>.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className={cn('rounded-md border p-3 space-y-1.5 max-h-48 overflow-y-auto', churchError && 'border-destructive')}>
+                  {churches.map((church) => {
                     const isSelected = selectedChurchIds.includes(church.id);
                     return (
                       <button
@@ -580,9 +603,13 @@ export const EventDialog: FC<EventDialogProps> = ({
                     );
                   })}
                 </div>
-              )}
-            </div>
-          )}
+              );
+            })()}
+
+            {churchError && (
+              <p className="text-xs text-destructive">Please select at least one participating church.</p>
+            )}
+          </div>
 
           <DialogFooter className="pt-2">
             <Button

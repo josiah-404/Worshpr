@@ -19,6 +19,7 @@ interface FinanceReportProps {
   entries: LedgerEntry[];
   events: { id: string; title: string }[];
   summaries: EventFinanceSummaryItem[];
+  fixedEventId?: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -197,14 +198,15 @@ const ExpenseTable: FC<{ entries: LedgerEntry[]; total: number }> = ({ entries, 
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export const FinanceReport: FC<FinanceReportProps> = ({ entries, events, summaries }) => {
-  const [selectedEventId, setSelectedEventId] = useState<string>('ALL');
+export const FinanceReport: FC<FinanceReportProps> = ({ entries, events, summaries, fixedEventId }) => {
+  const [selectedEventId, setSelectedEventId] = useState<string>(fixedEventId ?? 'ALL');
 
   const filteredEntries = useMemo(() => {
-    if (selectedEventId === 'ALL') return entries;
-    if (selectedEventId === 'STANDALONE') return entries.filter((e) => !e.eventId);
-    return entries.filter((e) => e.eventId === selectedEventId);
-  }, [entries, selectedEventId]);
+    const effectiveId = fixedEventId ?? selectedEventId;
+    if (effectiveId === 'ALL') return entries;
+    if (effectiveId === 'STANDALONE') return entries.filter((e) => !e.eventId);
+    return entries.filter((e) => e.eventId === effectiveId);
+  }, [entries, selectedEventId, fixedEventId]);
 
   const incomeEntries = filteredEntries.filter((e) => e.type === 'INCOME');
   const expenseEntries = filteredEntries.filter((e) => e.type === 'EXPENSE');
@@ -222,17 +224,19 @@ export const FinanceReport: FC<FinanceReportProps> = ({ entries, events, summari
     <div className="space-y-4">
       {/* Controls — hidden on print */}
       <div className="flex items-center justify-between gap-3 flex-wrap print:hidden">
-        <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-          <SelectTrigger className="w-[240px]"><SelectValue placeholder="Select event" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All Events</SelectItem>
-            <SelectItem value="STANDALONE">Standalone (No Event)</SelectItem>
-            {events.map((e) => (
-              <SelectItem key={e.id} value={e.id}>{e.title}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button variant="outline" size="sm" className="gap-2" onClick={() => window.print()}>
+        {!fixedEventId && (
+          <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+            <SelectTrigger className="w-[240px]"><SelectValue placeholder="Select event" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Events</SelectItem>
+              <SelectItem value="STANDALONE">Standalone (No Event)</SelectItem>
+              {events.map((e) => (
+                <SelectItem key={e.id} value={e.id}>{e.title}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <Button variant="outline" size="sm" className="gap-2 ml-auto" onClick={() => window.print()}>
           <Printer className="h-4 w-4" /> Print Report
         </Button>
       </div>

@@ -4,6 +4,7 @@ import { type FC, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Pencil, Trash2, Monitor, Play, Radio } from 'lucide-react';
 import { BACKGROUNDS, BG_BADGE_COLORS, FONT_LABELS } from '@/lib/constants';
+import { TourTrigger } from '@/components/guides/TourTrigger';
 import { usePresentations } from '@/hooks/usePresentations';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useIsPresentationActive } from '@/hooks/useIsPresentationActive';
@@ -93,7 +94,11 @@ export const PresentationsTable: FC<PresentationsTableProps> = ({ presentations:
         </div>
       )}
 
-      <div className="rounded-lg border overflow-hidden">
+      <div className="flex justify-end mb-2">
+        <TourTrigger tourId="worship-screen" />
+      </div>
+
+      <div className="rounded-lg border overflow-hidden" data-tour="worship-table">
         <Table>
           <TableHeader>
             <TableRow>

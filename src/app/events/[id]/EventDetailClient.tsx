@@ -366,7 +366,7 @@ const DetailsForm: FC<DetailsFormProps> = ({
       {/* ── Fee + Slots ── */}
       <div className="grid grid-cols-2 gap-4">
         <FormField label="Registration Fee (₱)" htmlFor="fee">
-          <Input id="fee" type="number" min={0} step={0.01} placeholder="0" {...register('fee')} />
+          <Input id="fee" type="text" inputMode="decimal" placeholder="0.00" {...register('fee')} />
           {errors.fee && <p className="text-xs text-destructive">{errors.fee.message}</p>}
         </FormField>
         <FormField label="Max Slots" htmlFor="maxSlots" hint="(optional)">

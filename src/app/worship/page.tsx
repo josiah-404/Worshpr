@@ -35,7 +35,7 @@ export default async function WorshipPage() {
             Manage your presentation setlists
           </p>
         </div>
-        <Link href='/worship/editor'>
+        <Link href='/worship/editor' data-tour="worship-new-btn">
           <Button>
             <Plus className='mr-2 h-4 w-4' />
             New Presentation
