@@ -3,6 +3,9 @@ import { render } from '@react-email/render';
 import { type ReactElement } from 'react';
 import { OnboardingEmail } from '@/emails/templates/onboarding-email';
 import { ResetPasswordEmail } from '@/emails/templates/reset-password-email';
+import { RegistrationPendingEmail } from '@/emails/templates/registration-pending-email';
+import { RegistrationApprovedEmail } from '@/emails/templates/registration-approved-email';
+import { RegistrationRejectedEmail } from '@/emails/templates/registration-rejected-email';
 
 type EmailOptions = {
   to: string;
@@ -70,5 +73,64 @@ export async function sendPasswordResetEmail(
     to,
     subject: 'Reset your Worshpr password',
     template: ResetPasswordEmail({ name, resetUrl }),
+  });
+}
+
+export async function sendRegistrationPendingEmail(params: {
+  to: string;
+  submittedByName: string;
+  eventTitle: string;
+  eventType: string;
+  eventStartDate: string;
+  eventEndDate: string;
+  eventVenue: string | null;
+  confirmationCode: string;
+  registrants: { fullName: string; email: string }[];
+  headcount: number;
+  paymentIntent: string;
+  eventFee: number;
+}) {
+  await sendMail({
+    to: params.to,
+    subject: `Registration Received — ${params.eventTitle} [${params.confirmationCode}]`,
+    template: RegistrationPendingEmail(params),
+  });
+}
+
+export async function sendRegistrationApprovedEmail(params: {
+  to: string;
+  registrantName: string;
+  eventTitle: string;
+  eventType: string;
+  eventStartDate: string;
+  eventEndDate: string;
+  eventVenue: string | null;
+  confirmationCode: string;
+  paymentIntent: string;
+  eventFee: number;
+  notes: string | null;
+}) {
+  await sendMail({
+    to: params.to,
+    subject: `You're Officially Registered — ${params.eventTitle}`,
+    template: RegistrationApprovedEmail(params),
+  });
+}
+
+export async function sendRegistrationRejectedEmail(params: {
+  to: string;
+  registrantName: string;
+  eventTitle: string;
+  eventType: string;
+  eventStartDate: string;
+  eventEndDate: string;
+  eventVenue: string | null;
+  confirmationCode: string;
+  reason: string | null;
+}) {
+  await sendMail({
+    to: params.to,
+    subject: `Registration Update — ${params.eventTitle}`,
+    template: RegistrationRejectedEmail(params),
   });
 }
