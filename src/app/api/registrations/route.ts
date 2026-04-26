@@ -4,6 +4,11 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { registrationGroupSchema } from '@/validations/registration.schema';
 import { randomBytes } from 'crypto';
+import { sendRegistrationPendingEmail } from '@/lib/mail';
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
+}
 
 function generateConfirmationCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no ambiguous chars
@@ -167,6 +172,11 @@ export async function POST(req: NextRequest) {
       where: { id: eventId },
       select: {
         id: true,
+        title: true,
+        type: true,
+        startDate: true,
+        endDate: true,
+        venue: true,
         status: true,
         maxSlots: true,
         registrationDeadline: true,
@@ -336,6 +346,21 @@ export async function POST(req: NextRequest) {
         })),
       };
     });
+
+    sendRegistrationPendingEmail({
+      to: submittedByEmail,
+      submittedByName,
+      eventTitle: event.title,
+      eventType: event.type,
+      eventStartDate: formatDate(event.startDate),
+      eventEndDate: formatDate(event.endDate),
+      eventVenue: event.venue ?? null,
+      confirmationCode: result.confirmationCode,
+      registrants: result.registrations.map((r) => ({ fullName: r.fullName, email: r.email })),
+      headcount: result.headcount,
+      paymentIntent,
+      eventFee: event.fee,
+    }).catch(console.error);
 
     return NextResponse.json({ data: result }, { status: 201 });
   } catch (err: unknown) {

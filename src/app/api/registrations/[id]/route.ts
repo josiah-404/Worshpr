@@ -3,6 +3,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { sendRegistrationApprovedEmail, sendRegistrationRejectedEmail } from '@/lib/mail';
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
+}
 
 const updateStatusSchema = z.object({
   status: z.enum(['APPROVED', 'REJECTED', 'CANCELLED']),
@@ -67,9 +72,15 @@ export async function PATCH(
           eventId: true,
           orgId: true,
           paymentIntent: true,
-          registrant: { select: { fullName: true } },
+          registrant: { select: { fullName: true, email: true } },
+          event: { select: { title: true, type: true, startDate: true, endDate: true, venue: true, fee: true } },
           payment: { select: { id: true, amount: true } },
-          group: { select: { sharedPayment: { select: { id: true, amount: true } } } },
+          group: {
+            select: {
+              confirmationCode: true,
+              sharedPayment: { select: { id: true, amount: true } },
+            },
+          },
         },
       });
 
@@ -101,6 +112,36 @@ export async function PATCH(
 
       return [reg];
     });
+
+    if (status === 'APPROVED') {
+      sendRegistrationApprovedEmail({
+        to: updated.registrant.email,
+        registrantName: updated.registrant.fullName,
+        eventTitle: updated.event.title,
+        eventType: updated.event.type,
+        eventStartDate: formatDate(updated.event.startDate),
+        eventEndDate: formatDate(updated.event.endDate),
+        eventVenue: updated.event.venue ?? null,
+        confirmationCode: updated.group.confirmationCode,
+        paymentIntent: updated.paymentIntent,
+        eventFee: updated.event.fee,
+        notes: updated.notes ?? null,
+      }).catch(console.error);
+    }
+
+    if (status === 'REJECTED') {
+      sendRegistrationRejectedEmail({
+        to: updated.registrant.email,
+        registrantName: updated.registrant.fullName,
+        eventTitle: updated.event.title,
+        eventType: updated.event.type,
+        eventStartDate: formatDate(updated.event.startDate),
+        eventEndDate: formatDate(updated.event.endDate),
+        eventVenue: updated.event.venue ?? null,
+        confirmationCode: updated.group.confirmationCode,
+        reason: updated.notes ?? null,
+      }).catch(console.error);
+    }
 
     return NextResponse.json({
       data: {
