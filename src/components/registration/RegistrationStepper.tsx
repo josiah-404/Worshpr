@@ -46,6 +46,7 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
           phone: '',
           birthday: '',
           address: '',
+          photoUrl: '',
           churchId: '',
           divisionOrgId: '',
           emergencyContactName: '',

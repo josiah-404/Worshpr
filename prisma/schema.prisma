@@ -223,6 +223,7 @@ model Event {
   registrations      Registration[]
   financeLedger      FinanceLedger[]
   program            EventProgram?
+  idTemplate         EventIdTemplate?
 
   @@index([status, startDate])
   @@map("events")
@@ -272,6 +273,7 @@ model Registrant {
   phone                 String
   birthday              DateTime
   address               String   @db.Text
+  photoUrl              String?  @map("photo_url")
   // Legacy text fields — kept for backward compat with existing data
   church                String?
   organization          String?
@@ -529,6 +531,24 @@ enum ProgramSession {
   MORNING
   AFTERNOON
   EVENING
+}
+
+model EventIdTemplate {
+  id            String   @id @default(cuid())
+  eventId       String   @unique @map("event_id")
+  backgroundUrl String   @map("background_url")
+  sizeId        String   @default("cr80") @map("size_id")
+  layoutId      String   @default("gradient-bottom") @map("layout_id")
+  layoutFields  Json     @map("layout_fields")
+  overlayColor  String   @default("#000000") @map("overlay_color")
+  textColor     String   @default("#ffffff") @map("text_color")
+  fontFamily    String   @default("Poppins") @map("font_family")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("event_id_templates")
 }
 
 enum FinanceCategory {

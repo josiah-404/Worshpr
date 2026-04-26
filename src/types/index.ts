@@ -44,6 +44,17 @@ export type {
   RegistrationGroupResult,
 } from '@/types/registration.types';
 
+export type {
+  IdSizeId,
+  IdSize,
+  LayoutFieldType,
+  LayoutField,
+  IdLayout,
+  IdTemplateConfig,
+  IdTemplateRecord,
+  IdRegistrant,
+} from '@/types/id.types';
+
 export type OrgRole = 'super_admin' | 'org_admin' | 'officer';
 
 export interface Organization {

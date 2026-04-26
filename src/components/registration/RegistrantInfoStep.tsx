@@ -1,8 +1,8 @@
 'use client';
 
-import { type FC } from 'react';
+import { type FC, useRef, useState } from 'react';
 import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
-import { Plus, Trash2, UserPlus } from 'lucide-react';
+import { Plus, Trash2, UserPlus, Camera, CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,8 +21,72 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEdgeStore } from '@/lib/edgestore-client';
 import type { RegistrationGroupInput } from '@/validations/registration.schema';
 import type { ChurchOption, EventOrgOption } from '@/types';
+
+// ─── PhotoUploadField ──────────────────────────────────────────────────────
+
+interface PhotoUploadFieldProps {
+  index: number;
+}
+
+const PhotoUploadField: FC<PhotoUploadFieldProps> = ({ index }) => {
+  const { edgestore } = useEdgeStore();
+  const form = useFormContext<RegistrationGroupInput>();
+  const photoUrl = useWatch({ control: form.control, name: `registrants.${index}.photoUrl` }) as string | undefined;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const res = await edgestore.imgBucket.upload({
+        file,
+        options: { replaceTargetUrl: photoUrl || undefined },
+      });
+      form.setValue(`registrants.${index}.photoUrl`, res.url);
+    } catch {
+      // silent retry
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <p className="text-sm font-medium">
+        Photo <span className="text-xs text-primary font-normal ml-1">Recommended for ID</span>
+      </p>
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+      {photoUrl ? (
+        <div className="flex items-center gap-3">
+          <img src={photoUrl} alt="registrant photo" className="h-16 w-16 rounded-md object-cover border border-border" />
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs text-emerald-500">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Photo uploaded
+            </div>
+            <Button type="button" variant="outline" size="sm" className="h-7 text-xs"
+              onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+              Change
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button type="button" variant="outline" size="sm" className="gap-2 w-full border-dashed"
+          onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+          {uploading
+            ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading…</>
+            : <><Camera className="h-4 w-4" /> Upload 1×1 or 2×2 Photo</>}
+        </Button>
+      )}
+    </div>
+  );
+};
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -177,6 +241,7 @@ export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({ registrationTy
       phone: '',
       birthday: '',
       address: '',
+      photoUrl: '',
       churchId: '',
       divisionOrgId: '',
       emergencyContactName: '',
@@ -296,6 +361,7 @@ export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({ registrationTy
                 </FormItem>
               )}
             />
+            <PhotoUploadField index={index} />
             <DivisionChurchFields index={index} eventOrgs={eventOrgs} churches={churches} />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField

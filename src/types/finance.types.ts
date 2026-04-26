@@ -70,6 +70,7 @@ export interface OrgFundDetail {
 export interface UpdateOrgFundPayload {
   initialBalance: number;
   notes?: string;
+  orgId?: string; // passed by super_admin to target a specific org
 }
 
 // ─── Ledger ───────────────────────────────────────────────────────────────────

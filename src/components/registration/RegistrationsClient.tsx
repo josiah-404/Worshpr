@@ -1,7 +1,7 @@
 'use client';
 
 import { type FC, useState, useMemo } from 'react';
-import { Search, X, CheckCircle2, Clock, XCircle, Ban, Users, CalendarDays } from 'lucide-react';
+import { Search, X, CheckCircle2, Clock, XCircle, Ban, Users, CalendarDays, IdCard } from 'lucide-react';
 import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -116,7 +116,15 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
             Showing registrations for <span className="font-medium text-foreground">{selectedEventTitle}</span>
           </span>
         )}
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          {eventSelected && (
+            <Button asChild variant="outline" size="sm" className="gap-2">
+              <a href={`/ids/${eventFilter}`}>
+                <IdCard className="h-3.5 w-3.5" />
+                Generate IDs
+              </a>
+            </Button>
+          )}
           <TourTrigger tourId="registrations" />
         </div>
       </div>
