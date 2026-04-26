@@ -84,6 +84,7 @@ export interface User {
   orgId: string | null;
   title: string | null;
   createdAt: string;
+  isSetup: boolean;
 }
 
 export interface UserFormState {

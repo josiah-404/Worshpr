@@ -13,21 +13,26 @@ export const createUser = async (form: UserFormState): Promise<User> => {
 
 export const updateUser = async (
   id: string,
-  form: Omit<UserFormState, 'password'> & { password?: string },
+  form: Omit<UserFormState, 'password'>,
 ): Promise<User> => {
-  const body: Record<string, string | undefined> = {
+  const { data } = await api.put<{ data: User }>(`/users/${id}`, {
     name: form.name,
     email: form.email,
     role: form.role,
     orgId: form.orgId || undefined,
     title: form.title || undefined,
-  };
-  if (form.password) body.password = form.password;
-
-  const { data } = await api.put<{ data: User }>(`/users/${id}`, body);
+  });
   return data.data;
 };
 
 export const deleteUser = async (id: string): Promise<void> => {
   await api.delete(`/users/${id}`);
+};
+
+export const resendOnboarding = async (id: string): Promise<void> => {
+  await api.post(`/users/${id}/resend-onboarding`);
+};
+
+export const sendPasswordReset = async (id: string): Promise<void> => {
+  await api.post(`/users/${id}/send-reset`);
 };

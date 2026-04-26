@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FC } from 'react';
-import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
+import { PlusCircle, Pencil, Trash2, Mail, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -30,14 +30,29 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 export const UsersTable: FC<UsersTableProps> = ({ initialUsers, organizations }) => {
-  const { users, loading, error, setError, createUser, updateUser, deleteUser } =
+  const { users, loading, error, setError, createUser, updateUser, deleteUser, resendOnboarding, sendPasswordReset } =
     useUsers(initialUsers);
+  const [emailingId, setEmailingId] = useState<string | null>(null);
 
   const [confirm, ConfirmDialogEl] = useConfirm({
     title: 'Remove User',
     description: 'This will permanently remove the user from the system.',
     confirmLabel: 'Remove',
     variant: 'destructive',
+  });
+
+  const [confirmResend, ConfirmResendEl] = useConfirm({
+    title: 'Resend Setup Email',
+    description: 'This will invalidate the previous setup link and send a new one to the user.',
+    confirmLabel: 'Send',
+    variant: 'default',
+  });
+
+  const [confirmReset, ConfirmResetEl] = useConfirm({
+    title: 'Send Password Reset',
+    description: 'A password reset link will be sent to the user\'s email address.',
+    confirmLabel: 'Send',
+    variant: 'default',
   });
 
   const [open, setOpen] = useState(false);
@@ -85,6 +100,22 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers, organizations })
     const ok = await confirm();
     if (!ok) return;
     await deleteUser(user.id);
+  }
+
+  async function handleResendOnboarding(user: User) {
+    const ok = await confirmResend();
+    if (!ok) return;
+    setEmailingId(user.id);
+    await resendOnboarding(user.id, user.name);
+    setEmailingId(null);
+  }
+
+  async function handleSendPasswordReset(user: User) {
+    const ok = await confirmReset();
+    if (!ok) return;
+    setEmailingId(user.id);
+    await sendPasswordReset(user.id, user.name);
+    setEmailingId(null);
   }
 
   return (
@@ -136,6 +167,29 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers, organizations })
                   {new Date(user.createdAt).toLocaleDateString()}
                 </TableCell>
                 <TableCell className="text-right space-x-1">
+                  {!user.isSetup ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Resend setup email"
+                      disabled={emailingId === user.id}
+                      onClick={() => handleResendOnboarding(user)}
+                      className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+                    >
+                      <Mail className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Send password reset"
+                      disabled={emailingId === user.id}
+                      onClick={() => handleSendPasswordReset(user)}
+                      className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                    >
+                      <KeyRound className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button variant="ghost" size="icon" onClick={() => openEdit(user)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -163,6 +217,8 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers, organizations })
       />
 
       {ConfirmDialogEl}
+      {ConfirmResendEl}
+      {ConfirmResetEl}
     </>
   );
 };

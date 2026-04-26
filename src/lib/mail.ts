@@ -1,11 +1,16 @@
 import nodemailer from 'nodemailer';
 import { render } from '@react-email/render';
-import type { ReactElement } from 'react';
+import { type ReactElement } from 'react';
 import { OnboardingEmail } from '@/emails/templates/onboarding-email';
 import { ResetPasswordEmail } from '@/emails/templates/reset-password-email';
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
+type EmailOptions = {
+  to: string;
+  subject: string;
+  template: ReactElement;
+};
+
+export const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 587,
   secure: false,
@@ -13,35 +18,57 @@ const transporter = nodemailer.createTransport({
     user: process.env.GMAIL_USERNAME,
     pass: process.env.GMAIL_PASSWORD,
   },
+  tls: {
+    rejectUnauthorized: true,
+  },
 });
 
-async function sendEmail(to: string, subject: string, template: ReactElement) {
-  const html = await render(template);
+async function sendMail({ to, subject, template }: EmailOptions) {
   try {
-    await transporter.sendMail({
-      from: `"Worshpr" <${process.env.GMAIL_USERNAME}>`,
+    const html = await render(template);
+
+    const appUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
+    const domain = new URL(appUrl).hostname;
+
+    const info = await transporter.sendMail({
+      from: `"Worshpr" <${process.env.GMAIL_USER}>`,
+      replyTo: `no-reply@${domain}`,
       to,
       subject,
       html,
     });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    throw new Error(`Failed to send email: ${message}`);
+
+    console.log('Email sent successfully:', info.accepted);
+    return info;
+  } catch (error) {
+    console.error('Failed to send email:', error);
+    if (error instanceof Error) {
+      throw new Error(`Email delivery failed: ${error.message}`);
+    }
+    throw new Error('Failed to send email');
   }
 }
 
-export async function sendOnboardingEmail(to: string, name: string, setupUrl: string) {
-  await sendEmail(
+export async function sendOnboardingEmail(
+  to: string,
+  name: string,
+  setupUrl: string,
+) {
+  await sendMail({
     to,
-    'Set up your Worshpr account',
-    OnboardingEmail({ name, setupUrl }),
-  );
+    subject: 'Set up your Worshpr account',
+    template: OnboardingEmail({ name, setupUrl }),
+  });
 }
 
-export async function sendPasswordResetEmail(to: string, name: string, resetUrl: string) {
-  await sendEmail(
+export async function sendPasswordResetEmail(
+  to: string,
+  name: string,
+  resetUrl: string,
+) {
+  await sendMail({
     to,
-    'Reset your Worshpr password',
-    ResetPasswordEmail({ name, resetUrl }),
-  );
+    subject: 'Reset your Worshpr password',
+    template: ResetPasswordEmail({ name, resetUrl }),
+  });
 }

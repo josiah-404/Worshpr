@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { createUser, updateUser, deleteUser } from '@/services/user.service';
+import { createUser, updateUser, deleteUser, resendOnboarding, sendPasswordReset } from '@/services/user.service';
 import { EMPTY_USER_FORM } from '@/lib/constants';
 import type { User, UserFormState } from '@/types';
 
@@ -56,6 +56,26 @@ export function useUsers(initialUsers: User[]) {
     }
   }
 
+  async function handleResendOnboarding(id: string, name: string) {
+    try {
+      await resendOnboarding(id);
+      toast.success('Onboarding email sent', { description: `Setup link resent to ${name}.` });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to send email';
+      toast.error('Email failed', { description: msg });
+    }
+  }
+
+  async function handleSendPasswordReset(id: string, name: string) {
+    try {
+      await sendPasswordReset(id);
+      toast.success('Reset email sent', { description: `Password reset link sent to ${name}.` });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to send email';
+      toast.error('Email failed', { description: msg });
+    }
+  }
+
   return {
     users,
     loading,
@@ -64,5 +84,7 @@ export function useUsers(initialUsers: User[]) {
     createUser: handleCreateUser,
     updateUser: handleUpdateUser,
     deleteUser: handleDeleteUser,
+    resendOnboarding: handleResendOnboarding,
+    sendPasswordReset: handleSendPasswordReset,
   };
 }

@@ -30,9 +30,14 @@ export async function GET() {
         title: true,
         createdAt: true,
         updatedAt: true,
+        password: true,
       },
     });
-    const serialized = users.map((u) => ({ ...u, id: u.id.toString() }));
+    const serialized = users.map(({ password, ...u }) => ({
+      ...u,
+      id: u.id.toString(),
+      isSetup: password !== null,
+    }));
     return NextResponse.json({ data: serialized }, { status: 200 });
   } catch {
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
@@ -85,6 +90,7 @@ export async function POST(req: NextRequest) {
           title: true,
           createdAt: true,
           updatedAt: true,
+          password: true,
         },
       });
 
@@ -100,7 +106,8 @@ export async function POST(req: NextRequest) {
       return created;
     });
 
-    return NextResponse.json({ data: { ...user, id: user.id.toString() } }, { status: 201 });
+    const { password: _pw, ...userWithoutPassword } = user;
+    return NextResponse.json({ data: { ...userWithoutPassword, id: user.id.toString(), isSetup: false } }, { status: 201 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Failed to create user';
     return NextResponse.json({ error: message }, { status: 500 });

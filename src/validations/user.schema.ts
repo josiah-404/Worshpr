@@ -20,19 +20,15 @@ export const createUserSchema = userBaseSchema.superRefine((data, ctx) => {
   }
 });
 
-export const updateUserSchema = userBaseSchema
-  .extend({
-    password: z.string().min(6).optional().or(z.literal('')),
-  })
-  .superRefine((data, ctx) => {
-    if (data.role !== 'super_admin' && !data.orgId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Organization is required',
-        path: ['orgId'],
-      });
-    }
-  });
+export const updateUserSchema = userBaseSchema.superRefine((data, ctx) => {
+  if (data.role !== 'super_admin' && !data.orgId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Organization is required',
+      path: ['orgId'],
+    });
+  }
+});
 
 export const setupPasswordSchema = z.object({
   token: z.string().min(1, 'Token is required'),
