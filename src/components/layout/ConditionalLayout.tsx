@@ -20,7 +20,8 @@ export default function ConditionalLayout({
   const hideSidebar =
     pathname === '/login' ||
     pathname === '/worship/present' ||
-    pathname.startsWith('/register');
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/auth/');
 
   if (hideSidebar) return <EdgeStoreProvider>{children}</EdgeStoreProvider>;
 

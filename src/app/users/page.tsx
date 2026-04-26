@@ -34,6 +34,7 @@ export default async function UsersPage() {
     orgId: u.orgId ?? null,
     title: u.title ?? null,
     createdAt: u.createdAt.toISOString(),
+    isSetup: u.password !== null,
   }));
 
   const organizations: Organization[] = rawOrgs.map((o) => ({
