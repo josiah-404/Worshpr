@@ -1,9 +1,11 @@
+import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
 import { getServerSession } from 'next-auth';
+import { TokenType } from '@/generated/prisma';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { createUserSchema } from '@/validations/user.schema';
+import { sendOnboardingEmail } from '@/lib/mail';
 
 export async function GET() {
   try {
@@ -39,6 +41,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await req.json();
     const parsed = createUserSchema.safeParse(body);
 
@@ -46,28 +53,51 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { name, email, password, role, orgId, title } = parsed.data;
-    const hashed = await bcrypt.hash(password, 10);
+    const { name, email, role, orgId, title } = parsed.data;
 
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashed,
-        role,
-        orgId: role === 'super_admin' ? null : (orgId || null),
-        title: title ?? null,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        orgId: true,
-        title: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return NextResponse.json({ error: 'Email already in use' }, { status: 409 });
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const setupUrl = `${process.env.NEXTAUTH_URL}/auth/setup-password?token=${token}`;
+
+    // Send email before writing to DB — delivery failure won't leave a broken user
+    await sendOnboardingEmail(email, name, setupUrl);
+
+    const user = await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          name,
+          email,
+          role,
+          orgId: role === 'super_admin' ? null : (orgId || null),
+          title: title ?? null,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          orgId: true,
+          title: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      await tx.passwordResetToken.create({
+        data: {
+          userId: created.id,
+          token,
+          type: TokenType.PASSWORD_SETUP,
+          expires,
+        },
+      });
+
+      return created;
     });
 
     return NextResponse.json({ data: { ...user, id: user.id.toString() } }, { status: 201 });

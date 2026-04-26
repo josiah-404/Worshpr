@@ -1,5 +1,8 @@
 'use client';
 
+import { useState } from 'react';
+import Link from 'next/link';
+import { Eye, EyeOff } from 'lucide-react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
@@ -22,6 +25,7 @@ import { loginSchema, type LoginInput } from '@/validations/auth.schema';
 
 export default function LoginPage() {
   const { mutate: login, isPending } = useLogin();
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -77,13 +81,24 @@ export default function LoginPage() {
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
                       <FieldLabel htmlFor='login-password'>Password</FieldLabel>
-                      <Input
-                        {...field}
-                        id='login-password'
-                        type='password'
-                        placeholder='••••••••'
-                        aria-invalid={fieldState.invalid}
-                      />
+                      <div className='relative'>
+                        <Input
+                          {...field}
+                          id='login-password'
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder='••••••••'
+                          aria-invalid={fieldState.invalid}
+                          className='pr-10'
+                        />
+                        <button
+                          type='button'
+                          tabIndex={-1}
+                          className='absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground'
+                          onClick={() => setShowPassword((v) => !v)}
+                        >
+                          {showPassword ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
+                        </button>
+                      </div>
                       {fieldState.invalid && (
                         <FieldError errors={[fieldState.error]} />
                       )}
@@ -91,9 +106,17 @@ export default function LoginPage() {
                   )}
                 />
               </FieldGroup>
+              <div className='flex justify-end mt-2'>
+                <Link
+                  href='/auth/forgot-password'
+                  className='text-sm text-muted-foreground hover:text-foreground underline'
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <Button
                 type='submit'
-                className='w-full mt-6'
+                className='w-full mt-4'
                 disabled={isPending}
               >
                 {isPending ? 'Signing in...' : 'Sign In'}

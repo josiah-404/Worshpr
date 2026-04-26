@@ -11,13 +11,13 @@ const SEED_USERS = [
     name: 'Admin User',
     email: 'admin@worshpr.com',
     password: 'admin1234',
-    role: 'ADMIN' as const,
+    role: 'super_admin',
   },
   {
     name: 'Media User',
     email: 'media@worshpr.com',
     password: 'media1234',
-    role: 'MEDIA' as const,
+    role: 'officer',
   },
 ];
 
@@ -29,8 +29,14 @@ async function main() {
 
     await prisma.user.upsert({
       where: { email: u.email },
-      update: {},
-      create: { name: u.name, email: u.email, password: hashed, role: u.role },
+      update: { password: hashed, emailVerified: new Date() },
+      create: {
+        name: u.name,
+        email: u.email,
+        password: hashed,
+        role: u.role,
+        emailVerified: new Date(),
+      },
     });
 
     console.log(`  ✔ ${u.role}: ${u.email} / ${u.password}`);

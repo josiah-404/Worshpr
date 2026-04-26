@@ -22,14 +22,14 @@ model Organization {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  users              User[]
-  eventOrganizations EventOrganization[]
-  registrations      Registration[]
-  orgFund            OrgFund?
-  financeLedger      FinanceLedger[]
-  paymentAccounts    PaymentAccount[]
-  churches           Church[]
-  registrantDivisions Registrant[] @relation("RegistrantDivision")
+  users               User[]
+  eventOrganizations  EventOrganization[]
+  registrations       Registration[]
+  orgFund             OrgFund?
+  financeLedger       FinanceLedger[]
+  paymentAccounts     PaymentAccount[]
+  churches            Church[]
+  registrantDivisions Registrant[]        @relation("RegistrantDivision")
 
   @@map("organizations")
 }
@@ -72,56 +72,33 @@ model User {
   password      String?
 
   // ─── Tenant fields ───────────────────────────────────────────────
-  orgId         String?                           // null only for super_admins
-  role          String    @default("officer")     // "super_admin" | "org_admin" | "officer"
-  title         String?                           // officer title (e.g. "Worship Leader")
+  orgId String? // null only for super_admins
+  role  String  @default("officer") // "super_admin" | "org_admin" | "officer"
+  title String? // officer title (e.g. "Worship Leader")
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  organization          Organization? @relation(fields: [orgId], references: [id])
-  accounts              Account[]
-  sessions              Session[]
-  createdEvents         Event[]         @relation("CreatedEvents")
-  financeLedgerEntries  FinanceLedger[] @relation("LedgerEnteredBy")
+  organization         Organization?        @relation(fields: [orgId], references: [id])
+  createdEvents        Event[]              @relation("CreatedEvents")
+  financeLedgerEntries FinanceLedger[]      @relation("LedgerEnteredBy")
+  passwordResetTokens  PasswordResetToken[]
 
   @@map("users")
 }
 
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  type      TokenType
+  expires   DateTime
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 model Presentation {
@@ -196,24 +173,24 @@ model AiSearchQuota {
 }
 
 model Event {
-  id                   String       @id @default(cuid())
+  id                   String      @id @default(cuid())
   title                String
-  slug                 String       @unique
-  description          String?      @db.Text
+  slug                 String      @unique
+  description          String?     @db.Text
   type                 EventType
   venue                String?
   startDate            DateTime
   endDate              DateTime
   registrationDeadline DateTime?
-  fee                  Float        @default(0)
+  fee                  Float       @default(0)
   maxSlots             Int?
-  status               EventStatus  @default(DRAFT)
+  status               EventStatus @default(DRAFT)
   coverImage           String?
   themeColor           String?
   paymentAccountId     String?
   createdBy            String
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
 
   creator            User                @relation("CreatedEvents", fields: [createdBy], references: [id])
   paymentAccount     PaymentAccount?     @relation(fields: [paymentAccountId], references: [id])
@@ -285,8 +262,8 @@ model Registrant {
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
-  churchRef    Church?       @relation(fields: [churchId], references: [id])
-  divisionOrg  Organization? @relation("RegistrantDivision", fields: [divisionOrgId], references: [id])
+  churchRef     Church?        @relation(fields: [churchId], references: [id])
+  divisionOrg   Organization?  @relation("RegistrantDivision", fields: [divisionOrgId], references: [id])
   registrations Registration[]
 
   @@map("registrants")
@@ -339,17 +316,17 @@ model Registration {
 }
 
 model Payment {
-  id            String        @id @default(cuid())
-  amount        Float
-  method        PaymentMethod
-  receiptUrl    String?
-  referenceNo   String?
-  status        PaymentStatus @default(PENDING)
-  verifiedBy    String?
-  verifiedAt    DateTime?
-  notes         String?       @db.Text
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id          String        @id @default(cuid())
+  amount      Float
+  method      PaymentMethod
+  receiptUrl  String?
+  referenceNo String?
+  status      PaymentStatus @default(PENDING)
+  verifiedBy  String?
+  verifiedAt  DateTime?
+  notes       String?       @db.Text
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   registrationId String?       @unique
   registration   Registration? @relation("IndividualPayment", fields: [registrationId], references: [id])
@@ -392,8 +369,8 @@ model PaymentAccount {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  organization  Organization  @relation(fields: [orgId], references: [id])
-  events        Event[]
+  organization Organization @relation(fields: [orgId], references: [id])
+  events       Event[]
 
   @@index([orgId, isActive])
   @@map("payment_accounts")
@@ -414,22 +391,22 @@ model OrgFund {
 }
 
 model FinanceLedger {
-  id          String           @id @default(cuid())
-  orgId       String
-  eventId     String?
-  type        FinanceEntryType
-  category    FinanceCategory
-  amount      Float
-  description String
+  id             String           @id @default(cuid())
+  orgId          String
+  eventId        String?
+  type           FinanceEntryType
+  category       FinanceCategory
+  amount         Float
+  description    String
   referenceId    String?
-  customCategory String?  @map("custom_category")
+  customCategory String?          @map("custom_category")
   payee          String?
   requestedBy    String?
   receiptUrl     String?
   enteredBy      String
-  date        DateTime
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  date           DateTime
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   organization  Organization @relation(fields: [orgId], references: [id])
   event         Event?       @relation(fields: [eventId], references: [id])
@@ -566,4 +543,9 @@ enum FinanceCategory {
   SUPPLIES
   MARKETING
   OTHER_EXPENSE
+}
+
+enum TokenType {
+  PASSWORD_SETUP
+  PASSWORD_RESET
 }

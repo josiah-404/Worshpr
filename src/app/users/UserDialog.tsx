@@ -188,20 +188,25 @@ export const UserDialog: FC<UserDialogProps> = ({
             </>
           )}
 
-          <FormField
-            label="Password"
-            htmlFor="password"
-            hint={editingUser ? '(leave blank to keep current)' : undefined}
-          >
-            <Input
-              id="password"
-              type="password"
-              required={!editingUser}
-              placeholder="••••••••"
-              value={form.password}
-              onChange={(e) => set({ password: e.target.value })}
-            />
-          </FormField>
+          {editingUser ? (
+            <FormField
+              label="Password"
+              htmlFor="password"
+              hint="(leave blank to keep current)"
+            >
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={form.password}
+                onChange={(e) => set({ password: e.target.value })}
+              />
+            </FormField>
+          ) : (
+            <p className="text-sm text-muted-foreground bg-muted/50 border rounded-md px-3 py-2">
+              An onboarding email with a setup link will be sent to the user.
+            </p>
+          )}
 
           {error && (
             <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
