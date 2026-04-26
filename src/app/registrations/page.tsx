@@ -43,6 +43,7 @@ export default async function RegistrationsPage() {
           phone: true,
           birthday: true,
           address: true,
+          photoUrl: true,
           churchId: true,
           churchRef: { select: { name: true } },
           divisionOrgId: true,

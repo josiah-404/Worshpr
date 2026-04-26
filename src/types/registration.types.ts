@@ -13,6 +13,7 @@ export interface RegistrantData {
   phone: string;
   birthday: string; // ISO date string
   address: string;
+  photoUrl?: string;
   churchId?: string;
   divisionOrgId?: string;
   emergencyContactName: string;
@@ -93,6 +94,7 @@ export interface RegistrantDetail {
   phone: string;
   birthday: string;
   address: string;
+  photoUrl: string | null;
   churchId: string | null;
   churchName: string | null;
   divisionOrgId: string | null;

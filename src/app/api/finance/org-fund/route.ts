@@ -59,7 +59,11 @@ export async function PATCH(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const orgId = session.user.orgId;
+    // super_admin may pass orgId via query param (same as GET)
+    const orgId = session.user.role === 'super_admin'
+      ? (req.nextUrl.searchParams.get('orgId') ?? session.user.orgId)
+      : session.user.orgId;
+
     if (!orgId) return NextResponse.json({ error: 'No organization' }, { status: 400 });
 
     const body = await req.json();

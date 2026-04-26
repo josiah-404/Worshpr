@@ -16,8 +16,10 @@ export const getOrgFund = async (orgId?: string): Promise<OrgFundDetail | null> 
   return data.data;
 };
 
-export const updateOrgFund = async (payload: UpdateOrgFundPayload): Promise<OrgFundDetail> => {
-  const { data } = await api.patch('/finance/org-fund', payload);
+export const updateOrgFund = async ({ orgId, ...payload }: UpdateOrgFundPayload): Promise<OrgFundDetail> => {
+  const { data } = await api.patch('/finance/org-fund', payload, {
+    params: orgId ? { orgId } : undefined,
+  });
   return data.data;
 };
 
