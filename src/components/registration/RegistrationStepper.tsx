@@ -26,7 +26,8 @@ const STEPS = ['Your Info', 'Payment', 'Review'];
 export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => {
   const [step, setStep] = useState(0);
   const [result, setResult] = useState<RegistrationGroupResult | null>(null);
-  const [registrationType, setRegistrationType] = useState<RegistrationType>('individual');
+  // Group registration temporarily disabled — selector hidden, defaults to individual
+  const [registrationType] = useState<RegistrationType>('individual');
 
   const tc = event.themeColor ?? null;
 
@@ -118,47 +119,15 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
 
   return (
     <div className="space-y-6">
-      {/* Registration type selector — only visible on step 0 */}
-      {step === 0 && (
-        <div className="grid grid-cols-2 gap-3">
-          {(['individual', 'group'] as const).map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => handleRegistrationTypeChange(type)}
-              className={cn(
-                'flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-sm font-medium transition-all duration-200',
-                registrationType === type
-                  ? tc ? 'shadow-sm' : 'border-primary bg-primary/10 text-primary shadow-sm'
-                  : 'border-border text-muted-foreground hover:border-primary/40 hover:text-foreground',
-              )}
-              style={registrationType === type && tc ? {
-                borderColor: tc,
-                backgroundColor: `${tc}1a`,
-                color: tc,
-              } : undefined}
-            >
-              {type === 'individual' ? (
-                <User className="h-6 w-6" />
-              ) : (
-                <Users className="h-6 w-6" />
-              )}
-              {type === 'individual' ? 'Individual' : 'Group'}
-              <span className="text-xs font-normal text-muted-foreground">
-                {type === 'individual' ? 'Register yourself only' : 'Register multiple people'}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Registration type selector — temporarily hidden */}
 
       {/* Step indicator */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2">
         {STEPS.map((label, i) => (
-          <div key={label} className="flex items-center gap-2">
+          <div key={label} className="flex items-center gap-1.5 sm:gap-2 min-w-0">
             <div
               className={cn(
-                'flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-all duration-200',
+                'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-all duration-200',
                 i > step
                   ? 'bg-muted text-muted-foreground'
                   : tc ? '' : i === step
@@ -173,9 +142,10 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
             >
               {i < step ? <Check className="h-3.5 w-3.5 stroke-[2.5]" /> : i + 1}
             </div>
+            {/* Label: hidden on xs, visible on sm+ */}
             <span
               className={cn(
-                'text-sm transition-colors',
+                'hidden sm:inline text-sm transition-colors truncate',
                 i === step ? 'font-semibold' : 'text-muted-foreground',
                 i === step && !tc ? 'text-primary' : '',
               )}
@@ -183,9 +153,18 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
             >
               {label}
             </span>
+            {/* Current step label on mobile only */}
+            {i === step && (
+              <span
+                className={cn('sm:hidden text-xs font-semibold truncate', !tc ? 'text-primary' : '')}
+                style={tc ? { color: tc } : undefined}
+              >
+                {label}
+              </span>
+            )}
             {i < STEPS.length - 1 && (
               <div
-                className={cn('h-px w-8 transition-colors duration-500', i < step && !tc ? 'bg-primary' : 'bg-border')}
+                className={cn('h-px w-6 sm:w-8 shrink-0 transition-colors duration-500', i < step && !tc ? 'bg-primary' : 'bg-border')}
                 style={i < step && tc ? { backgroundColor: tc } : undefined}
               />
             )}
@@ -201,13 +180,13 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
           {step === 2 && <ReviewStep event={event} />}
 
           {/* Navigation */}
-          <div className="flex justify-between pt-6">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 pt-6">
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               onClick={handleBack}
               disabled={step === 0}
-              className="gap-1"
+              className="gap-1 w-full sm:w-auto"
             >
               <ChevronLeft className="h-4 w-4" />
               Back
@@ -217,7 +196,7 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
               <Button
                 type="button"
                 onClick={handleNext}
-                className="gap-1"
+                className="gap-1 w-full sm:w-auto"
                 style={tc ? { backgroundColor: tc, borderColor: tc } : undefined}
               >
                 Next
@@ -227,7 +206,7 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
               <Button
                 type="button"
                 disabled={isPending}
-                className="gap-2"
+                className="gap-2 w-full sm:w-auto"
                 onClick={handleSubmit}
                 style={tc ? { backgroundColor: tc, borderColor: tc } : undefined}
               >

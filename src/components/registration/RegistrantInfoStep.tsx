@@ -254,7 +254,7 @@ export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({ registrationTy
       {/* Registrant cards */}
       {fields.map((field, index) => (
         <Card key={field.id} className="relative">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 px-4 sm:px-6">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-semibold">
                 Registrant {index + 1}
@@ -272,7 +272,7 @@ export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({ registrationTy
               )}
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 px-4 sm:px-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -361,7 +361,6 @@ export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({ registrationTy
                 </FormItem>
               )}
             />
-            <PhotoUploadField index={index} />
             <DivisionChurchFields index={index} eventOrgs={eventOrgs} churches={churches} />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
@@ -396,7 +395,7 @@ export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({ registrationTy
       ))}
 
       {registrationType === 'group' && (
-        <Button type="button" variant="outline" className="w-full gap-2" onClick={addRegistrant}>
+        <Button type="button" variant="outline" className="w-full gap-2 h-11" onClick={addRegistrant}>
           <Plus className="h-4 w-4" />
           <UserPlus className="h-4 w-4" />
           Add Another Registrant
