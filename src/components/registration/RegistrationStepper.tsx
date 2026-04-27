@@ -3,7 +3,7 @@
 import { type FC, useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Check, ChevronLeft, ChevronRight, Loader2, User, Users } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RegistrantInfoStep } from '@/components/registration/RegistrantInfoStep';
 import { PaymentStep } from '@/components/registration/PaymentStep';
@@ -60,14 +60,6 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
   });
 
   const { mutate, isPending } = useSubmitRegistration();
-
-  function handleRegistrationTypeChange(type: RegistrationType) {
-    setRegistrationType(type);
-    if (type === 'individual') {
-      const first = form.getValues('registrants')[0];
-      form.setValue('registrants', [first]);
-    }
-  }
 
   async function handleNext() {
     let valid = false;
