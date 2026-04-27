@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
     }
 
     const token = crypto.randomBytes(32).toString('hex');
-    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     const setupUrl = `${process.env.NEXTAUTH_URL}/auth/setup-password?token=${token}`;
 
     // Send email before writing to DB — delivery failure won't leave a broken user
