@@ -20,7 +20,7 @@ export function OnboardingEmail({ name, setupUrl }: OnboardingEmailProps) {
   return (
     <Html>
       <Head />
-      <Preview>Set up your Worshpr account</Preview>
+      <Preview>Set up your EMBR account</Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={h1}>Welcome to Worshpr</Heading>
@@ -35,7 +35,7 @@ export function OnboardingEmail({ name, setupUrl }: OnboardingEmailProps) {
             </Button>
           </Section>
           <Text style={text}>
-            This link will expire in 24 hours for security reasons.
+            This link will expire in 7 days for security reasons.
           </Text>
           <Hr style={{ borderColor: '#e5e7eb', margin: '24px 0' }} />
           <Text style={footer}>

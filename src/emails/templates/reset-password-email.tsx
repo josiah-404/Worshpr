@@ -16,11 +16,14 @@ interface ResetPasswordEmailProps {
   resetUrl: string;
 }
 
-export function ResetPasswordEmail({ name, resetUrl }: ResetPasswordEmailProps) {
+export function ResetPasswordEmail({
+  name,
+  resetUrl,
+}: ResetPasswordEmailProps) {
   return (
     <Html>
       <Head />
-      <Preview>Reset your Worshpr password</Preview>
+      <Preview>Reset your EMBR password</Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={h1}>Reset Your Worshpr Password</Heading>

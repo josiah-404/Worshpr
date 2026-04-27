@@ -34,7 +34,7 @@ async function sendMail({ to, subject, template }: EmailOptions) {
     const domain = new URL(appUrl).hostname;
 
     const info = await transporter.sendMail({
-      from: `"Worshpr" <${process.env.GMAIL_USER}>`,
+      from: `"EMBR" <${process.env.GMAIL_USER}>`,
       replyTo: `no-reply@${domain}`,
       to,
       subject,
@@ -59,7 +59,7 @@ export async function sendOnboardingEmail(
 ) {
   await sendMail({
     to,
-    subject: 'Set up your Worshpr account',
+    subject: 'Set up your EMBR account',
     template: OnboardingEmail({ name, setupUrl }),
   });
 }
@@ -71,7 +71,7 @@ export async function sendPasswordResetEmail(
 ) {
   await sendMail({
     to,
-    subject: 'Reset your Worshpr password',
+    subject: 'Reset your EMBR password',
     template: ResetPasswordEmail({ name, resetUrl }),
   });
 }
