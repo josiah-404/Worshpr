@@ -73,7 +73,7 @@ function PaymentAccountCard({ account }: { account: PaymentAccountSummary }) {
   return (
     <div className="rounded-xl border overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 px-5 py-4 bg-muted/40 border-b">
+      <div className="flex items-center gap-3 px-4 sm:px-5 py-4 bg-muted/40 border-b">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-background border shrink-0">
           <Icon className="h-4 w-4 text-muted-foreground" />
         </div>
@@ -84,7 +84,7 @@ function PaymentAccountCard({ account }: { account: PaymentAccountSummary }) {
       </div>
 
       {/* Account details */}
-      <div className="px-5 py-4 space-y-2.5">
+      <div className="px-4 sm:px-5 py-4 space-y-2.5">
         <CopyField label="Account Name" value={account.accountName} />
         <CopyField
           label={account.method === 'BANK_TRANSFER' ? 'Account Number' : 'Mobile Number'}
@@ -101,13 +101,13 @@ function PaymentAccountCard({ account }: { account: PaymentAccountSummary }) {
 
       {/* QR code — centered */}
       {account.qrCodeUrl && (
-        <div className="px-5 pb-4 flex flex-col items-center gap-3">
+        <div className="px-4 sm:px-5 pb-4 flex flex-col items-center gap-3">
           <div className="w-full border-t" />
           <p className="text-xs text-muted-foreground self-start">Scan QR Code</p>
           <img
             src={account.qrCodeUrl}
             alt="QR Code"
-            className="h-44 w-44 rounded-xl border object-contain p-1 bg-white"
+            className="w-full max-w-[176px] rounded-xl border object-contain p-1 bg-white"
           />
           <a
             href={account.qrCodeUrl}
@@ -122,7 +122,7 @@ function PaymentAccountCard({ account }: { account: PaymentAccountSummary }) {
 
       {/* Instructions */}
       {account.instructions && (
-        <div className="mx-5 mb-5 rounded-lg border border-dashed px-4 py-3">
+        <div className="mx-4 sm:mx-5 mb-4 sm:mb-5 rounded-lg border border-dashed px-4 py-3">
           <p className="text-xs font-medium text-muted-foreground mb-1">Payment Instructions</p>
           <p className="text-sm leading-relaxed">{account.instructions}</p>
         </div>

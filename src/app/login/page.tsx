@@ -41,7 +41,7 @@ export default function LoginPage() {
             <span className='text-primary tracking-wide'>EMBR</span>
           </h1>
           <p className='text-muted-foreground mt-2 text-sm'>
-            Worship Media Team Portal
+            Centralized Event Management System
           </p>
         </div>
 

@@ -146,7 +146,7 @@ export default async function RegistrationPage({ params }: Props) {
         />
       )}
 
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
         {/* Event info */}
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2 items-center">
@@ -160,7 +160,7 @@ export default async function RegistrationPage({ params }: Props) {
               <Badge variant="outline">₱{event.fee.toFixed(2)} / person</Badge>
             )}
           </div>
-          <h1 className="text-3xl font-bold">{event.title}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">{event.title}</h1>
           {tc && <div className="h-1 w-12 rounded-full" style={{ backgroundColor: tc }} />}
           {event.hostOrg && (
             <p className="text-muted-foreground text-sm">
@@ -193,12 +193,12 @@ export default async function RegistrationPage({ params }: Props) {
         {canRegister ? (
           <div className="border rounded-xl overflow-hidden">
             <div
-              className="px-6 py-4 flex items-center gap-2.5 bg-primary"
+              className="px-4 sm:px-6 py-4 flex items-center gap-2.5 bg-primary"
               style={tc ? { backgroundColor: tc } : undefined}
             >
               <h2 className="text-base font-semibold text-white">Registration Form</h2>
             </div>
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <RegistrationStepper event={event} />
             </div>
           </div>
