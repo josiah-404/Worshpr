@@ -34,7 +34,7 @@ function extractBodyMap(
 }
 
 export type LyricsMode = 'paste' | 'ai';
-export type AddMode = 'choose' | 'manual' | 'ai' | 'section';
+export type AddMode = 'choose' | 'manual' | 'ai' | 'section' | 'bible';
 
 export interface EditorState {
   // Dialog / panel visibility

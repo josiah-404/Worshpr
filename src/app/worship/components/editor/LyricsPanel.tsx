@@ -226,6 +226,11 @@ export const LyricsPanel: FC<LyricsPanelProps> = (props) => {
                 sectionLabel={props.sectionLabel}
                 setSectionLabel={props.setSectionLabel}
                 onAddSection={props.onAddSection}
+                onAddBibleVerse={(song) => {
+                  props.onSelectSong(song);
+                  setAddDialogOpen(false);
+                  setAddMode('choose');
+                }}
                 onSwitchToAi={() => {
                   setAddDialogOpen(false);
                   setAddMode('choose');
