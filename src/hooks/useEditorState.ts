@@ -96,6 +96,8 @@ export interface EditorState {
   setEditArtist: (v: string) => void;
   editRole: string;
   setEditRole: (v: string) => void;
+  editLyrics: string;
+  setEditLyrics: (v: string) => void;
 
   // Handlers
   handleSearchLyrics: () => Promise<void>;
@@ -186,6 +188,7 @@ export function useEditorState({
   const [editTitle, setEditTitle] = useState('');
   const [editArtist, setEditArtist] = useState('');
   const [editRole, setEditRole] = useState('');
+  const [editLyrics, setEditLyrics] = useState('');
 
   // ── Rebuild slides whenever lyrics or queue change ───────────────────────────
   useEffect(() => {
@@ -376,30 +379,64 @@ export function useEditorState({
       setEditTitle(song.title);
       setEditArtist(song.artist);
       setEditRole(song.role ?? '');
+      if (!song.isSection) {
+        const bodyMap = extractBodyMap(lyrics, songQueue);
+        setEditLyrics(bodyMap[idx] ?? song.lyrics ?? '');
+      } else {
+        setEditLyrics('');
+      }
     },
-    [songQueue],
+    [songQueue, lyrics],
   );
 
   const handleSaveEdit = useCallback(() => {
     if (editingIdx === null) return;
     const title = editTitle.trim();
     if (!title) return;
-    // Only title/artist/role change — song.lyrics is untouched, so the
-    // lyrics textarea content must not be rebuilt (that would discard user edits).
-    setSongQueue((prev) =>
-      prev.map((s, i) => {
-        if (i !== editingIdx) return s;
-        if (s.isSection) return { ...s, title };
-        return {
-          ...s,
-          title,
-          artist: editArtist.trim() || 'Unknown',
-          role: editRole.trim() || undefined,
-        };
-      }),
-    );
+
+    const song = songQueue[editingIdx];
+    if (!song) return;
+
+    const newLyricsBody = editLyrics.trim();
+    const hadBodySlot = !song.isSection && !!song.lyrics?.trim();
+    const willHaveBodySlot = !song.isSection && !!newLyricsBody;
+
+    const newQueue = songQueue.map((s, i) => {
+      if (i !== editingIdx) return s;
+      if (s.isSection) return { ...s, title };
+      return {
+        ...s,
+        title,
+        artist: editArtist.trim() || 'Unknown',
+        role: editRole.trim() || undefined,
+        lyrics: newLyricsBody,
+      };
+    });
+
+    setSongQueue(newQueue);
+
+    if (!song.isSection) {
+      const currentBodies = lyrics.split(/\n{3,}/);
+      let bodyIdx = 0;
+      const newBodies: string[] = [];
+
+      for (let i = 0; i < songQueue.length; i++) {
+        const origHasSlot = !songQueue[i].isSection && !!songQueue[i].lyrics?.trim();
+
+        if (i === editingIdx) {
+          if (willHaveBodySlot) newBodies.push(newLyricsBody);
+          if (hadBodySlot) bodyIdx++;
+        } else if (origHasSlot) {
+          newBodies.push(currentBodies[bodyIdx] ?? '');
+          bodyIdx++;
+        }
+      }
+
+      setLyrics(parseLyrics(newBodies.filter(Boolean).join('\n\n\n')));
+    }
+
     setEditingIdx(null);
-  }, [editingIdx, editTitle, editArtist, editRole]);
+  }, [editingIdx, editTitle, editArtist, editRole, editLyrics, songQueue, lyrics, setLyrics]);
 
   const handleCancelEdit = useCallback(() => setEditingIdx(null), []);
 
@@ -523,6 +560,8 @@ export function useEditorState({
     setEditArtist,
     editRole,
     setEditRole,
+    editLyrics,
+    setEditLyrics,
     handleSearchLyrics,
     handleSelectSong,
     handleRemoveFromQueue,

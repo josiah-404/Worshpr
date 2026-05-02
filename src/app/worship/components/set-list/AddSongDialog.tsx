@@ -169,8 +169,7 @@ export const AddSongDialog: FC<AddSongDialogProps> = ({
             }
             value={manualLyricsText}
             onChange={(e) => setManualLyricsText(e.target.value)}
-            rows={5}
-            className='font-mono leading-relaxed resize-none'
+            className='min-h-[120px] resize-y font-mono leading-relaxed'
           />
           <div className='flex items-center justify-between gap-2'>
             {needsParsing(manualLyricsText) ? (
