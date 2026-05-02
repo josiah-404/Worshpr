@@ -16,6 +16,8 @@ export interface SongResult {
   role?: string;
   /** True for single-slide section markers (Testimony, Word of God, etc.) */
   isSection?: boolean;
+  /** True for Bible verses — skips the title slide, shows reference + numbered verses on one slide */
+  isBibleVerse?: boolean;
 }
 
 /**
@@ -50,6 +52,22 @@ export function buildDisplaySlides(
     if (song.isSection) {
       // Section: single announcement slide — role line holds the label
       allSlides.push(`${TITLE_SLIDE_MARKER}\n\n\n${song.title}`);
+      continue;
+    }
+
+    if (song.isBibleVerse) {
+      // Bible verse: no title slide — body already contains reference + numbered verses
+      if (song.lyrics?.trim()) {
+        const body = (songBodies[bodyIdx] ?? '').trim();
+        bodyIdx++;
+        if (body) {
+          const lyricSlides = body
+            .split(/\n{2,}/)
+            .map((b) => b.trim())
+            .filter(Boolean);
+          allSlides.push(...lyricSlides);
+        }
+      }
       continue;
     }
 
