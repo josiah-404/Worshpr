@@ -241,6 +241,8 @@ function WorshipEditorInner() {
             setEditArtist={editor.setEditArtist}
             editRole={editor.editRole}
             setEditRole={editor.setEditRole}
+            editLyrics={editor.editLyrics}
+            setEditLyrics={editor.setEditLyrics}
             onStartEdit={editor.handleStartEdit}
             onSaveEdit={editor.handleSaveEdit}
             onCancelEdit={editor.handleCancelEdit}

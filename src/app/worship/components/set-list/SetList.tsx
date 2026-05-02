@@ -27,6 +27,8 @@ interface SetListProps {
   setEditArtist: (v: string) => void;
   editRole: string;
   setEditRole: (v: string) => void;
+  editLyrics: string;
+  setEditLyrics: (v: string) => void;
   onStartEdit: (idx: number) => void;
   onSaveEdit: () => void;
   onCancelEdit: () => void;
@@ -43,6 +45,8 @@ export const SetList: FC<SetListProps> = ({
   setEditArtist,
   editRole,
   setEditRole,
+  editLyrics,
+  setEditLyrics,
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
@@ -79,6 +83,8 @@ export const SetList: FC<SetListProps> = ({
               setEditArtist={setEditArtist}
               editRole={editRole}
               setEditRole={setEditRole}
+              editLyrics={editLyrics}
+              setEditLyrics={setEditLyrics}
               onStartEdit={onStartEdit}
               onSaveEdit={onSaveEdit}
               onCancelEdit={onCancelEdit}

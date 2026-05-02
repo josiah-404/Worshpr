@@ -5,6 +5,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, BookOpen } from 'lucide-react';
 import type { SongResult } from '@/types/worship.types';
+import { Textarea } from '@/components/ui/textarea';
 
 interface SetListItemProps {
   song: SongResult;
@@ -17,6 +18,8 @@ interface SetListItemProps {
   setEditArtist: (v: string) => void;
   editRole: string;
   setEditRole: (v: string) => void;
+  editLyrics: string;
+  setEditLyrics: (v: string) => void;
   onStartEdit: (idx: number) => void;
   onSaveEdit: () => void;
   onCancelEdit: () => void;
@@ -34,6 +37,8 @@ export const SetListItem: FC<SetListItemProps> = ({
   setEditArtist,
   editRole,
   setEditRole,
+  editLyrics,
+  setEditLyrics,
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
@@ -94,7 +99,6 @@ export const SetListItem: FC<SetListItemProps> = ({
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') onSaveEdit();
                     if (e.key === 'Escape') onCancelEdit();
                   }}
                   autoFocus
@@ -106,12 +110,17 @@ export const SetListItem: FC<SetListItemProps> = ({
                   value={editArtist}
                   onChange={(e) => setEditArtist(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') onSaveEdit();
                     if (e.key === 'Escape') onCancelEdit();
                   }}
                   className='rounded border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring'
                 />
               </div>
+              <Textarea
+                placeholder='Lyrics (separate slides with a blank line)'
+                value={editLyrics}
+                onChange={(e) => setEditLyrics(e.target.value)}
+                className='min-h-[120px] resize-y text-xs'
+              />
             </>
           )}
           <div className='flex items-center justify-end gap-1.5'>

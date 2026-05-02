@@ -33,6 +33,8 @@ interface LyricsPanelProps {
   setEditArtist: (v: string) => void;
   editRole: string;
   setEditRole: (v: string) => void;
+  editLyrics: string;
+  setEditLyrics: (v: string) => void;
   onStartEdit: (idx: number) => void;
   onSaveEdit: () => void;
   onCancelEdit: () => void;
@@ -192,6 +194,8 @@ export const LyricsPanel: FC<LyricsPanelProps> = (props) => {
                   setEditArtist={props.setEditArtist}
                   editRole={props.editRole}
                   setEditRole={props.setEditRole}
+                  editLyrics={props.editLyrics}
+                  setEditLyrics={props.setEditLyrics}
                   onStartEdit={props.onStartEdit}
                   onSaveEdit={props.onSaveEdit}
                   onCancelEdit={props.onCancelEdit}
@@ -337,7 +341,7 @@ export const LyricsPanel: FC<LyricsPanelProps> = (props) => {
                   placeholder={
                     'Or paste raw lyrics here — slides split on blank lines\n(no title slide; use the set list above for formatted songs)'
                   }
-                  className='flex-1 w-full font-mono leading-relaxed min-h-[160px] resize-none'
+                  className='w-full font-mono leading-relaxed min-h-[160px] resize-y'
                 />
               </div>
             ) : (
@@ -346,7 +350,7 @@ export const LyricsPanel: FC<LyricsPanelProps> = (props) => {
                   value={lyrics}
                   onChange={(e) => setLyrics(e.target.value)}
                   placeholder='Lyrics auto-populated from set list…'
-                  className='w-full h-full font-mono leading-relaxed min-h-[160px] resize-none'
+                  className='w-full font-mono leading-relaxed min-h-[160px] resize-y'
                 />
               </div>
             )}
