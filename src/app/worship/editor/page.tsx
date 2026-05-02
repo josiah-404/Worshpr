@@ -217,7 +217,7 @@ function WorshipEditorInner() {
 
       {/* 3-panel body */}
       <div className='flex gap-5 flex-1 min-h-0'>
-        <div data-tour="worship-slides-panel" className="flex flex-col min-h-0">
+        <div data-tour="worship-slides-panel" className="shrink-0 flex flex-col min-h-0">
           <SlidesPanel
             slides={slides}
             current={current}
@@ -226,7 +226,7 @@ function WorshipEditorInner() {
           />
         </div>
 
-        <div data-tour="worship-lyrics-panel" className="flex flex-col flex-1 min-h-0 min-w-0">
+        <div data-tour="worship-lyrics-panel" className="shrink-0 flex flex-col min-h-0">
           <LyricsPanel
             lyricsMode={editor.lyricsMode}
             setLyricsMode={editor.setLyricsMode}
@@ -288,7 +288,7 @@ function WorshipEditorInner() {
           />
         </div>
 
-        <div data-tour="worship-preview-panel" className="flex flex-col min-h-0">
+        <div data-tour="worship-preview-panel" className="flex-1 min-w-0 flex flex-col min-h-0">
           <PreviewPanel
             currentSlide={currentSlide}
             bgCls={bgCls}
