@@ -4,7 +4,8 @@ export type IdSizeId =
   | 'lanyard'
   | 'badge-sm'
   | 'badge-lg'
-  | 'a4-quarter';
+  | 'a4-quarter'
+  | 'custom';
 
 export interface IdSize {
   id: IdSizeId;
@@ -55,9 +56,11 @@ export interface IdTemplateConfig {
   sizeId: IdSizeId;
   layoutId: string;
   layoutFields: LayoutField[];
-  overlayColor: string; // hex — applied to gradient/rect overlay fields
-  textColor: string;    // hex — overrides all text field colors
-  fontFamily: string;   // font name e.g. "Poppins", "Montserrat"
+  overlayColor: string;    // hex — applied to gradient/rect overlay fields
+  textColor: string;       // hex — default color for all text fields
+  fontFamily: string;      // font name e.g. "Poppins", "Montserrat"
+  customWidthMm?: number;  // only used when sizeId === 'custom'
+  customHeightMm?: number;
 }
 
 export interface IdTemplateRecord {

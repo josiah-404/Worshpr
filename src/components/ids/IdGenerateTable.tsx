@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { drawId } from '@/lib/idCanvas';
-import { ID_SIZES } from '@/lib/idSizes';
+import { resolveSize } from '@/lib/idSizes';
 import { IdCanvasPreview } from '@/components/ids/IdCanvasPreview';
 import type { IdRegistrant, LayoutField, IdSizeId } from '@/types/id.types';
 
@@ -19,16 +19,18 @@ interface IdGenerateTableProps {
   overlayColor?: string;
   textColor?: string;
   fontFamily?: string;
+  customWidthMm?: number;
+  customHeightMm?: number;
 }
 
 export const IdGenerateTable: FC<IdGenerateTableProps> = ({
   registrants, backgroundUrl, sizeId, fields, overlayColor, textColor, fontFamily,
+  customWidthMm, customHeightMm,
 }) => {
   const [previewRegistrant, setPreviewRegistrant] = useState<IdRegistrant | null>(null);
 
   async function downloadSingle(registrant: IdRegistrant) {
-    const size = ID_SIZES[sizeId];
-    if (!size) return;
+    const size = resolveSize(sizeId, customWidthMm, customHeightMm);
     const canvas = document.createElement('canvas');
     await drawId(canvas, { registrant, fields, backgroundUrl, size, overlayColor, textColor, fontFamily });
     const a = document.createElement('a');
@@ -102,6 +104,8 @@ export const IdGenerateTable: FC<IdGenerateTableProps> = ({
                 fontFamily={fontFamily}
                 registrant={previewRegistrant}
                 previewWidth={300}
+                customWidthMm={customWidthMm}
+                customHeightMm={customHeightMm}
               />
               <Button variant="outline" size="sm" className="gap-2 w-full"
                 onClick={() => void downloadSingle(previewRegistrant)}>

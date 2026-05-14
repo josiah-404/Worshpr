@@ -491,7 +491,8 @@ export const EventDetailClient: FC<EventDetailClientProps> = ({
   role,
 }) => {
   const router = useRouter();
-  const canEdit = role !== 'officer';
+  const canEdit = true;
+  const canInvite = role !== 'officer';
   const isSuperAdmin = role === 'super_admin';
   const hostOrg = event.organizations.find((o) => o.role === 'HOST');
 
@@ -542,7 +543,7 @@ export const EventDetailClient: FC<EventDetailClientProps> = ({
           )}
         </div>
 
-        {canEdit && (
+        {canInvite && (
           <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={() => setInvitePanelOpen(true)}>
             <UserPlus className="h-4 w-4" />
             Collaborators

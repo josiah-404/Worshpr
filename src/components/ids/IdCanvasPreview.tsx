@@ -2,7 +2,7 @@
 
 import { type FC, useEffect, useRef, useCallback } from 'react';
 import { drawId } from '@/lib/idCanvas';
-import { ID_SIZES } from '@/lib/idSizes';
+import { resolveSize } from '@/lib/idSizes';
 import type { LayoutField, IdRegistrant, IdSizeId } from '@/types/id.types';
 
 interface IdCanvasPreviewProps {
@@ -14,6 +14,8 @@ interface IdCanvasPreviewProps {
   textColor?: string;
   fontFamily?: string;
   previewWidth?: number;
+  customWidthMm?: number;
+  customHeightMm?: number;
 }
 
 export const SAMPLE_REGISTRANT: IdRegistrant = {
@@ -35,20 +37,21 @@ export const IdCanvasPreview: FC<IdCanvasPreviewProps> = ({
   textColor,
   fontFamily,
   previewWidth = 320,
+  customWidthMm,
+  customHeightMm,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const render = useCallback(async () => {
     if (!canvasRef.current) return;
-    const size = ID_SIZES[sizeId];
-    if (!size) return;
+    const size = resolveSize(sizeId, customWidthMm, customHeightMm);
     await drawId(canvasRef.current, { registrant, fields, backgroundUrl, size, overlayColor, textColor, fontFamily });
-  }, [backgroundUrl, sizeId, fields, registrant, overlayColor, textColor, fontFamily]);
+  }, [backgroundUrl, sizeId, fields, registrant, overlayColor, textColor, fontFamily, customWidthMm, customHeightMm]);
 
   useEffect(() => { void render(); }, [render]);
 
-  const size = ID_SIZES[sizeId];
-  const aspect = size ? size.widthPx / size.heightPx : 16 / 9;
+  const size = resolveSize(sizeId, customWidthMm, customHeightMm);
+  const aspect = size.widthPx / size.heightPx;
   const previewHeight = Math.round(previewWidth / aspect);
 
   return (
