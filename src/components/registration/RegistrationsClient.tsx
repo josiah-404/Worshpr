@@ -1,7 +1,7 @@
 'use client';
 
 import { type FC, useState, useMemo } from 'react';
-import { Search, X, CheckCircle2, Clock, XCircle, Ban, Users, CalendarDays, IdCard } from 'lucide-react';
+import { Search, X, CheckCircle2, Clock, XCircle, Ban, Users, CalendarDays, IdCard, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { RegistrationDrawer } from '@/components/registration/RegistrationDrawer';
+import { WalkInRegistrationDialog } from '@/components/registration/WalkInRegistrationDialog';
 import { TourTrigger } from '@/components/guides/TourTrigger';
 import { useGetRegistrations } from '@/hooks/useGetRegistrations';
 import { cn } from '@/lib/utils';
@@ -54,6 +55,7 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
   // Event is required — empty string means none selected yet
   const [eventFilter, setEventFilter] = useState('');
   const [selected, setSelected] = useState<RegistrationListItem | null>(null);
+  const [walkInOpen, setWalkInOpen] = useState(false);
 
   const eventSelected = eventFilter !== '';
 
@@ -118,12 +120,18 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
         )}
         <div className="ml-auto flex items-center gap-2">
           {eventSelected && (
-            <Button asChild variant="outline" size="sm" className="gap-2">
-              <a href={`/ids/${eventFilter}`}>
-                <IdCard className="h-3.5 w-3.5" />
-                Generate IDs
-              </a>
-            </Button>
+            <>
+              <Button asChild variant="outline" size="sm" className="gap-2">
+                <a href={`/ids/${eventFilter}`}>
+                  <IdCard className="h-3.5 w-3.5" />
+                  Generate IDs
+                </a>
+              </Button>
+              <Button size="sm" className="gap-2" onClick={() => setWalkInOpen(true)}>
+                <UserPlus className="h-3.5 w-3.5" />
+                Add Registrant
+              </Button>
+            </>
           )}
           <TourTrigger tourId="registrations" />
         </div>
@@ -264,6 +272,23 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
       )}
 
       <RegistrationDrawer registration={selected} onClose={() => setSelected(null)} />
+
+      {walkInOpen && eventFilter && (() => {
+        const selectedEvent = events.find((e) => e.id === eventFilter);
+        return (
+          <WalkInRegistrationDialog
+            open={walkInOpen}
+            onOpenChange={setWalkInOpen}
+            eventId={eventFilter}
+            eventTitle={selectedEventTitle ?? ''}
+            eventFee={selectedEvent?.fee ?? 0}
+            paymentAccount={selectedEvent?.paymentAccount ?? null}
+            eventOrgs={
+              selectedEvent?.organizations.filter((o) => o.inviteStatus === 'ACCEPTED') ?? []
+            }
+          />
+        );
+      })()}
     </div>
   );
 };

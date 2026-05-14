@@ -63,7 +63,7 @@ export const EventsGrid: FC<EventsGridProps> = ({
     variant: 'destructive',
   });
 
-  const canEdit = role !== 'officer';
+  const canDelete = role !== 'officer';
   const isSuperAdmin = role === 'super_admin';
 
   // Host org for non-super_admins
@@ -185,16 +185,14 @@ export const EventsGrid: FC<EventsGridProps> = ({
           )}
 
           <TourTrigger tourId="events" />
-          {canEdit && (
-            <Button
-              data-tour="events-new-btn"
-              onClick={handleCreate}
-              disabled={isSuperAdmin && !activeOrgId}
-            >
-              <Plus className="h-4 w-4 mr-1.5" />
-              New Event
-            </Button>
-          )}
+          <Button
+            data-tour="events-new-btn"
+            onClick={handleCreate}
+            disabled={isSuperAdmin && !activeOrgId}
+          >
+            <Plus className="h-4 w-4 mr-1.5" />
+            New Event
+          </Button>
         </div>
       </div>
 
@@ -228,7 +226,7 @@ export const EventsGrid: FC<EventsGridProps> = ({
             <EventCard
               key={event.id}
               event={event}
-              onDelete={canEdit ? handleDelete : undefined}
+              onDelete={canDelete ? handleDelete : undefined}
             />
           ))}
         </div>

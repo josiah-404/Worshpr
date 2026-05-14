@@ -11,10 +11,7 @@ export const createProgramItemSchema = z.object({
   session: z.enum(['MORNING', 'AFTERNOON', 'EVENING']).optional(),
   title: z.string().min(1, 'Title is required').max(200),
   description: z.string().max(1000).optional(),
-  time: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/, 'Time must be in HH:MM format')
-    .optional(),
+  time: z.string().optional(),
   churchId: z.string().optional(),
   presenterName: z.string().max(100).optional(),
 });
@@ -22,11 +19,7 @@ export const createProgramItemSchema = z.object({
 export const updateProgramItemSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   description: z.string().max(1000).nullable().optional(),
-  time: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/, 'Time must be in HH:MM format')
-    .nullable()
-    .optional(),
+  time: z.string().nullable().optional(),
   churchId: z.string().nullable().optional(),
   presenterName: z.string().max(100).nullable().optional(),
   session: z.enum(['MORNING', 'AFTERNOON', 'EVENING']).nullable().optional(),

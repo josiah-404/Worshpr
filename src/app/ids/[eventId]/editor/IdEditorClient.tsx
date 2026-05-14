@@ -56,13 +56,15 @@ export const IdEditorClient: FC<IdEditorClientProps> = ({
 
   const defaultLayoutId = initialTemplate?.layoutId ?? 'gradient-bottom';
   const [config, setConfig] = useState<IdTemplateConfig>({
-    backgroundUrl: initialTemplate?.backgroundUrl ?? '',
-    sizeId: (initialTemplate?.sizeId as IdSizeId) ?? 'cr80',
-    layoutId: defaultLayoutId,
-    layoutFields: initialTemplate?.layoutFields ?? ID_LAYOUTS[defaultLayoutId]?.fields ?? [],
-    overlayColor: initialTemplate?.overlayColor ?? '#000000',
-    textColor: initialTemplate?.textColor ?? '#ffffff',
-    fontFamily: initialTemplate?.fontFamily ?? 'Poppins',
+    backgroundUrl:  initialTemplate?.backgroundUrl ?? '',
+    sizeId:         (initialTemplate?.sizeId as IdSizeId) ?? 'cr80',
+    layoutId:       defaultLayoutId,
+    layoutFields:   initialTemplate?.layoutFields ?? ID_LAYOUTS[defaultLayoutId]?.fields ?? [],
+    overlayColor:   initialTemplate?.overlayColor ?? '#000000',
+    textColor:      initialTemplate?.textColor ?? '#ffffff',
+    fontFamily:     initialTemplate?.fontFamily ?? 'Poppins',
+    customWidthMm:  85.6,
+    customHeightMm: 54,
   });
 
   function updateLayout(layoutId: string) {
@@ -82,6 +84,15 @@ export const IdEditorClient: FC<IdEditorClientProps> = ({
       };
       setConfig((c) => ({ ...c, layoutFields: [...c.layoutFields, toAdd] }));
     }
+  }
+
+  function updateFieldColor(fieldType: LayoutFieldType, color: string) {
+    setConfig((c) => ({
+      ...c,
+      layoutFields: c.layoutFields.map((f) =>
+        f.field === fieldType ? { ...f, color: color || undefined } : f,
+      ),
+    }));
   }
 
   function updateFieldFontSize(fieldType: LayoutFieldType, displayVal: number) {
@@ -185,6 +196,8 @@ export const IdEditorClient: FC<IdEditorClientProps> = ({
               textColor: config.textColor,
               fontFamily: config.fontFamily,
               eventTitle: event.title,
+              customWidthMm: config.customWidthMm,
+              customHeightMm: config.customHeightMm,
             })} disabled={exporting || registrants.length === 0}>
               {exporting
                 ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Exporting…</>
@@ -237,7 +250,13 @@ export const IdEditorClient: FC<IdEditorClientProps> = ({
               {/* Size */}
               <div className="px-4 py-3 border-b border-border/60">
                 <p className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest mb-2">ID Size</p>
-                <IdSizeSelector value={config.sizeId} onChange={(id) => setConfig((c) => ({ ...c, sizeId: id }))} />
+                <IdSizeSelector
+                  value={config.sizeId}
+                  onChange={(id) => setConfig((c) => ({ ...c, sizeId: id }))}
+                  customWidthMm={config.customWidthMm ?? 85.6}
+                  customHeightMm={config.customHeightMm ?? 54}
+                  onCustomChange={(w, h) => setConfig((c) => ({ ...c, customWidthMm: w, customHeightMm: h }))}
+                />
               </div>
 
               {/* Layout */}
@@ -276,22 +295,49 @@ export const IdEditorClient: FC<IdEditorClientProps> = ({
                           </button>
                         </div>
 
-                        {/* Font size row — only when enabled */}
+                        {/* Controls — only when enabled */}
                         {enabled && (
-                          <div className="px-3 pb-2.5 flex items-center gap-2">
-                            <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wide w-12 shrink-0">Size</span>
-                            <input
-                              type="range"
-                              min={15}
-                              max={120}
-                              step={1}
-                              value={displaySize}
-                              onChange={(e) => updateFieldFontSize(fieldType, Number(e.target.value))}
-                              className="flex-1 h-1 accent-primary cursor-pointer"
-                            />
-                            <span className="text-[10px] font-mono text-muted-foreground w-6 text-right shrink-0">
-                              {displaySize}
-                            </span>
+                          <div className="px-3 pb-2.5 space-y-2">
+                            {/* Size row */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wide w-10 shrink-0">Size</span>
+                              <input
+                                type="range"
+                                min={15}
+                                max={120}
+                                step={1}
+                                value={displaySize}
+                                onChange={(e) => updateFieldFontSize(fieldType, Number(e.target.value))}
+                                className="flex-1 h-1 accent-primary cursor-pointer"
+                              />
+                              <span className="text-[10px] font-mono text-muted-foreground w-6 text-right shrink-0">
+                                {displaySize}
+                              </span>
+                            </div>
+                            {/* Per-field color row */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wide w-10 shrink-0">Color</span>
+                              <div className="relative h-5 w-5 rounded-full border border-border overflow-hidden cursor-pointer shrink-0"
+                                style={{ backgroundColor: fieldData?.color ?? config.textColor }}
+                                title="Pick field color"
+                              >
+                                <input
+                                  type="color"
+                                  value={fieldData?.color ?? config.textColor}
+                                  onChange={(e) => updateFieldColor(fieldType, e.target.value)}
+                                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                                />
+                              </div>
+                              {fieldData?.color && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateFieldColor(fieldType, '')}
+                                  className="text-[9px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                                >
+                                  Reset
+                                </button>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -366,6 +412,8 @@ export const IdEditorClient: FC<IdEditorClientProps> = ({
                     fontFamily={config.fontFamily}
                     registrant={SAMPLE_REGISTRANT}
                     previewWidth={320}
+                    customWidthMm={config.customWidthMm}
+                    customHeightMm={config.customHeightMm}
                   />
                   <p className="text-[10px] text-muted-foreground/40 tracking-wide mt-3">
                     Sample data — actual IDs use registrant info
@@ -381,6 +429,8 @@ export const IdEditorClient: FC<IdEditorClientProps> = ({
                     textColor={config.textColor}
                     fontFamily={config.fontFamily}
                     onChange={(newFields) => setConfig((c) => ({ ...c, layoutFields: newFields }))}
+                    customWidthMm={config.customWidthMm}
+                    customHeightMm={config.customHeightMm}
                   />
                 </div>
               )}
@@ -402,6 +452,8 @@ export const IdEditorClient: FC<IdEditorClientProps> = ({
               overlayColor={config.overlayColor}
               textColor={config.textColor}
               fontFamily={config.fontFamily}
+              customWidthMm={config.customWidthMm}
+              customHeightMm={config.customHeightMm}
             />
           )}
         </div>

@@ -69,6 +69,9 @@
     "tailwindcss-animate": "^1.0.7",
     "zod": "^4.3.6"
   },
+  "overrides": {
+    "zeptomatch": "1.2.2"
+  },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20",

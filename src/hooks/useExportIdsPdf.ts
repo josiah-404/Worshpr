@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { drawId } from '@/lib/idCanvas';
-import { ID_SIZES } from '@/lib/idSizes';
-import type { IdRegistrant, LayoutField, IdSizeId } from '@/types/id.types';
+import { resolveSize } from '@/lib/idSizes';
+import type { IdRegistrant, LayoutField } from '@/types/id.types';
 
 export function useExportIdsPdf() {
   const [exporting, setExporting] = useState(false);
@@ -18,6 +18,8 @@ export function useExportIdsPdf() {
     textColor,
     fontFamily,
     eventTitle,
+    customWidthMm,
+    customHeightMm,
   }: {
     registrants: IdRegistrant[];
     backgroundUrl: string;
@@ -27,12 +29,13 @@ export function useExportIdsPdf() {
     textColor?: string;
     fontFamily?: string;
     eventTitle: string;
+    customWidthMm?: number;
+    customHeightMm?: number;
   }) {
     if (registrants.length === 0) return;
     setExporting(true);
     try {
-      const size = ID_SIZES[sizeId as IdSizeId];
-      if (!size) throw new Error('Unknown size');
+      const size = resolveSize(sizeId, customWidthMm, customHeightMm);
 
       const { jsPDF } = await import('jspdf');
       const doc = new jsPDF({

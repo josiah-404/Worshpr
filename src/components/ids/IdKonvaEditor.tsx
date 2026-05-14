@@ -5,7 +5,7 @@ import { Stage, Layer, Image as KonvaImage, Text, Rect, Line } from 'react-konva
 import type Konva from 'konva';
 import { Minus, Plus, Bold, Move } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ID_SIZES } from '@/lib/idSizes';
+import { resolveSize } from '@/lib/idSizes';
 import type { LayoutField, LayoutFieldType, IdSizeId } from '@/types/id.types';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -65,19 +65,22 @@ interface IdKonvaEditorProps {
   textColor: string;
   fontFamily: string;
   onChange: (fields: LayoutField[]) => void;
+  customWidthMm?: number;
+  customHeightMm?: number;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export const IdKonvaEditor: FC<IdKonvaEditorProps> = ({
   backgroundUrl, sizeId, fields, overlayColor, textColor, fontFamily, onChange,
+  customWidthMm, customHeightMm,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [stageW, setStageW] = useState(420);
   const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
   const [selectedField, setSelectedField] = useState<LayoutFieldType | null>(null);
 
-  const size = ID_SIZES[sizeId];
+  const size = resolveSize(sizeId, customWidthMm, customHeightMm);
   const stageH = Math.round(stageW * size.heightPx / size.widthPx);
 
   // Observe container width

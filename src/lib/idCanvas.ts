@@ -38,7 +38,7 @@ function wrapText(
 
 function getFieldValue(fieldType: LayoutField['field'], registrant: IdRegistrant): string {
   switch (fieldType) {
-    case 'name':     return registrant.fullName;
+    case 'name':     return registrant.nickname ?? registrant.fullName;
     case 'nickname': return registrant.nickname ?? registrant.fullName;
     case 'church':   return registrant.churchName ?? '';
     case 'division': return registrant.divisionOrgName ?? '';
@@ -71,7 +71,6 @@ function overlayRgba(hex: string, alpha: number): string {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-const PRIMARY_TEXT_FIELDS: LayoutFieldType[] = ['name', 'nickname'];
 const SECONDARY_TEXT_FIELDS: LayoutFieldType[] = ['church', 'division', 'code'];
 
 // ─── Main draw function ──────────────────────────────────────────────────────
@@ -192,14 +191,17 @@ export async function drawId(
 
     const fontSize = (f.fontSize ?? 0.06) * H;
 
-    let resolvedColor = f.color ?? '#ffffff';
-    if (textColor) {
+    // Per-field color takes priority; fall back to global textColor with opacity rules
+    let resolvedColor: string;
+    if (f.color) {
+      resolvedColor = f.color;
+    } else if (textColor) {
       const [r, g, b] = hexToRgb(textColor);
-      if (PRIMARY_TEXT_FIELDS.includes(f.field as LayoutFieldType)) {
-        resolvedColor = `rgb(${r},${g},${b})`;
-      } else if (SECONDARY_TEXT_FIELDS.includes(f.field as LayoutFieldType)) {
-        resolvedColor = `rgba(${r},${g},${b},0.75)`;
-      }
+      resolvedColor = SECONDARY_TEXT_FIELDS.includes(f.field as LayoutFieldType)
+        ? `rgba(${r},${g},${b},0.75)`
+        : `rgb(${r},${g},${b})`;
+    } else {
+      resolvedColor = '#ffffff';
     }
 
     const fontStr = resolvedFont

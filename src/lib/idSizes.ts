@@ -1,6 +1,8 @@
 import type { IdSize, IdSizeId } from '@/types/id.types';
 
-export const ID_SIZES: Record<IdSizeId, IdSize> = {
+const MM_TO_PX = 300 / 25.4; // 300 DPI
+
+export const ID_SIZES: Partial<Record<IdSizeId, IdSize>> = {
   'cr80': {
     id: 'cr80',
     label: 'Standard ID (CR80)',
@@ -57,4 +59,26 @@ export const ID_SIZES: Record<IdSizeId, IdSize> = {
   },
 };
 
-export const ID_SIZE_LIST = Object.values(ID_SIZES);
+export const ID_SIZE_LIST = Object.values(ID_SIZES) as IdSize[];
+
+/** Resolves an IdSizeId (including 'custom') to a full IdSize object. */
+export function resolveSize(
+  sizeId: string,
+  customWidthMm = 85.6,
+  customHeightMm = 54,
+): IdSize {
+  if (sizeId === 'custom') {
+    const w = customWidthMm;
+    const h = customHeightMm;
+    return {
+      id: 'custom',
+      label: 'Custom',
+      widthMm: w,
+      heightMm: h,
+      widthPx:  Math.round(w * MM_TO_PX),
+      heightPx: Math.round(h * MM_TO_PX),
+      orientation: w >= h ? 'landscape' : 'portrait',
+    };
+  }
+  return ID_SIZES[sizeId as IdSizeId] ?? ID_SIZES['cr80']!;
+}
