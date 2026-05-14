@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Upload, CheckCircle2, Loader2,
   FileDown, ChevronRight, Settings2, Layers, MousePointer2, Eye,
+  RectangleHorizontal, RectangleVertical,
 } from 'lucide-react';
 
 const IdKonvaEditor = dynamic(
@@ -24,6 +25,11 @@ import { IdFontPicker } from '@/components/ids/IdFontPicker';
 import { IdCanvasPreview, SAMPLE_REGISTRANT } from '@/components/ids/IdCanvasPreview';
 import { IdGenerateTable } from '@/components/ids/IdGenerateTable';
 import { ID_LAYOUTS } from '@/lib/idLayouts';
+import { PAPER_SIZES } from '@/hooks/useExportIdsPdf';
+import type { PaperSizeId } from '@/hooks/useExportIdsPdf';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import type { IdRegistrant, IdTemplateRecord, IdTemplateConfig, IdSizeId, LayoutFieldType, LayoutField } from '@/types/id.types';
 
 const TEXT_FIELD_TYPES: LayoutFieldType[] = ['name', 'nickname', 'church', 'division', 'code'];
@@ -51,6 +57,8 @@ export const IdEditorClient: FC<IdEditorClientProps> = ({
 
   const [phase, setPhase] = useState<Phase>('configure');
   const [rightMode, setRightMode] = useState<'preview' | 'edit'>('preview');
+  const [paperSizeId, setPaperSizeId] = useState<PaperSizeId>('a4');
+  const [paperOrientation, setPaperOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const [uploading, setUploading] = useState(false);
   const bgInputRef = useRef<HTMLInputElement>(null);
 
@@ -187,22 +195,63 @@ export const IdEditorClient: FC<IdEditorClientProps> = ({
               Save & Generate
             </Button>
           ) : (
-            <Button size="sm" className="gap-2" onClick={() => void exportPdf({
-              registrants,
-              backgroundUrl: config.backgroundUrl,
-              sizeId: config.sizeId,
-              fields: config.layoutFields,
-              overlayColor: config.overlayColor,
-              textColor: config.textColor,
-              fontFamily: config.fontFamily,
-              eventTitle: event.title,
-              customWidthMm: config.customWidthMm,
-              customHeightMm: config.customHeightMm,
-            })} disabled={exporting || registrants.length === 0}>
-              {exporting
-                ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Exporting…</>
-                : <><FileDown className="h-3.5 w-3.5" /> Export PDF ({registrants.length})</>}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Select value={paperSizeId} onValueChange={(v) => setPaperSizeId(v as PaperSizeId)}>
+                <SelectTrigger className="h-8 text-xs w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(PAPER_SIZES).map((p) => (
+                    <SelectItem key={p.id} value={p.id} className="text-xs">{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Portrait / Landscape toggle */}
+              <div className="flex rounded-md border border-border overflow-hidden h-8">
+                <button
+                  onClick={() => setPaperOrientation('portrait')}
+                  title="Portrait"
+                  className={`flex items-center px-2 transition-colors ${
+                    paperOrientation === 'portrait'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-accent/60'
+                  }`}
+                >
+                  <RectangleVertical className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => setPaperOrientation('landscape')}
+                  title="Landscape"
+                  className={`flex items-center px-2 transition-colors ${
+                    paperOrientation === 'landscape'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-accent/60'
+                  }`}
+                >
+                  <RectangleHorizontal className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              <Button size="sm" className="gap-2" onClick={() => void exportPdf({
+                registrants,
+                backgroundUrl:  config.backgroundUrl,
+                sizeId:         config.sizeId,
+                fields:         config.layoutFields,
+                overlayColor:   config.overlayColor,
+                textColor:      config.textColor,
+                fontFamily:     config.fontFamily,
+                eventTitle:     event.title,
+                customWidthMm:   config.customWidthMm,
+                customHeightMm:  config.customHeightMm,
+                paperSizeId,
+                paperOrientation,
+              })} disabled={exporting || registrants.length === 0}>
+                {exporting
+                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Exporting…</>
+                  : <><FileDown className="h-3.5 w-3.5" /> Export PDF ({registrants.length})</>}
+              </Button>
+            </div>
           )}
         </div>
       </div>

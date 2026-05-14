@@ -1,7 +1,7 @@
 'use client';
 
 import { type FC, useState, useMemo } from 'react';
-import { Search, X, CheckCircle2, Clock, XCircle, Ban, Users, CalendarDays, IdCard, UserPlus } from 'lucide-react';
+import { Search, X, CheckCircle2, Clock, XCircle, Ban, Users, CalendarDays, IdCard, UserPlus, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table';
 import { RegistrationDrawer } from '@/components/registration/RegistrationDrawer';
 import { WalkInRegistrationDialog } from '@/components/registration/WalkInRegistrationDialog';
+import { ImportRegistrantsDialog } from '@/components/registration/ImportRegistrantsDialog';
 import { TourTrigger } from '@/components/guides/TourTrigger';
 import { useGetRegistrations } from '@/hooks/useGetRegistrations';
 import { cn } from '@/lib/utils';
@@ -56,6 +57,7 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
   const [eventFilter, setEventFilter] = useState('');
   const [selected, setSelected] = useState<RegistrationListItem | null>(null);
   const [walkInOpen, setWalkInOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const eventSelected = eventFilter !== '';
 
@@ -126,6 +128,10 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
                   <IdCard className="h-3.5 w-3.5" />
                   Generate IDs
                 </a>
+              </Button>
+              <Button size="sm" variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
+                <FileSpreadsheet className="h-3.5 w-3.5" />
+                Import Excel
               </Button>
               <Button size="sm" className="gap-2" onClick={() => setWalkInOpen(true)}>
                 <UserPlus className="h-3.5 w-3.5" />
@@ -283,6 +289,23 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
             eventTitle={selectedEventTitle ?? ''}
             eventFee={selectedEvent?.fee ?? 0}
             paymentAccount={selectedEvent?.paymentAccount ?? null}
+            eventOrgs={
+              selectedEvent?.organizations.filter((o) => o.inviteStatus === 'ACCEPTED') ?? []
+            }
+          />
+        );
+      })()}
+
+      {importOpen && eventFilter && (() => {
+        const selectedEvent = events.find((e) => e.id === eventFilter);
+        const existingEmails = new Set(registrations.map((r) => r.registrant.email.toLowerCase()));
+        return (
+          <ImportRegistrantsDialog
+            open={importOpen}
+            onOpenChange={setImportOpen}
+            eventId={eventFilter}
+            eventTitle={selectedEventTitle ?? ''}
+            existingEmails={existingEmails}
             eventOrgs={
               selectedEvent?.organizations.filter((o) => o.inviteStatus === 'ACCEPTED') ?? []
             }
