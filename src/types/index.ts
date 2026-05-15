@@ -115,3 +115,5 @@ export interface AiSearchQuotaRecord {
   remaining: number;
   date: string;
 }
+
+export type { ChatRoomType, ChatRoom, ChatMessage } from '@/types/chat.types';

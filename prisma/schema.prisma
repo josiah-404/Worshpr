@@ -30,6 +30,7 @@ model Organization {
   paymentAccounts     PaymentAccount[]
   churches            Church[]
   registrantDivisions Registrant[]        @relation("RegistrantDivision")
+  chatRooms           ChatRoom[]
 
   @@map("organizations")
 }
@@ -83,6 +84,7 @@ model User {
   createdEvents        Event[]              @relation("CreatedEvents")
   financeLedgerEntries FinanceLedger[]      @relation("LedgerEnteredBy")
   passwordResetTokens  PasswordResetToken[]
+  sentMessages         ChatMessage[]        @relation("SentMessages")
 
   @@map("users")
 }
@@ -201,6 +203,7 @@ model Event {
   financeLedger      FinanceLedger[]
   program            EventProgram?
   idTemplate         EventIdTemplate?
+  chatRoom           ChatRoom?
 
   @@index([status, startDate])
   @@map("events")
@@ -418,6 +421,38 @@ model FinanceLedger {
   @@map("finance_ledger")
 }
 
+// ─── Chat ──────────────────────────────────────────────────────────────────
+
+model ChatRoom {
+  id        String       @id @default(cuid())
+  name      String
+  type      ChatRoomType
+  orgId     String
+  eventId   String?      @unique
+  createdAt DateTime     @default(now())
+
+  organization Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  event        Event?        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  messages     ChatMessage[]
+
+  @@index([orgId, type])
+  @@map("chat_rooms")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  roomId    String
+  senderId  String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  room   ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender User     @relation("SentMessages", fields: [senderId], references: [id])
+
+  @@index([roomId, createdAt])
+  @@map("chat_messages")
+}
+
 // ─── Enums ─────────────────────────────────────────────────────────────────
 
 enum ItemType {
@@ -548,4 +583,9 @@ enum FinanceCategory {
 enum TokenType {
   PASSWORD_SETUP
   PASSWORD_RESET
+}
+
+enum ChatRoomType {
+  ORG
+  EVENT
 }

@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Building2, Church, ImagePlus, Loader2,
-  Pencil, Pipette, ScrollText, UserPlus, X,
+  MessageSquare, Pencil, Pipette, ScrollText, UserPlus, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +27,7 @@ import { useGetEventChurches } from '@/hooks/useGetEventChurches';
 import { useSetEventChurches } from '@/hooks/useSetEventChurches';
 import { EventInvitePanel } from '@/app/events/EventInvitePanel';
 import { ProgramClient } from './program/ProgramClient';
+import { ChatPanel } from '@/components/chat/ChatPanel';
 import { createEventSchema, type CreateEventInput } from '@/validations/event.schema';
 import type {
   EventListItem, EventProgramData, ChurchOption, Organization,
@@ -555,7 +556,7 @@ export const EventDetailClient: FC<EventDetailClientProps> = ({
 
       {/* ── Tabs ── */}
       <Tabs defaultValue="details">
-        <TabsList className="grid grid-cols-2 w-full max-w-xs">
+        <TabsList className="grid grid-cols-3 w-full max-w-sm">
           <TabsTrigger value="details" className="gap-1.5 text-xs">
             <Pencil className="h-3.5 w-3.5" />
             Details
@@ -563,6 +564,10 @@ export const EventDetailClient: FC<EventDetailClientProps> = ({
           <TabsTrigger value="program" className="gap-1.5 text-xs">
             <ScrollText className="h-3.5 w-3.5" />
             Program
+          </TabsTrigger>
+          <TabsTrigger value="chat" className="gap-1.5 text-xs">
+            <MessageSquare className="h-3.5 w-3.5" />
+            Chat
           </TabsTrigger>
         </TabsList>
 
@@ -584,6 +589,12 @@ export const EventDetailClient: FC<EventDetailClientProps> = ({
             churches={churches}
             eventDetails={eventDetails}
           />
+        </TabsContent>
+
+        <TabsContent value="chat" className="mt-5">
+          <div className='border rounded-lg overflow-hidden h-[600px]'>
+            <ChatPanel mode='event' eventId={event.id} />
+          </div>
         </TabsContent>
       </Tabs>
 

@@ -14,6 +14,7 @@ import {
   BookOpen,
   HelpCircle,
   IdCard,
+  MessageSquare,
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 
@@ -100,6 +101,11 @@ const ALL_NAV_GROUPS = [
         title: 'Worship Screen',
         url: '/worship',
         icon: Monitor,
+      },
+      {
+        title: 'Chat',
+        url: '/chat',
+        icon: MessageSquare,
       },
     ],
   },

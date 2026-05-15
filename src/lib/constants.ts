@@ -15,6 +15,9 @@ export const QUERY_KEYS = {
   CHURCHES: 'churches',
   EVENT_CHURCHES: 'event-churches',
   PROGRAM: 'program',
+  CHAT_ROOMS: 'chat-rooms',
+  CHAT_MESSAGES: 'chat-messages',
+  CHAT_EVENT_ROOM: 'chat-event-room',
 } as const;
 
 export const OFFICER_TITLES = [
