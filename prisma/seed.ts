@@ -8,16 +8,10 @@ const prisma = new PrismaClient({ adapter });
 
 const SEED_USERS = [
   {
-    name: 'Admin User',
-    email: 'admin@worshpr.com',
-    password: 'admin1234',
+    name: 'Super Admin',
+    email: 'super_admin@example.com',
+    password: '@Password123',
     role: 'super_admin',
-  },
-  {
-    name: 'Media User',
-    email: 'media@worshpr.com',
-    password: 'media1234',
-    role: 'officer',
   },
 ];
 
