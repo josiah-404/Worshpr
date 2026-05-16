@@ -6,6 +6,22 @@ import { supabase, getChatChannelName } from '@/lib/supabase';
 import { sendMessageSchema } from '@/validations/chat.schema';
 import type { ChatMessage } from '@/types/chat.types';
 
+function groupReactions(
+  reactions: { emoji: string; userId: string }[],
+): ChatMessage['reactions'] {
+  const map = new Map<string, string[]>();
+  for (const r of reactions) {
+    const existing = map.get(r.emoji) ?? [];
+    existing.push(r.userId);
+    map.set(r.emoji, existing);
+  }
+  return Array.from(map.entries()).map(([emoji, userIds]) => ({
+    emoji,
+    count: userIds.length,
+    userIds,
+  }));
+}
+
 function mapMessage(m: {
   id: string;
   roomId: string;
@@ -13,6 +29,7 @@ function mapMessage(m: {
   content: string;
   createdAt: Date;
   sender: { name: string };
+  reactions: { emoji: string; userId: string }[];
 }): ChatMessage {
   return {
     id: m.id,
@@ -21,6 +38,7 @@ function mapMessage(m: {
     senderName: m.sender.name,
     content: m.content,
     createdAt: m.createdAt.toISOString(),
+    reactions: groupReactions(m.reactions),
   };
 }
 
@@ -61,10 +79,12 @@ export async function GET(
         content: true,
         createdAt: true,
         sender: { select: { name: true } },
+        reactions: { select: { emoji: true, userId: true } },
       },
     });
 
-    return NextResponse.json({ data: messages.map(mapMessage) });
+    const mapped = messages.map(mapMessage);
+    return NextResponse.json({ data: mapped, hasMore: messages.length === limit });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -102,6 +122,7 @@ export async function POST(
         content: true,
         createdAt: true,
         sender: { select: { name: true } },
+        reactions: { select: { emoji: true, userId: true } },
       },
     });
 
@@ -112,11 +133,7 @@ export async function POST(
         ? getChatChannelName('event', room.eventId)
         : getChatChannelName('org', room.orgId);
 
-    await supabase.channel(channelId).send({
-      type: 'broadcast',
-      event: 'new_message',
-      payload: message,
-    });
+    await supabase.channel(channelId).httpSend('new_message', message);
 
     return NextResponse.json({ data: message }, { status: 201 });
   } catch {

@@ -18,6 +18,7 @@ export const QUERY_KEYS = {
   CHAT_ROOMS: 'chat-rooms',
   CHAT_MESSAGES: 'chat-messages',
   CHAT_EVENT_ROOM: 'chat-event-room',
+  CHAT_REACTIONS: 'chat-reactions',
 } as const;
 
 export const OFFICER_TITLES = [

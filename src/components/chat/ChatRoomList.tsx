@@ -23,9 +23,10 @@ interface ChatRoomListProps {
   rooms: ChatRoom[];
   activeRoomId: string | null;
   onSelect: (room: ChatRoom) => void;
+  unreadCounts: Record<string, number>;
 }
 
-export const ChatRoomList: FC<ChatRoomListProps> = ({ rooms, activeRoomId, onSelect }) => {
+export const ChatRoomList: FC<ChatRoomListProps> = ({ rooms, activeRoomId, onSelect, unreadCounts }) => {
   const { data: session } = useSession();
   const role = session?.user?.role ?? 'officer';
   const canCreate = role === 'super_admin' || role === 'org_admin';
@@ -85,7 +86,12 @@ export const ChatRoomList: FC<ChatRoomListProps> = ({ rooms, activeRoomId, onSel
               )}
             >
               <Hash className='h-3.5 w-3.5 shrink-0' />
-              <span className='truncate'>{room.name}</span>
+              <span className='truncate flex-1'>{room.name}</span>
+              {(unreadCounts[room.id] ?? 0) > 0 && (
+                <span className='ml-auto shrink-0 min-w-[18px] rounded-full bg-primary px-1.5 py-0.5 text-center text-[10px] font-semibold text-primary-foreground'>
+                  {unreadCounts[room.id] > 99 ? '99+' : unreadCounts[room.id]}
+                </span>
+              )}
             </button>
           ))
         )}

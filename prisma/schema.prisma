@@ -85,6 +85,7 @@ model User {
   financeLedgerEntries FinanceLedger[]      @relation("LedgerEnteredBy")
   passwordResetTokens  PasswordResetToken[]
   sentMessages         ChatMessage[]        @relation("SentMessages")
+  messageReactions     ChatMessageReaction[] @relation("MessageReactions")
 
   @@map("users")
 }
@@ -446,11 +447,27 @@ model ChatMessage {
   content   String   @db.Text
   createdAt DateTime @default(now())
 
-  room   ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  sender User     @relation("SentMessages", fields: [senderId], references: [id])
+  room      ChatRoom              @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender    User                  @relation("SentMessages", fields: [senderId], references: [id])
+  reactions ChatMessageReaction[]
 
   @@index([roomId, createdAt])
   @@map("chat_messages")
+}
+
+model ChatMessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User        @relation("MessageReactions", fields: [userId], references: [id])
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+  @@map("chat_message_reactions")
 }
 
 // ─── Enums ─────────────────────────────────────────────────────────────────

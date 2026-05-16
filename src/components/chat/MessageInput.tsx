@@ -1,6 +1,6 @@
 'use client';
 
-import { type FC, useState, type KeyboardEvent } from 'react';
+import { type FC, useState, useRef, useEffect, type KeyboardEvent } from 'react';
 import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,6 +15,14 @@ interface MessageInputProps {
 export const MessageInput: FC<MessageInputProps> = ({ room, onTyping }) => {
   const [content, setContent] = useState('');
   const { mutate, isPending } = useSendMessage(room.id);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [content]);
 
   const handleSend = () => {
     const trimmed = content.trim();
@@ -35,6 +43,7 @@ export const MessageInput: FC<MessageInputProps> = ({ room, onTyping }) => {
   return (
     <div className='flex items-end gap-2 border-t p-3'>
       <Textarea
+        ref={textareaRef}
         value={content}
         onChange={(e) => {
           setContent(e.target.value);
@@ -43,7 +52,7 @@ export const MessageInput: FC<MessageInputProps> = ({ room, onTyping }) => {
         onKeyDown={handleKeyDown}
         placeholder='Type a message… (Enter to send)'
         rows={1}
-        className='min-h-0 resize-none flex-1'
+        className='min-h-0 resize-none flex-1 overflow-y-auto'
         disabled={isPending}
       />
       <Button
