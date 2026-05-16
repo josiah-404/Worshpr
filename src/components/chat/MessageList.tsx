@@ -103,7 +103,7 @@ export const MessageList: FC<MessageListProps> = ({
     <div
       ref={containerRef}
       onScroll={handleScroll}
-      className='flex flex-col gap-3 p-4 overflow-y-auto flex-1'
+      className='flex flex-col gap-3 p-4 overflow-y-auto overflow-x-hidden flex-1'
     >
       {isFetchingNextPage && (
         <div className='flex justify-center py-2'>

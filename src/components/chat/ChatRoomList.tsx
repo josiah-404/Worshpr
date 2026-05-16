@@ -86,7 +86,7 @@ export const ChatRoomList: FC<ChatRoomListProps> = ({ rooms, activeRoomId, onSel
               )}
             >
               <Hash className='h-3.5 w-3.5 shrink-0' />
-              <span className='truncate flex-1'>{room.name}</span>
+              <span className='truncate flex-1 min-w-0'>{room.name}</span>
               {(unreadCounts[room.id] ?? 0) > 0 && (
                 <span className='ml-auto shrink-0 min-w-[18px] rounded-full bg-primary px-1.5 py-0.5 text-center text-[10px] font-semibold text-primary-foreground'>
                   {unreadCounts[room.id] > 99 ? '99+' : unreadCounts[room.id]}
