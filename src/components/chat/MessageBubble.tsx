@@ -1,6 +1,7 @@
 'use client';
 
-import { type FC, useState, useRef } from 'react';
+import { type FC, type CSSProperties, useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { ChatMessage } from '@/types/chat.types';
@@ -21,10 +22,27 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
   onReact,
 }) => {
   const [showEmoji, setShowEmoji] = useState(false);
+  const [barStyle, setBarStyle] = useState<CSSProperties>({ position: 'fixed', top: -9999, left: -9999 });
+  const bubbleRef = useRef<HTMLDivElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  const updateBarPosition = () => {
+    if (!bubbleRef.current) return;
+    const rect = bubbleRef.current.getBoundingClientRect();
+    setBarStyle({
+      position: 'fixed',
+      top: rect.top - 44,
+      ...(isOwn ? { right: window.innerWidth - rect.right } : { left: rect.left }),
+      zIndex: 9999,
+    });
+  };
 
   const handleMouseEnter = () => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
+    updateBarPosition();
     setShowEmoji(true);
   };
 
@@ -35,26 +53,17 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
   const timeAgo = formatDistanceToNow(new Date(message.createdAt), { addSuffix: true });
   const hasReactions = message.reactions.length > 0;
 
-  return (
-    <div className={cn('flex flex-col gap-1', isOwn ? 'items-end' : 'items-start')}>
-      {!isOwn && (
-        <span className='text-xs font-medium text-muted-foreground px-1'>
-          {message.senderName}
-        </span>
-      )}
-
-      <div className='relative max-w-[75%]'>
-        {/* Emoji bar — separate onMouseEnter/Leave so 200ms delay keeps it alive during traverse */}
+  const emojiBar = mounted
+    ? createPortal(
         <div
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          style={barStyle}
           className={cn(
-            'absolute bottom-full z-10 pb-2',
-            isOwn ? 'right-0' : 'left-0',
+            'transition-[opacity,transform] duration-150 ease-out',
             showEmoji
               ? 'opacity-100 scale-100 pointer-events-auto'
               : 'opacity-0 scale-90 pointer-events-none',
-            'transition-all duration-150 ease-out',
           )}
         >
           <div className='flex items-center gap-0.5 rounded-full border bg-popover px-1.5 py-1 shadow-md'>
@@ -69,9 +78,22 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
               </button>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body,
+      )
+    : null;
 
+  return (
+    <div className={cn('flex flex-col gap-1 w-full min-w-0', isOwn ? 'items-end' : 'items-start')}>
+      {!isOwn && (
+        <span className='text-xs font-medium text-muted-foreground px-1'>
+          {message.senderName}
+        </span>
+      )}
+
+      <div className='max-w-[75%]'>
         <div
+          ref={bubbleRef}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           className={cn(
@@ -110,6 +132,8 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
       </div>
 
       <span className='text-[10px] text-muted-foreground px-1'>{timeAgo}</span>
+
+      {emojiBar}
     </div>
   );
 };
