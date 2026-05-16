@@ -1,5 +1,5 @@
 import { api } from '@/lib/axios';
-import type { ChatRoom, ChatMessage } from '@/types/chat.types';
+import type { ChatRoom, ChatMessage, ReactionGroup } from '@/types/chat.types';
 import type { SendMessageInput, CreateRoomInput } from '@/validations/chat.schema';
 
 export const getOrgRooms = async (orgId?: string): Promise<ChatRoom[]> => {
@@ -19,12 +19,12 @@ export const createOrgRoom = async (
 export const getRoomMessages = async (
   roomId: string,
   cursor?: string,
-): Promise<ChatMessage[]> => {
-  const { data } = await api.get<{ data: ChatMessage[] }>(
+): Promise<{ messages: ChatMessage[]; hasMore: boolean }> => {
+  const { data } = await api.get<{ data: ChatMessage[]; hasMore: boolean }>(
     `/chat/rooms/${roomId}/messages`,
     { params: cursor ? { cursor } : undefined },
   );
-  return data.data;
+  return { messages: data.data, hasMore: data.hasMore };
 };
 
 export const sendMessage = async (
@@ -34,6 +34,17 @@ export const sendMessage = async (
   const { data } = await api.post<{ data: ChatMessage }>(
     `/chat/rooms/${roomId}/messages`,
     input,
+  );
+  return data.data;
+};
+
+export const toggleReaction = async (
+  messageId: string,
+  emoji: string,
+): Promise<ReactionGroup[]> => {
+  const { data } = await api.post<{ data: ReactionGroup[] }>(
+    `/chat/messages/${messageId}/reactions`,
+    { emoji },
   );
   return data.data;
 };

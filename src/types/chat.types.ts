@@ -9,6 +9,12 @@ export interface ChatRoom {
   createdAt: string;
 }
 
+export interface ReactionGroup {
+  emoji: string;
+  count: number;
+  userIds: string[];
+}
+
 export interface ChatMessage {
   id: string;
   roomId: string;
@@ -16,6 +22,7 @@ export interface ChatMessage {
   senderName: string;
   content: string;
   createdAt: string;
+  reactions: ReactionGroup[];
 }
 
 export interface TypingPayload {

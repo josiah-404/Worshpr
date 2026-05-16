@@ -6,7 +6,7 @@
 - **Language**: TypeScript (strict mode)
 - **Styling**: Tailwind CSS + ShadCN UI
 - **ORM**: Prisma
-- **Database**: MongoDB Atlas
+- **Database**: Supabase
 - **Data Fetching**: Axios + TanStack Query (React Query)
 
 ---
@@ -306,11 +306,17 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: 'jwt' },
   callbacks: {
     async jwt({ token, user }) {
-      if (user) { token.id = user.id; token.role = user.role; }
+      if (user) {
+        token.id = user.id;
+        token.role = user.role;
+      }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) { session.user.id = token.id; session.user.role = token.role; }
+      if (session.user) {
+        session.user.id = token.id;
+        session.user.role = token.role;
+      }
       return session;
     },
   },
@@ -327,7 +333,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
 const session = await getServerSession(authOptions);
-if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+if (!session)
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 ```
 
 ### Session in Client Components
@@ -367,12 +374,20 @@ Extend NextAuth types in `src/types/next-auth.d.ts` to keep `id` and `role` type
 import 'next-auth';
 
 declare module 'next-auth' {
-  interface User { id: string; role: string; }
-  interface Session { user: User & { id: string; role: string }; }
+  interface User {
+    id: string;
+    role: string;
+  }
+  interface Session {
+    user: User & { id: string; role: string };
+  }
 }
 
 declare module 'next-auth/jwt' {
-  interface JWT { id: string; role: string; }
+  interface JWT {
+    id: string;
+    role: string;
+  }
 }
 ```
 
@@ -414,7 +429,9 @@ toast.success('Saved', { description: 'Your changes have been saved.' });
 toast.warning('Title required', { description: 'Please enter a title.' });
 
 // Error
-toast.error('Save failed', { description: err instanceof Error ? err.message : 'Unexpected error.' });
+toast.error('Save failed', {
+  description: err instanceof Error ? err.message : 'Unexpected error.',
+});
 ```
 
 ---
@@ -440,48 +457,99 @@ export const env = envSchema.parse(process.env);
 
 ---
 
-## Prisma Migration Workflow (Neon / PostgreSQL)
+## Prisma Migration Workflow (Supabase / PostgreSQL)
 
-### Local Development
+This project uses **Supabase** as the database (PostgreSQL under the hood). Prisma manages the schema and migrations. Supabase is also used for **Realtime** (broadcast channels for chat).
 
-When adding or changing models in `prisma/schema.prisma`, always use `migrate dev` — never `db push`:
+### Supabase Services Used
+
+| Service | Purpose |
+| --- | --- |
+| PostgreSQL (via `DATABASE_URL`) | Primary database, accessed through Prisma |
+| Realtime broadcast | Live chat messages, typing indicators, reactions |
+| `@supabase/supabase-js` client | Client + server-side broadcast via `src/lib/supabase.ts` |
+
+### Creating a Migration
+
+**Step 1 — Edit the schema**
+
+Make your changes in `prisma/schema.prisma`.
+
+**Step 2 — Generate the migration file**
 
 ```bash
 npx prisma migrate dev --name <descriptive_name>
 ```
 
-This creates a timestamped migration file in `prisma/migrations/` and regenerates the client. Commit the `prisma/migrations/` folder — it is the source of truth for production deploys.
+This:
+- Diffs the schema against the current DB state
+- Creates a timestamped SQL file in `prisma/migrations/`
+- Applies the migration to the local/dev DB
+- Regenerates the Prisma client
 
-### Production / Vercel
+Use a descriptive name in `snake_case`, e.g.:
 
-The `build` script must run `migrate deploy` before `next build` so pending migrations are applied on every deploy:
+```bash
+npx prisma migrate dev --name add_chat_message_reactions
+npx prisma migrate dev --name add_user_avatar_field
+```
+
+**Step 3 — Commit the migration**
+
+Always commit `prisma/migrations/` — it is the source of truth for all environments.
+
+```bash
+git add prisma/schema.prisma prisma/migrations/
+git commit -m "..."
+```
+
+### Applying to Supabase (Production)
+
+Supabase uses the same `DATABASE_URL` connection string. On Vercel deploy, the build script applies pending migrations automatically:
 
 ```json
 "build": "prisma migrate deploy && prisma generate && next build"
 ```
 
-`migrate deploy` applies pending migrations only — it never creates new ones.
+`migrate deploy` applies pending migrations only — never creates new ones.
+
+To apply manually to Supabase (e.g. after a schema change in a PR):
+
+```bash
+DATABASE_URL="your-supabase-connection-string" npx prisma migrate deploy
+```
+
+### After Any Schema Change
+
+Always regenerate the Prisma client after editing `schema.prisma`:
+
+```bash
+npx prisma generate
+```
+
+Without this, TypeScript types will be out of sync with the schema.
 
 ### Drift / First-time Setup
 
-If `migrate dev` reports **"Drift detected"** (tables exist but no migration history), the cleanest fix is:
+If `migrate dev` reports **"Drift detected"** (tables exist but no migration history), the cleanest fix in dev is:
 
 ```bash
-npx prisma migrate reset   # drops schema, recreates from scratch, applies migrations
-npm run db:seed            # re-seed after reset
+npx prisma migrate reset   # drops schema, recreates from migrations
+npm run db:seed            # re-seed if needed
 ```
 
-Only use the baseline approach (`migrate diff` + `migrate resolve --applied`) when you have real production data you cannot afford to lose.
+Only use `migrate diff` + `migrate resolve --applied` (baseline approach) when Supabase has real production data you cannot drop.
 
 ### Command Reference
 
 | Command | When to use |
-|---|---|
+| --- | --- |
 | `prisma migrate dev --name x` | Adding/changing schema locally |
-| `prisma migrate deploy` | CI/CD and production builds |
-| `prisma migrate reset` | Resolve drift in dev (data loss is acceptable) |
-| `prisma generate` | After any schema change, to update TS types |
-| `prisma db push` | Prototyping only — never use for tracked schemas |
+| `prisma migrate deploy` | CI/CD and production (Supabase) |
+| `prisma migrate reset` | Resolve drift in dev (data loss OK) |
+| `prisma generate` | After any schema change — updates TS types |
+| `prisma db push` | Never — use `migrate dev` instead |
+| `prisma studio` | Browse/edit data in the local DB |
 
 ---
 
