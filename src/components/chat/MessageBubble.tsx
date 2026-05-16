@@ -1,6 +1,6 @@
 'use client';
 
-import { type FC } from 'react';
+import { type FC, useState, useRef } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { ChatMessage } from '@/types/chat.types';
@@ -20,6 +20,18 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
   currentUserId,
   onReact,
 }) => {
+  const [showEmoji, setShowEmoji] = useState(false);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    setShowEmoji(true);
+  };
+
+  const handleMouseLeave = () => {
+    hideTimer.current = setTimeout(() => setShowEmoji(false), 200);
+  };
+
   const timeAgo = formatDistanceToNow(new Date(message.createdAt), { addSuffix: true });
   const hasReactions = message.reactions.length > 0;
 
@@ -31,15 +43,18 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
         </span>
       )}
 
-      <div className='group relative max-w-[75%]'>
-        {/* outer div: transparent, pb-2 bridges gap to bubble so hover doesn't drop */}
+      <div className='relative max-w-[75%]'>
+        {/* Emoji bar — separate onMouseEnter/Leave so 200ms delay keeps it alive during traverse */}
         <div
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
           className={cn(
             'absolute bottom-full z-10 pb-2',
-            'opacity-0 scale-90 pointer-events-none',
-            'transition-all duration-150 ease-out',
-            'group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto',
             isOwn ? 'right-0' : 'left-0',
+            showEmoji
+              ? 'opacity-100 scale-100 pointer-events-auto'
+              : 'opacity-0 scale-90 pointer-events-none',
+            'transition-all duration-150 ease-out',
           )}
         >
           <div className='flex items-center gap-0.5 rounded-full border bg-popover px-1.5 py-1 shadow-md'>
@@ -57,6 +72,8 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
         </div>
 
         <div
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
           className={cn(
             'rounded-2xl px-3.5 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap',
             isOwn
