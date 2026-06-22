@@ -21,6 +21,7 @@ import { useSession } from 'next-auth/react';
 import { NavMain } from '@/components/layout/NavMain';
 import { NavUser } from '@/components/layout/NavUser';
 import { useCollaborationBadge } from '@/hooks/useCollaborationBadge';
+import { useChatUnread } from '@/hooks/useChatUnread';
 import {
   Sidebar,
   SidebarContent,
@@ -117,6 +118,7 @@ export default function AppSidebar({
   const { data: session } = useSession();
   const role = session?.user?.role ?? 'officer';
   const collaborationBadge = useCollaborationBadge();
+  const chatUnread = useChatUnread();
   const navGroups = ALL_NAV_GROUPS.filter((g) => g.roles.includes(role))
     .map((g) => ({
       ...g,
@@ -129,7 +131,11 @@ export default function AppSidebar({
         .map((item) => ({
           ...item,
           badge:
-            item.title === 'Collaborations' ? collaborationBadge : undefined,
+            item.title === 'Collaborations'
+              ? collaborationBadge
+              : item.title === 'Chat'
+                ? chatUnread
+                : undefined,
         })),
     }))
     .filter((g) => g.items.length > 0);

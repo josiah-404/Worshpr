@@ -1,5 +1,5 @@
 import { PageLoader } from '@/components/common/PageLoader';
 
-export default function WorshipLoading() {
+export default function OrganizationsLoading() {
   return <PageLoader variant="table" />;
 }

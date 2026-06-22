@@ -77,6 +77,18 @@ export interface IdTemplateRecord {
   updatedAt: string;
 }
 
+export interface IdEventListItem {
+  id: string;
+  title: string;
+  type: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  coverImage: string | null;
+  hasTemplate: boolean;
+  approvedCount: number;
+}
+
 export interface IdRegistrant {
   id: string;
   fullName: string;

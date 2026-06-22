@@ -224,6 +224,7 @@ export const ProgramClient: FC<ProgramClientProps> = ({
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
   const [selectedPrintDays, setSelectedPrintDays] = useState<Set<number>>(new Set());
   const [printPageSize, setPrintPageSize] = useState<'a4' | 'letter' | 'folio' | 'legal'>('a4');
+  const [printOrientation, setPrintOrientation] = useState<'portrait' | 'landscape'>('portrait');
 
   const { mutate: upsertProgram, isPending: isUpsertPending } = useUpsertProgram(eventId);
   const { mutate: createItem, isPending: isCreatePending } = useCreateProgramItem(eventId);
@@ -442,7 +443,11 @@ export const ProgramClient: FC<ProgramClientProps> = ({
     });
   }
 
-  async function exportToPDF(daysToExport: number[], pageSize: 'a4' | 'letter' | 'folio' | 'legal') {
+  async function exportToPDF(
+    daysToExport: number[],
+    pageSize: 'a4' | 'letter' | 'folio' | 'legal',
+    orientation: 'portrait' | 'landscape',
+  ) {
     const { default: jsPDF } = await import('jspdf');
     const { default: autoTable } = await import('jspdf-autotable');
 
@@ -453,9 +458,12 @@ export const ProgramClient: FC<ProgramClientProps> = ({
       folio:  [215.9, 330.2],
       legal:  [215.9, 355.6],
     };
-    const [pw, ph] = PAGE_DIMS[pageSize];
+    // Swap dimensions for landscape
+    const [pw, ph] = orientation === 'landscape'
+      ? [PAGE_DIMS[pageSize][1], PAGE_DIMS[pageSize][0]]
+      : PAGE_DIMS[pageSize];
 
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [pw, ph] });
+    const doc = new jsPDF({ orientation, unit: 'mm', format: [pw, ph] });
     const pageW = doc.internal.pageSize.getWidth();
     const margin = 13;
 
@@ -524,9 +532,18 @@ export const ProgramClient: FC<ProgramClientProps> = ({
 
     const allItems = (program?.items ?? []).sort((a, b) => a.day - b.day || a.order - b.order);
 
+    let firstDayRendered = false;
+
     for (const day of daysToExport) {
       const items = allItems.filter((i) => i.day === day);
       if (!items.length) continue;
+
+      // Each day starts on a fresh page (except the very first)
+      if (firstDayRendered) {
+        doc.addPage([pw, ph], orientation);
+        y = margin + 2;
+      }
+      firstDayRendered = true;
 
       if (isCamp) {
         doc.setFontSize(9.5);
@@ -875,6 +892,28 @@ export const ProgramClient: FC<ProgramClientProps> = ({
               </div>
             </div>
 
+            {/* Orientation */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Orientation</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {(['portrait', 'landscape'] as const).map((o) => (
+                  <button
+                    key={o}
+                    type="button"
+                    onClick={() => setPrintOrientation(o)}
+                    className={cn(
+                      'py-1.5 rounded-md border text-xs font-medium transition-colors capitalize',
+                      printOrientation === o
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-background text-muted-foreground border-border hover:border-primary/50',
+                    )}
+                  >
+                    {o.charAt(0).toUpperCase() + o.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Day selection — only for CAMP with multiple days */}
             {isCamp && totalDays > 1 && (
               <div className="space-y-1.5">
@@ -934,7 +973,7 @@ export const ProgramClient: FC<ProgramClientProps> = ({
                 const days = isCamp && totalDays > 1
                   ? Array.from(selectedPrintDays).sort((a, b) => a - b)
                   : [1];
-                void exportToPDF(days, printPageSize);
+                void exportToPDF(days, printPageSize, printOrientation);
               }}
             >
               <FileDown className="h-3.5 w-3.5" />

@@ -18,6 +18,7 @@ import { WalkInRegistrationDialog } from '@/components/registration/WalkInRegist
 import { ImportRegistrantsDialog } from '@/components/registration/ImportRegistrantsDialog';
 import { TourTrigger } from '@/components/guides/TourTrigger';
 import { useGetRegistrations } from '@/hooks/useGetRegistrations';
+import { useOrgContext } from '@/providers/OrgContext';
 import { cn } from '@/lib/utils';
 import type { RegistrationListItem, RegistrationStatus, EventListItem } from '@/types';
 
@@ -51,6 +52,8 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
   initialData,
   events,
 }) => {
+  const { activeOrgId } = useOrgContext();
+
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   // Event is required — empty string means none selected yet
@@ -58,6 +61,21 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
   const [selected, setSelected] = useState<RegistrationListItem | null>(null);
   const [walkInOpen, setWalkInOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+
+  // Filter events by the active org selected in the OrgBar
+  const visibleEvents = useMemo(() => {
+    const filtered = activeOrgId
+      ? events.filter((e) => e.organizations.some((o) => o.orgId === activeOrgId))
+      : events;
+    return filtered;
+  }, [events, activeOrgId]);
+
+  // Clear the selected event if it's no longer in the visible list (org switched)
+  useMemo(() => {
+    if (eventFilter && !visibleEvents.some((e) => e.id === eventFilter)) {
+      setEventFilter('');
+    }
+  }, [visibleEvents, eventFilter]);
 
   const eventSelected = eventFilter !== '';
 
@@ -99,7 +117,7 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
 
   const hasFilters = search || statusFilter !== 'ALL';
 
-  const selectedEventTitle = events.find((e) => e.id === eventFilter)?.title;
+  const selectedEventTitle = visibleEvents.find((e) => e.id === eventFilter)?.title;
 
   return (
     <div className="flex flex-col gap-4">
@@ -110,9 +128,13 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
             <SelectValue placeholder="Select an event…" />
           </SelectTrigger>
           <SelectContent>
-            {events.map((e) => (
-              <SelectItem key={e.id} value={e.id}>{e.title}</SelectItem>
-            ))}
+            {visibleEvents.length === 0 ? (
+              <p className="px-2 py-3 text-sm text-muted-foreground text-center">No events found</p>
+            ) : (
+              visibleEvents.map((e) => (
+                <SelectItem key={e.id} value={e.id}>{e.title}</SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
         {eventSelected && (
@@ -280,7 +302,7 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
       <RegistrationDrawer registration={selected} onClose={() => setSelected(null)} />
 
       {walkInOpen && eventFilter && (() => {
-        const selectedEvent = events.find((e) => e.id === eventFilter);
+        const selectedEvent = visibleEvents.find((e) => e.id === eventFilter);
         return (
           <WalkInRegistrationDialog
             open={walkInOpen}
@@ -297,7 +319,7 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
       })()}
 
       {importOpen && eventFilter && (() => {
-        const selectedEvent = events.find((e) => e.id === eventFilter);
+        const selectedEvent = visibleEvents.find((e) => e.id === eventFilter);
         const existingEmails = new Set(registrations.map((r) => r.registrant.email.toLowerCase()));
         return (
           <ImportRegistrantsDialog
