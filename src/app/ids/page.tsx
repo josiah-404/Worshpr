@@ -60,7 +60,7 @@ export default async function IdsPage() {
         </div>
       </div>
 
-      <IdsEventGrid events={mapped} />
+      <IdsEventGrid initialEvents={mapped} />
     </div>
   );
 }

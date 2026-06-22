@@ -5,22 +5,14 @@ import Link from 'next/link';
 import { CalendarDays, Users, IdCard, CheckCircle2, Monitor } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-
-interface EventCardItem {
-  id: string;
-  title: string;
-  type: string;
-  startDate: string;
-  endDate: string;
-  status: string;
-  coverImage: string | null;
-  hasTemplate: boolean;
-  approvedCount: number;
-}
+import { useGetIdEvents } from '@/hooks/useGetIdEvents';
+import { useOrgContext } from '@/providers/OrgContext';
+import type { IdEventListItem } from '@/types/id.types';
 
 interface IdsEventGridProps {
-  events: EventCardItem[];
+  initialEvents: IdEventListItem[];
 }
 
 function formatDate(d: string) {
@@ -34,7 +26,20 @@ const TYPE_GRADIENT: Record<string, string> = {
   WORSHIP_NIGHT: 'from-rose-500 to-pink-600',
 };
 
-export const IdsEventGrid: FC<IdsEventGridProps> = ({ events }) => {
+export const IdsEventGrid: FC<IdsEventGridProps> = ({ initialEvents }) => {
+  const { activeOrgId } = useOrgContext();
+  const { data: events = initialEvents, isLoading } = useGetIdEvents(activeOrgId, initialEvents);
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className="aspect-[4/5] rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
   if (events.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center border border-dashed border-border rounded-lg">
