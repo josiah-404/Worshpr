@@ -38,12 +38,12 @@ export async function GET() {
             title: true,
             slug: true,
             type: true,
+            customType: true,
             status: true,
             startDate: true,
             endDate: true,
             venue: true,
             coverImage: true,
-            fee: true,
             description: true,
             organizations: {
               where: { role: 'HOST' },
@@ -76,12 +76,12 @@ export async function GET() {
           title: invite.event.title,
           slug: invite.event.slug,
           type: invite.event.type,
+          customType: invite.event.customType,
           status: invite.event.status,
           startDate: invite.event.startDate.toISOString(),
           endDate: invite.event.endDate.toISOString(),
           venue: invite.event.venue,
           coverImage: invite.event.coverImage,
-          fee: invite.event.fee,
           description: invite.event.description,
           hostOrg: hostEntry
             ? {

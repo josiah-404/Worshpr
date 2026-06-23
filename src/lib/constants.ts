@@ -14,6 +14,7 @@ export const QUERY_KEYS = {
   PAYMENT_ACCOUNTS: 'payment-accounts',
   CHURCHES: 'churches',
   EVENT_CHURCHES: 'event-churches',
+  EVENT_FEE_ITEMS: 'event-fee-items',
   PROGRAM: 'program',
   CHAT_ROOMS: 'chat-rooms',
   CHAT_MESSAGES: 'chat-messages',

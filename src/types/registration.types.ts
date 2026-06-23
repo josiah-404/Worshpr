@@ -1,5 +1,6 @@
 import type { PaymentAccountSummary } from '@/types/payment-account.types';
 import type { ChurchOption } from '@/types/church.types';
+import type { EventFeeItem } from '@/types/event.types';
 
 export type RegistrationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 export type PaymentIntent = 'CASH' | 'ONLINE' | 'FREE';
@@ -18,6 +19,7 @@ export interface RegistrantData {
   divisionOrgId?: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
+  selectedFeeItemIds?: string[];
 }
 
 export interface PaymentPayload {
@@ -50,11 +52,11 @@ export interface PublicEventData {
   slug: string;
   description: string | null;
   type: string;
+  customType: string | null;
   venue: string | null;
   startDate: string;
   endDate: string;
   registrationDeadline: string | null;
-  fee: number;
   maxSlots: number | null;
   status: string;
   coverImage: string | null;
@@ -71,6 +73,14 @@ export interface PublicEventData {
   registrationCount: number;
   /** Churches participating in this event — empty means registration is blocked. */
   churches: ChurchOption[];
+  /** Admin-defined fee items registrants can select from (replaces flat `fee`). */
+  feeItems: EventFeeItem[];
+}
+
+export interface RegistrationFeeItemDetail {
+  id: string;
+  label: string;
+  amount: number;
 }
 
 export interface PaymentDetail {
@@ -126,6 +136,7 @@ export interface RegistrationListItem {
     createdAt: string;
   };
   payment: PaymentDetail | null;
+  feeItems: RegistrationFeeItemDetail[];
 }
 
 export interface RegistrationGroupResult {

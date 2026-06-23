@@ -90,6 +90,9 @@ export default async function RegistrationsPage() {
           createdAt: true,
         },
       },
+      feeItems: {
+        select: { id: true, label: true, amount: true },
+      },
     },
   });
 
@@ -137,11 +140,11 @@ export default async function RegistrationsPage() {
       slug: true,
       description: true,
       type: true,
+      customType: true,
       venue: true,
       startDate: true,
       endDate: true,
       registrationDeadline: true,
-      fee: true,
       maxSlots: true,
       status: true,
       coverImage: true,
@@ -169,6 +172,10 @@ export default async function RegistrationsPage() {
           inviteStatus: true,
           organization: { select: { name: true, logoUrl: true } },
         },
+      },
+      feeItems: {
+        orderBy: { order: 'asc' },
+        select: { id: true, label: true, amount: true, isRequired: true, order: true },
       },
     },
   });

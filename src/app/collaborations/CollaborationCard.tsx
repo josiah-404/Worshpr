@@ -4,7 +4,7 @@ import { type FC } from 'react';
 import {
   CalendarDays, MapPin, Building2,
   CheckCircle2, XCircle, Clock, TreePine,
-  Heart, BookOpen, Music2,
+  Heart, BookOpen, Music2, Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -20,6 +20,7 @@ const TYPE_GRADIENT: Record<EventType, string> = {
   FELLOWSHIP:    'from-blue-500 via-indigo-500 to-violet-500',
   SEMINAR:       'from-violet-600 via-purple-500 to-indigo-500',
   WORSHIP_NIGHT: 'from-rose-500 via-pink-500 to-fuchsia-600',
+  OTHER:         'from-gray-500 via-slate-500 to-zinc-600',
 };
 
 const TYPE_ICON: Record<EventType, JSX.Element> = {
@@ -27,10 +28,11 @@ const TYPE_ICON: Record<EventType, JSX.Element> = {
   FELLOWSHIP:    <Heart     className="h-16 w-16 text-white/20" />,
   SEMINAR:       <BookOpen  className="h-16 w-16 text-white/20" />,
   WORSHIP_NIGHT: <Music2    className="h-16 w-16 text-white/20" />,
+  OTHER:         <Sparkles  className="h-16 w-16 text-white/20" />,
 };
 
 const TYPE_LABEL: Record<EventType, string> = {
-  CAMP: 'Camp', FELLOWSHIP: 'Fellowship', SEMINAR: 'Seminar', WORSHIP_NIGHT: 'Worship Night',
+  CAMP: 'Camp', FELLOWSHIP: 'Fellowship', SEMINAR: 'Seminar', WORSHIP_NIGHT: 'Worship Night', OTHER: 'Other',
 };
 
 const EVENT_STATUS_STYLE: Record<EventStatus, string> = {
@@ -128,7 +130,7 @@ export const CollaborationCard: FC<CollaborationCardProps> = ({ invite }) => {
         {/* Type badge */}
         <div className="absolute top-3 right-3">
           <span className="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white/15 text-white backdrop-blur-md border border-white/20">
-            {TYPE_LABEL[event.type]}
+            {event.type === 'OTHER' ? (event.customType || 'Other') : TYPE_LABEL[event.type]}
           </span>
         </div>
 

@@ -16,11 +16,11 @@ export async function GET(
         slug: true,
         description: true,
         type: true,
+        customType: true,
         venue: true,
         startDate: true,
         endDate: true,
         registrationDeadline: true,
-        fee: true,
         maxSlots: true,
         status: true,
         coverImage: true,
@@ -53,6 +53,10 @@ export async function GET(
             },
           },
         },
+        feeItems: {
+          orderBy: { order: 'asc' },
+          select: { id: true, label: true, amount: true, isRequired: true, order: true },
+        },
       },
     });
 
@@ -72,11 +76,11 @@ export async function GET(
       slug: event.slug,
       description: event.description,
       type: event.type,
+      customType: event.customType,
       venue: event.venue,
       startDate: event.startDate.toISOString(),
       endDate: event.endDate.toISOString(),
       registrationDeadline: event.registrationDeadline?.toISOString() ?? null,
-      fee: event.fee,
       maxSlots: event.maxSlots,
       status: event.status,
       coverImage: event.coverImage,
@@ -101,6 +105,7 @@ export async function GET(
         orgName: ec.church.organization.name,
         orgId: ec.church.orgId,
       })),
+      feeItems: event.feeItems,
       registrationCount,
     };
 

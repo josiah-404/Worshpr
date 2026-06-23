@@ -85,10 +85,10 @@ export async function sendRegistrationPendingEmail(params: {
   eventEndDate: string;
   eventVenue: string | null;
   confirmationCode: string;
-  registrants: { fullName: string; email: string }[];
+  registrants: { fullName: string; email: string; feeItems: { label: string; amount: number }[] }[];
   headcount: number;
   paymentIntent: string;
-  eventFee: number;
+  totalAmount: number;
 }) {
   await sendMail({
     to: params.to,
@@ -107,7 +107,7 @@ export async function sendRegistrationApprovedEmail(params: {
   eventVenue: string | null;
   confirmationCode: string;
   paymentIntent: string;
-  eventFee: number;
+  feeItems: { label: string; amount: number }[];
   notes: string | null;
 }) {
   await sendMail({

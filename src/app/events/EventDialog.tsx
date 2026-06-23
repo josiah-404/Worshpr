@@ -32,9 +32,17 @@ import { useGetPaymentAccounts } from '@/hooks/useGetPaymentAccounts';
 import { useGetChurches } from '@/hooks/useGetChurches';
 import { useGetEventChurches } from '@/hooks/useGetEventChurches';
 import { useSetEventChurches } from '@/hooks/useSetEventChurches';
+import { useGetEventFeeItems } from '@/hooks/useGetEventFeeItems';
+import { useSetEventFeeItems } from '@/hooks/useSetEventFeeItems';
 import { setEventChurches } from '@/services/church.service';
+import { setEventFeeItems } from '@/services/event.service';
+import { EventFeeItemsEditor } from '@/components/events/EventFeeItemsEditor';
 import { createEventSchema, type CreateEventInput } from '@/validations/event.schema';
-import type { EventListItem, Organization } from '@/types';
+import type { EventListItem, Organization, EventFeeItemInput } from '@/types';
+
+const DEFAULT_FEE_ITEMS: EventFeeItemInput[] = [
+  { label: 'Registration Fee', amount: 0, isRequired: true },
+];
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -85,6 +93,7 @@ export const EventDialog: FC<EventDialogProps> = ({
     editingEvent?.id ?? '',
   );
   const { mutate: setChurches } = useSetEventChurches(editingEvent?.id ?? '');
+  const { mutate: setFeeItems } = useSetEventFeeItems(editingEvent?.id ?? '');
 
   const isPending = isCreating || isUpdating;
 
@@ -93,17 +102,21 @@ export const EventDialog: FC<EventDialogProps> = ({
   const [churchError, setChurchError] = useState(false);
   const { data: churchData } = useGetEventChurches(editingEvent?.id ?? null);
 
+  // ── Fee items ───────────────────────────────────────────────────────────────
+  const [feeItems, setFeeItemsState] = useState<EventFeeItemInput[]>(DEFAULT_FEE_ITEMS);
+  const { data: feeItemsData } = useGetEventFeeItems(editingEvent?.id ?? null);
+
   const form = useForm<CreateEventInput>({
     resolver: zodResolver(createEventSchema) as unknown as Resolver<CreateEventInput>,
     defaultValues: {
       title: '',
       description: '',
       type: 'FELLOWSHIP',
+      customType: '',
       venue: '',
       startDate: '',
       endDate: '',
       registrationDeadline: '',
-      fee: undefined,
       maxSlots: undefined,
       status: 'DRAFT',
       coverImage: '',
@@ -116,8 +129,9 @@ export const EventDialog: FC<EventDialogProps> = ({
   const { register, control, handleSubmit, reset, setValue, watch, formState: { errors } } = form;
   const coverImage = watch('coverImage');
   const themeColor = watch('themeColor');
-  const fee = watch('fee');
   const watchedHostOrgId = watch('hostOrgId');
+  const watchedType = watch('type');
+  const hasAnyFee = feeItems.some((i) => i.amount > 0);
 
   const churchOrgId = isSuperAdmin ? (watchedHostOrgId || null) : hostOrgId;
 
@@ -134,6 +148,15 @@ export const EventDialog: FC<EventDialogProps> = ({
     setChurchError(false);
   }, [churchData, editingEvent, open]);
 
+  // Sync fee items when data loads or dialog opens fresh
+  useEffect(() => {
+    if (editingEvent && feeItemsData) {
+      setFeeItemsState(feeItemsData.map((i) => ({ label: i.label, amount: i.amount, isRequired: i.isRequired })));
+    } else if (!editingEvent) {
+      setFeeItemsState(DEFAULT_FEE_ITEMS);
+    }
+  }, [feeItemsData, editingEvent, open]);
+
   // Populate form when editing
   useEffect(() => {
     if (editingEvent) {
@@ -141,11 +164,11 @@ export const EventDialog: FC<EventDialogProps> = ({
         title: editingEvent.title,
         description: editingEvent.description ?? '',
         type: editingEvent.type,
+        customType: editingEvent.customType ?? '',
         venue: editingEvent.venue ?? '',
         startDate: toDatetimeLocal(editingEvent.startDate),
         endDate: toDatetimeLocal(editingEvent.endDate),
         registrationDeadline: toDatetimeLocal(editingEvent.registrationDeadline),
-        fee: editingEvent.fee,
         maxSlots: editingEvent.maxSlots ?? undefined,
         status: editingEvent.status,
         coverImage: editingEvent.coverImage ?? '',
@@ -158,11 +181,11 @@ export const EventDialog: FC<EventDialogProps> = ({
         title: '',
         description: '',
         type: 'FELLOWSHIP',
+        customType: '',
         venue: '',
         startDate: '',
         endDate: '',
         registrationDeadline: '',
-        fee: undefined,
         maxSlots: undefined,
         status: 'DRAFT',
         coverImage: '',
@@ -191,6 +214,7 @@ export const EventDialog: FC<EventDialogProps> = ({
       updateMutate(updateData, {
         onSuccess: () => {
           setChurches(selectedChurchIds);
+          setFeeItems(feeItems);
           toast.success('Event updated');
           onOpenChange(false);
         },
@@ -200,6 +224,7 @@ export const EventDialog: FC<EventDialogProps> = ({
       createMutate(data, {
         onSuccess: async (newEvent) => {
           await setEventChurches(newEvent.id, selectedChurchIds);
+          await setEventFeeItems(newEvent.id, feeItems);
           toast.success('Event created');
           onOpenChange(false);
         },
@@ -419,6 +444,7 @@ export const EventDialog: FC<EventDialogProps> = ({
                       <SelectItem value="FELLOWSHIP">Fellowship</SelectItem>
                       <SelectItem value="SEMINAR">Seminar</SelectItem>
                       <SelectItem value="WORSHIP_NIGHT">Worship Night</SelectItem>
+                      <SelectItem value="OTHER">Others</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
@@ -450,6 +476,20 @@ export const EventDialog: FC<EventDialogProps> = ({
             </FormField>
           </div>
 
+          {/* ── Specify (only when Type = Others) ── */}
+          {watchedType === 'OTHER' && (
+            <FormField label="Please Specify" htmlFor="customType">
+              <Input
+                id="customType"
+                placeholder="e.g. Outreach, Retreat, Workshop"
+                {...register('customType')}
+              />
+              {errors.customType && (
+                <p className="text-xs text-destructive">{errors.customType.message}</p>
+              )}
+            </FormField>
+          )}
+
           {/* ── Venue ── */}
           <FormField label="Venue" htmlFor="venue" hint="(optional)">
             <Input id="venue" placeholder="e.g. Camp Lambayong, South Cotabato" {...register('venue')} />
@@ -476,38 +516,34 @@ export const EventDialog: FC<EventDialogProps> = ({
             <Input id="registrationDeadline" type="datetime-local" {...register('registrationDeadline')} />
           </FormField>
 
-          {/* ── Fee + Slots ── */}
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Registration Fee (₱)" htmlFor="fee">
-              <Input
-                id="fee"
-                type="text"
-                inputMode="decimal"
-                placeholder="0.00"
-                {...register('fee')}
-              />
-              {errors.fee && (
-                <p className="text-xs text-destructive">{errors.fee.message}</p>
-              )}
-            </FormField>
+          {/* ── Max Slots ── */}
+          <FormField label="Max Slots" htmlFor="maxSlots" hint="(optional)">
+            <Input
+              id="maxSlots"
+              type="number"
+              min={1}
+              step={1}
+              placeholder="Unlimited"
+              {...register('maxSlots')}
+            />
+            {errors.maxSlots && (
+              <p className="text-xs text-destructive">{errors.maxSlots.message}</p>
+            )}
+          </FormField>
 
-            <FormField label="Max Slots" htmlFor="maxSlots" hint="(optional)">
-              <Input
-                id="maxSlots"
-                type="number"
-                min={1}
-                step={1}
-                placeholder="Unlimited"
-                {...register('maxSlots')}
-              />
-              {errors.maxSlots && (
-                <p className="text-xs text-destructive">{errors.maxSlots.message}</p>
-              )}
-            </FormField>
+          {/* ── Fees ── */}
+          <div className="space-y-2">
+            <div>
+              <p className="text-sm font-medium">Fees</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Add a fee for each thing registrants can pay for (e.g. Registration, Food, Accommodation). Leave empty for a free event.
+              </p>
+            </div>
+            <EventFeeItemsEditor items={feeItems} onChange={setFeeItemsState} />
           </div>
 
-          {/* ── Payment Account (only when fee > 0) ── */}
-          {Number(fee) > 0 && (
+          {/* ── Payment Account (only when any fee > 0) ── */}
+          {hasAnyFee && (
             <FormField label="Payment Account" htmlFor="paymentAccountId" hint="(optional)">
               <Controller
                 name="paymentAccountId"

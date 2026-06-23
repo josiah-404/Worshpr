@@ -51,13 +51,19 @@ export async function PATCH(
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { coverImage, themeColor, paymentAccountId, registrationDeadline, maxSlots, startDate, endDate, ...rest } =
+    const { coverImage, themeColor, paymentAccountId, registrationDeadline, maxSlots, startDate, endDate, customType, ...rest } =
       parsed.data;
 
     const updated = await prisma.event.update({
       where: { id: params.id },
       data: {
         ...rest,
+        // customType only makes sense for type "OTHER" — clear it whenever the type changes away
+        ...(rest.type !== undefined
+          ? { customType: rest.type === 'OTHER' ? (customType?.trim() || null) : null }
+          : customType !== undefined
+            ? { customType: customType.trim() || null }
+            : {}),
         ...(startDate ? { startDate: new Date(startDate) } : {}),
         ...(endDate ? { endDate: new Date(endDate) } : {}),
         ...(registrationDeadline !== undefined
@@ -76,11 +82,11 @@ export async function PATCH(
         slug: true,
         description: true,
         type: true,
+        customType: true,
         venue: true,
         startDate: true,
         endDate: true,
         registrationDeadline: true,
-        fee: true,
         maxSlots: true,
         status: true,
         coverImage: true,
@@ -108,6 +114,10 @@ export async function PATCH(
             inviteStatus: true,
             organization: { select: { name: true, logoUrl: true } },
           },
+        },
+        feeItems: {
+          orderBy: { order: 'asc' },
+          select: { id: true, label: true, amount: true, isRequired: true, order: true },
         },
       },
     });

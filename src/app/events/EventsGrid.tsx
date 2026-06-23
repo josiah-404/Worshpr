@@ -153,6 +153,7 @@ export const EventsGrid: FC<EventsGridProps> = ({
               <SelectItem value="FELLOWSHIP">Fellowship</SelectItem>
               <SelectItem value="SEMINAR">Seminar</SelectItem>
               <SelectItem value="WORSHIP_NIGHT">Worship Night</SelectItem>
+              <SelectItem value="OTHER">Others</SelectItem>
             </SelectContent>
           </Select>
 

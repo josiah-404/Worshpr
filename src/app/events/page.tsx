@@ -27,11 +27,11 @@ export default async function EventsPage() {
       slug: true,
       description: true,
       type: true,
+      customType: true,
       venue: true,
       startDate: true,
       endDate: true,
       registrationDeadline: true,
-      fee: true,
       maxSlots: true,
       status: true,
       coverImage: true,
@@ -59,6 +59,10 @@ export default async function EventsPage() {
           inviteStatus: true,
           organization: { select: { name: true, logoUrl: true } },
         },
+      },
+      feeItems: {
+        orderBy: { order: 'asc' },
+        select: { id: true, label: true, amount: true, isRequired: true, order: true },
       },
     },
   });

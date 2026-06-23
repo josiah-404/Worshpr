@@ -113,6 +113,9 @@ export async function GET(req: NextRequest) {
             createdAt: true,
           },
         },
+        feeItems: {
+          select: { id: true, label: true, amount: true },
+        },
       },
     });
 
@@ -174,13 +177,16 @@ export async function POST(req: NextRequest) {
         id: true,
         title: true,
         type: true,
+        customType: true,
         startDate: true,
         endDate: true,
         venue: true,
         status: true,
         maxSlots: true,
         registrationDeadline: true,
-        fee: true,
+        feeItems: {
+          select: { id: true, label: true, amount: true, isRequired: true },
+        },
         organizations: {
           where: { role: 'HOST', inviteStatus: 'ACCEPTED' },
           select: { orgId: true },
@@ -215,6 +221,22 @@ export async function POST(req: NextRequest) {
     const hostOrgId = event.organizations[0]?.orgId;
     if (!hostOrgId) {
       return NextResponse.json({ error: 'Event has no host organization' }, { status: 500 });
+    }
+
+    // Required fee items are force-included and any id not belonging to this event is dropped —
+    // the authoritative amount is always computed server-side, never trusted from the client.
+    const requiredFeeItemIds = event.feeItems.filter((i) => i.isRequired).map((i) => i.id);
+    const registrantFeeSelections = registrants.map((r) => {
+      const validIds = (r.selectedFeeItemIds ?? []).filter((id) => event.feeItems.some((i) => i.id === id));
+      const finalIds = Array.from(new Set([...validIds, ...requiredFeeItemIds]));
+      const items = event.feeItems.filter((i) => finalIds.includes(i.id));
+      const amount = items.reduce((sum, i) => sum + i.amount, 0);
+      return { items, amount };
+    });
+    const totalAmount = registrantFeeSelections.reduce((sum, s) => sum + s.amount, 0);
+
+    if (totalAmount > 0 && paymentIntent === 'ONLINE' && !payment) {
+      return NextResponse.json({ error: 'Payment details are required' }, { status: 400 });
     }
 
     const confirmationCode = generateConfirmationCode();
@@ -321,11 +343,27 @@ export async function POST(req: NextRequest) {
         ),
       );
 
-      // Create shared payment for group (if provided and fee > 0)
-      if (payment && event.fee > 0) {
+      // Snapshot each registrant's selected fee items (label/amount frozen at submission time)
+      await Promise.all(
+        registrationRecords.map((reg, i) => {
+          const { items } = registrantFeeSelections[i];
+          if (items.length === 0) return Promise.resolve();
+          return tx.registrationFeeItem.createMany({
+            data: items.map((item) => ({
+              registrationId: reg.id,
+              feeItemId: item.id,
+              label: item.label,
+              amount: item.amount,
+            })),
+          });
+        }),
+      );
+
+      // Create shared payment for group (server-computed total — never trust client amount)
+      if (payment && totalAmount > 0) {
         await tx.payment.create({
           data: {
-            amount: payment.amount,
+            amount: totalAmount,
             method: payment.method,
             receiptUrl: payment.receiptUrl ?? null,
             referenceNo: payment.referenceNo ?? null,
@@ -351,15 +389,19 @@ export async function POST(req: NextRequest) {
       to: submittedByEmail,
       submittedByName,
       eventTitle: event.title,
-      eventType: event.type,
+      eventType: event.type === 'OTHER' ? (event.customType || 'Other') : event.type,
       eventStartDate: formatDate(event.startDate),
       eventEndDate: formatDate(event.endDate),
       eventVenue: event.venue ?? null,
       confirmationCode: result.confirmationCode,
-      registrants: result.registrations.map((r) => ({ fullName: r.fullName, email: r.email })),
+      registrants: result.registrations.map((r, i) => ({
+        fullName: r.fullName,
+        email: r.email,
+        feeItems: registrantFeeSelections[i].items.map((item) => ({ label: item.label, amount: item.amount })),
+      })),
       headcount: result.headcount,
       paymentIntent,
-      eventFee: event.fee,
+      totalAmount,
     }).catch(console.error);
 
     return NextResponse.json({ data: result }, { status: 201 });

@@ -2,7 +2,7 @@
 
 import { type FC, useEffect } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
-import { Upload, Loader2, Copy, QrCode, Smartphone, Building2, CreditCard } from 'lucide-react';
+import { Upload, Loader2, Copy, QrCode, Smartphone, Building2, CreditCard, CheckCircle2, Circle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { useReceiptUpload } from '@/hooks/useReceiptUpload';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import type { RegistrationGroupInput } from '@/validations/registration.schema';
 import type { PublicEventData, PaymentAccountSummary } from '@/types';
 
@@ -137,11 +138,38 @@ export const PaymentStep: FC<PaymentStepProps> = ({ event }) => {
     useReceiptUpload();
 
   const paymentIntent = useWatch({ control: form.control, name: 'paymentIntent' });
-  const headcount = useWatch({ control: form.control, name: 'registrants' })?.length ?? 1;
-  const totalFee = event.fee * headcount;
+  const registrants = useWatch({ control: form.control, name: 'registrants' }) ?? [];
+  const feeItems = event.feeItems;
+  const requiredIds = feeItems.filter((i) => i.isRequired).map((i) => i.id);
 
-  const isFree = event.fee === 0;
+  function registrantTotal(selectedIds: string[] | undefined): number {
+    const ids = selectedIds ?? [];
+    return feeItems.filter((i) => ids.includes(i.id)).reduce((sum, i) => sum + i.amount, 0);
+  }
+
+  const totalFee = registrants.reduce((sum, r) => sum + registrantTotal(r.selectedFeeItemIds), 0);
+  const isFree = totalFee === 0;
   const paymentAccount = event.paymentAccount;
+
+  // Required fee items must always be included, regardless of what the registrant toggles
+  useEffect(() => {
+    registrants.forEach((r, i) => {
+      const current = r.selectedFeeItemIds ?? [];
+      const merged = Array.from(new Set([...current, ...requiredIds]));
+      if (merged.length !== current.length) {
+        form.setValue(`registrants.${i}.selectedFeeItemIds`, merged);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feeItems, registrants.length]);
+
+  function toggleFeeItem(index: number, itemId: string) {
+    const current = form.getValues(`registrants.${index}.selectedFeeItemIds`) ?? [];
+    const next = current.includes(itemId)
+      ? current.filter((id) => id !== itemId)
+      : [...current, itemId];
+    form.setValue(`registrants.${index}.selectedFeeItemIds`, next);
+  }
 
   // Auto-set amount and method when switching to ONLINE
   useEffect(() => {
@@ -155,22 +183,61 @@ export const PaymentStep: FC<PaymentStepProps> = ({ event }) => {
 
   return (
     <div className="space-y-6">
-      {/* Fee summary */}
-      <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Fee per person</span>
-          <span>{isFree ? 'Free' : `₱${event.fee.toFixed(2)}`}</span>
+      {/* Fee item selection per registrant */}
+      {feeItems.length > 0 && (
+        <div className="space-y-3">
+          {registrants.map((r, index) => (
+            <div key={index} className="rounded-lg border p-4 space-y-2.5">
+              <p className="text-sm font-semibold">
+                {r.fullName || `Registrant ${index + 1}`}
+              </p>
+              <div className="space-y-1.5">
+                {feeItems.map((item) => {
+                  const selected = (r.selectedFeeItemIds ?? []).includes(item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      disabled={item.isRequired}
+                      onClick={() => toggleFeeItem(index, item.id)}
+                      className={cn(
+                        'w-full flex items-center justify-between rounded-md border px-3 py-2 text-sm transition-colors disabled:cursor-default',
+                        selected
+                          ? 'bg-primary/10 border-primary/20'
+                          : 'border-transparent hover:bg-muted/50',
+                      )}
+                    >
+                      <span className="flex items-center gap-2">
+                        {selected ? (
+                          <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                        ) : (
+                          <Circle className="h-4 w-4 text-muted-foreground shrink-0" />
+                        )}
+                        {item.label}
+                        {item.isRequired && (
+                          <span className="text-xs text-muted-foreground">(Required)</span>
+                        )}
+                      </span>
+                      <span className="font-medium">₱{item.amount.toFixed(2)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex justify-between text-sm font-semibold border-t pt-2">
+                <span>Subtotal</span>
+                <span>₱{registrantTotal(r.selectedFeeItemIds).toFixed(2)}</span>
+              </div>
+            </div>
+          ))}
         </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Registrants</span>
-          <span>{headcount}</span>
+      )}
+
+      {/* Total */}
+      <div className="rounded-lg border bg-muted/30 p-4">
+        <div className="flex justify-between font-semibold">
+          <span>Total</span>
+          <span>{isFree ? 'Free' : `₱${totalFee.toFixed(2)}`}</span>
         </div>
-        {!isFree && (
-          <div className="flex justify-between font-semibold border-t pt-2">
-            <span>Total</span>
-            <span>₱{totalFee.toFixed(2)}</span>
-          </div>
-        )}
       </div>
 
       {isFree ? (

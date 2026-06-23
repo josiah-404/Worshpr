@@ -1,5 +1,5 @@
 import { api } from '@/lib/axios';
-import type { EventListItem, CollaborationInvite } from '@/types';
+import type { EventListItem, CollaborationInvite, EventFeeItem, EventFeeItemInput } from '@/types';
 import type { CreateEventInput, UpdateEventInput, InviteOrgInput } from '@/validations/event.schema';
 
 export const getEvents = async (params?: { orgId?: string }): Promise<EventListItem[]> => {
@@ -38,5 +38,18 @@ export const respondToInvite = async (
 
 export const getCollaborations = async (): Promise<CollaborationInvite[]> => {
   const { data } = await api.get<{ data: CollaborationInvite[] }>('/collaborations');
+  return data.data;
+};
+
+export const getEventFeeItems = async (eventId: string): Promise<EventFeeItem[]> => {
+  const { data } = await api.get<{ data: EventFeeItem[] }>(`/events/${eventId}/fee-items`);
+  return data.data;
+};
+
+export const setEventFeeItems = async (
+  eventId: string,
+  items: EventFeeItemInput[],
+): Promise<EventFeeItem[]> => {
+  const { data } = await api.put<{ data: EventFeeItem[] }>(`/events/${eventId}/fee-items`, { items });
   return data.data;
 };

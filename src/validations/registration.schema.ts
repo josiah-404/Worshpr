@@ -12,6 +12,7 @@ export const registrantSchema = z.object({
   divisionOrgId: z.string().optional(),
   emergencyContactName: z.string().min(1, 'Emergency contact name is required'),
   emergencyContactPhone: z.string().min(1, 'Emergency contact phone is required'),
+  selectedFeeItemIds: z.array(z.string()).default([]),
 });
 
 export const paymentSchema = z.object({

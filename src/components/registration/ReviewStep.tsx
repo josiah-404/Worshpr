@@ -15,7 +15,16 @@ export const ReviewStep: FC<ReviewStepProps> = ({ event }) => {
   const form = useFormContext<RegistrationGroupInput>();
   const values = form.getValues();
 
-  const totalFee = event.fee * values.registrants.length;
+  function registrantFeeItems(selectedIds: string[] | undefined) {
+    const ids = selectedIds ?? [];
+    return event.feeItems.filter((i) => ids.includes(i.id));
+  }
+
+  const totalFee = values.registrants.reduce(
+    (sum, r) => sum + registrantFeeItems(r.selectedFeeItemIds).reduce((s, i) => s + i.amount, 0),
+    0,
+  );
+  const isFree = totalFee === 0;
 
   return (
     <div className="space-y-6 text-sm">
@@ -58,6 +67,16 @@ export const ReviewStep: FC<ReviewStepProps> = ({ event }) => {
                 </p>
               )}
               <p className="text-muted-foreground text-xs">{r.address}</p>
+              {registrantFeeItems(r.selectedFeeItemIds).length > 0 && (
+                <div className="pt-1 border-t mt-1 space-y-0.5">
+                  {registrantFeeItems(r.selectedFeeItemIds).map((item) => (
+                    <div key={item.id} className="flex justify-between text-xs text-muted-foreground">
+                      <span>{item.label}</span>
+                      <span>₱{item.amount.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -68,7 +87,7 @@ export const ReviewStep: FC<ReviewStepProps> = ({ event }) => {
       {/* Payment */}
       <div>
         <p className="font-semibold text-xs uppercase text-muted-foreground tracking-wide mb-2">Payment</p>
-        {event.fee === 0 ? (
+        {isFree ? (
           <Badge variant="secondary">Free</Badge>
         ) : (
           <div className="space-y-1">

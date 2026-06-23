@@ -28,6 +28,7 @@ const walkInSchema = z.object({
   churchId:              z.string().optional(),
   divisionOrgId:         z.string().optional(),
   paymentIntent:         z.enum(['CASH', 'ONLINE', 'FREE']).default('CASH'),
+  selectedFeeItemIds:    z.array(z.string()).default([]),
 });
 
 export async function POST(req: NextRequest) {
@@ -46,13 +47,16 @@ export async function POST(req: NextRequest) {
     const {
       eventId, fullName, email, phone, birthday,
       nickname, address, emergencyContactName, emergencyContactPhone,
-      churchId, divisionOrgId, paymentIntent,
+      churchId, divisionOrgId, paymentIntent, selectedFeeItemIds,
     } = parsed.data;
 
     const event = await prisma.event.findUnique({
       where: { id: eventId },
       select: {
         id: true,
+        feeItems: {
+          select: { id: true, label: true, amount: true, isRequired: true },
+        },
         organizations: {
           where: { role: 'HOST', inviteStatus: 'ACCEPTED' },
           select: { orgId: true },
@@ -69,6 +73,14 @@ export async function POST(req: NextRequest) {
     if (!hostOrgId) {
       return NextResponse.json({ error: 'Event has no host organization' }, { status: 500 });
     }
+
+    // Required fee items are force-included and any id not belonging to this event is dropped —
+    // same integrity rule as the public registration endpoint.
+    const requiredFeeItemIds = event.feeItems.filter((i) => i.isRequired).map((i) => i.id);
+    const validIds = selectedFeeItemIds.filter((id) => event.feeItems.some((i) => i.id === id));
+    const finalFeeItemIds = Array.from(new Set([...validIds, ...requiredFeeItemIds]));
+    const selectedItems = event.feeItems.filter((i) => finalFeeItemIds.includes(i.id));
+    const totalAmount = selectedItems.reduce((sum, i) => sum + i.amount, 0);
 
     const confirmationCode = generateConfirmationCode();
     const submittedByName = session.user.name ?? session.user.email ?? 'Admin';
@@ -137,7 +149,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      await tx.registration.create({
+      const registration = await tx.registration.create({
         data: {
           eventId,
           registrantId: registrant.id,
@@ -149,6 +161,47 @@ export async function POST(req: NextRequest) {
           approvedAt:   new Date(),
         },
       });
+
+      if (selectedItems.length > 0) {
+        await tx.registrationFeeItem.createMany({
+          data: selectedItems.map((item) => ({
+            registrationId: registration.id,
+            feeItemId: item.id,
+            label: item.label,
+            amount: item.amount,
+          })),
+        });
+      }
+
+      // Walk-ins are entered (and confirmed) by staff on the spot — record the payment as
+      // already verified and post the income immediately, mirroring the auto-insert that
+      // happens on approval for the public registration flow.
+      if (totalAmount > 0) {
+        const payment = await tx.payment.create({
+          data: {
+            amount: totalAmount,
+            method: paymentIntent === 'ONLINE' ? 'OTHER' : 'CASH',
+            status: 'VERIFIED',
+            verifiedBy: session.user.id,
+            verifiedAt: new Date(),
+            registrationId: registration.id,
+          },
+        });
+
+        await tx.financeLedger.create({
+          data: {
+            orgId: hostOrgId,
+            eventId,
+            type: 'INCOME',
+            category: 'REGISTRATION',
+            amount: payment.amount,
+            description: `Registration — ${fullName}`,
+            referenceId: payment.id,
+            enteredBy: session.user.id,
+            date: new Date(),
+          },
+        });
+      }
 
       return { confirmationCode, fullName, email };
     });

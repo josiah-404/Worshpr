@@ -246,6 +246,7 @@ export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({ registrationTy
       divisionOrgId: '',
       emergencyContactName: '',
       emergencyContactPhone: '',
+      selectedFeeItemIds: [],
     });
   }
 

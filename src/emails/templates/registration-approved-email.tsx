@@ -21,7 +21,7 @@ interface RegistrationApprovedEmailProps {
   eventVenue: string | null;
   confirmationCode: string;
   paymentIntent: string;
-  eventFee: number;
+  feeItems: { label: string; amount: number }[];
   notes: string | null;
 }
 
@@ -32,9 +32,9 @@ const EVENT_TYPE_LABEL: Record<string, string> = {
   WORSHIP_NIGHT: 'Worship Night',
 };
 
-function paymentReminder(intent: string, fee: number): string | null {
-  if (fee === 0 || intent === 'FREE') return null;
-  if (intent === 'CASH') return `Please prepare PHP ${fee.toLocaleString()} cash for payment on-site.`;
+function paymentReminder(intent: string, totalAmount: number): string | null {
+  if (totalAmount === 0 || intent === 'FREE') return null;
+  if (intent === 'CASH') return `Please prepare PHP ${totalAmount.toLocaleString()} cash for payment on-site.`;
   return `Your online payment is under review. Please keep your receipt for verification.`;
 }
 
@@ -47,10 +47,11 @@ export function RegistrationApprovedEmail({
   eventVenue,
   confirmationCode,
   paymentIntent,
-  eventFee,
+  feeItems,
   notes,
 }: RegistrationApprovedEmailProps) {
-  const payment = paymentReminder(paymentIntent, eventFee);
+  const totalAmount = feeItems.reduce((sum, item) => sum + item.amount, 0);
+  const payment = paymentReminder(paymentIntent, totalAmount);
 
   return (
     <Html>
@@ -109,6 +110,21 @@ export function RegistrationApprovedEmail({
               </Row>
             )}
           </Section>
+
+          {/* Fee breakdown */}
+          {feeItems.length > 0 && (
+            <Section style={card}>
+              <Text style={sectionTitle}>Fees</Text>
+              {feeItems.map((item, i) => (
+                <Row key={i}>
+                  <Column>
+                    <Text style={detailLabel}>{item.label}</Text>
+                    <Text style={detailValue}>PHP {item.amount.toLocaleString()}</Text>
+                  </Column>
+                </Row>
+              ))}
+            </Section>
+          )}
 
           {/* Payment reminder */}
           {payment && (

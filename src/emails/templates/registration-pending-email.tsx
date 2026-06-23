@@ -20,10 +20,10 @@ interface RegistrationPendingEmailProps {
   eventEndDate: string;
   eventVenue: string | null;
   confirmationCode: string;
-  registrants: { fullName: string; email: string }[];
+  registrants: { fullName: string; email: string; feeItems: { label: string; amount: number }[] }[];
   headcount: number;
   paymentIntent: string;
-  eventFee: number;
+  totalAmount: number;
 }
 
 const EVENT_TYPE_LABEL: Record<string, string> = {
@@ -33,9 +33,9 @@ const EVENT_TYPE_LABEL: Record<string, string> = {
   WORSHIP_NIGHT: 'Worship Night',
 };
 
-function paymentMessage(intent: string, fee: number): string {
-  if (fee === 0 || intent === 'FREE') return 'This event is free — no payment required.';
-  if (intent === 'CASH') return `Please bring PHP ${fee.toLocaleString()} cash on the day of the event.`;
+function paymentMessage(intent: string, totalAmount: number): string {
+  if (totalAmount === 0 || intent === 'FREE') return 'This event is free — no payment required.';
+  if (intent === 'CASH') return `Please bring PHP ${totalAmount.toLocaleString()} cash on the day of the event.`;
   return `Your payment receipt has been received and is currently under review by the organizer.`;
 }
 
@@ -50,7 +50,7 @@ export function RegistrationPendingEmail({
   registrants,
   headcount,
   paymentIntent,
-  eventFee,
+  totalAmount,
 }: RegistrationPendingEmailProps) {
   return (
     <Html>
@@ -103,11 +103,11 @@ export function RegistrationPendingEmail({
                 </Column>
               </Row>
             )}
-            {eventFee > 0 && (
+            {totalAmount > 0 && (
               <Row>
                 <Column>
-                  <Text style={detailLabel}>Registration Fee</Text>
-                  <Text style={detailValue}>PHP {eventFee.toLocaleString()}</Text>
+                  <Text style={detailLabel}>Total Fees</Text>
+                  <Text style={detailValue}>PHP {totalAmount.toLocaleString()}</Text>
                 </Column>
               </Row>
             )}
@@ -126,6 +126,11 @@ export function RegistrationPendingEmail({
                 <Column>
                   <Text style={{ ...detailValue, margin: 0 }}>{r.fullName}</Text>
                   <Text style={{ ...detailLabel, margin: 0 }}>{r.email}</Text>
+                  {r.feeItems.length > 0 && (
+                    <Text style={{ ...detailLabel, margin: '2px 0 0' }}>
+                      {r.feeItems.map((item) => `${item.label} (PHP ${item.amount.toLocaleString()})`).join(' · ')}
+                    </Text>
+                  )}
                 </Column>
               </Row>
             ))}
@@ -134,7 +139,7 @@ export function RegistrationPendingEmail({
           {/* Payment reminder */}
           <Section style={infoBox}>
             <Text style={infoText}>
-              <strong>Payment:</strong> {paymentMessage(paymentIntent, eventFee)}
+              <strong>Payment:</strong> {paymentMessage(paymentIntent, totalAmount)}
             </Text>
           </Section>
 

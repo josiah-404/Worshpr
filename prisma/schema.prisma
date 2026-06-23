@@ -181,11 +181,11 @@ model Event {
   slug                 String      @unique
   description          String?     @db.Text
   type                 EventType
+  customType           String?     @map("custom_type")
   venue                String?
   startDate            DateTime
   endDate              DateTime
   registrationDeadline DateTime?
-  fee                  Float       @default(0)
   maxSlots             Int?
   status               EventStatus @default(DRAFT)
   coverImage           String?
@@ -199,6 +199,7 @@ model Event {
   paymentAccount     PaymentAccount?     @relation(fields: [paymentAccountId], references: [id])
   organizations      EventOrganization[]
   eventChurches      EventChurch[]
+  feeItems           EventFeeItem[]
   registrationGroups RegistrationGroup[]
   registrations      Registration[]
   financeLedger      FinanceLedger[]
@@ -208,6 +209,25 @@ model Event {
 
   @@index([status, startDate])
   @@map("events")
+}
+
+/// Admin-defined fee line item for an event (e.g. "Registration Fee", "Food", "Accommodation").
+/// Replaces the legacy Event.fee flat number — see RegistrationFeeItem for per-registrant selections.
+model EventFeeItem {
+  id         String   @id @default(cuid())
+  eventId    String
+  label      String
+  amount     Float
+  isRequired Boolean  @default(false)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  event      Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  selections RegistrationFeeItem[]
+
+  @@index([eventId])
+  @@map("event_fee_items")
 }
 
 model EventProgram {
@@ -306,17 +326,35 @@ model Registration {
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 
-  event        Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  registrant   Registrant        @relation(fields: [registrantId], references: [id])
-  group        RegistrationGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  organization Organization      @relation(fields: [orgId], references: [id])
-  payment      Payment?          @relation("IndividualPayment")
+  event        Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  registrant   Registrant            @relation(fields: [registrantId], references: [id])
+  group        RegistrationGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  organization Organization          @relation(fields: [orgId], references: [id])
+  payment      Payment?              @relation("IndividualPayment")
+  feeItems     RegistrationFeeItem[]
 
   @@unique([eventId, registrantId])
   @@index([eventId, status])
   @@index([orgId, status])
   @@index([groupId])
   @@map("registrations")
+}
+
+/// Snapshot of a fee item a registrant selected at submission time — label/amount are
+/// copied so later edits or deletion of the source EventFeeItem don't change past totals.
+model RegistrationFeeItem {
+  id             String       @id @default(cuid())
+  registrationId String
+  feeItemId      String
+  label          String
+  amount         Float
+  createdAt      DateTime     @default(now())
+
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  feeItem        EventFeeItem @relation(fields: [feeItemId], references: [id])
+
+  @@unique([registrationId, feeItemId])
+  @@map("registration_fee_items")
 }
 
 model Payment {
@@ -492,6 +530,7 @@ enum EventType {
   FELLOWSHIP
   SEMINAR
   WORSHIP_NIGHT
+  OTHER
 }
 
 enum EventStatus {

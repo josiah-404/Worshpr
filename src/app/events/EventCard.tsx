@@ -3,7 +3,7 @@
 import { type FC, useState } from 'react';
 import {
   CalendarDays, MapPin, Building2, Users,
-  TreePine, Heart, BookOpen, Music2,
+  TreePine, Heart, BookOpen, Music2, Sparkles,
   QrCode, Trash2,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -20,6 +20,7 @@ const TYPE_GRADIENT: Record<EventType, string> = {
   FELLOWSHIP:    'from-blue-500 via-indigo-500 to-violet-500',
   SEMINAR:       'from-violet-600 via-purple-500 to-indigo-500',
   WORSHIP_NIGHT: 'from-rose-500 via-pink-500 to-fuchsia-600',
+  OTHER:         'from-gray-500 via-slate-500 to-zinc-600',
 };
 
 const TYPE_ICON: Record<EventType, JSX.Element> = {
@@ -27,6 +28,7 @@ const TYPE_ICON: Record<EventType, JSX.Element> = {
   FELLOWSHIP:    <Heart     className="h-20 w-20 text-white/20" />,
   SEMINAR:       <BookOpen  className="h-20 w-20 text-white/20" />,
   WORSHIP_NIGHT: <Music2    className="h-20 w-20 text-white/20" />,
+  OTHER:         <Sparkles  className="h-20 w-20 text-white/20" />,
 };
 
 const TYPE_LABEL: Record<EventType, string> = {
@@ -34,6 +36,7 @@ const TYPE_LABEL: Record<EventType, string> = {
   FELLOWSHIP:    'Fellowship',
   SEMINAR:       'Seminar',
   WORSHIP_NIGHT: 'Worship Night',
+  OTHER:         'Other',
 };
 
 const STATUS_CONFIG: Record<EventStatus, { label: string; dot: string; pill: string }> = {
@@ -76,6 +79,11 @@ export const EventCard: FC<EventCardProps> = ({ event, onDelete }) => {
     (o) => o.role === 'COLLABORATOR' && o.inviteStatus === 'ACCEPTED',
   );
   const status = STATUS_CONFIG[event.status];
+
+  const requiredTotal = event.feeItems.filter((i) => i.isRequired).reduce((sum, i) => sum + i.amount, 0);
+  const hasOptionalFees = event.feeItems.some((i) => !i.isRequired && i.amount > 0);
+  const isFree = requiredTotal === 0 && !hasOptionalFees;
+  const feeLabel = isFree ? 'Free' : `${hasOptionalFees ? 'From ' : ''}₱${requiredTotal.toLocaleString()}`;
 
   const registrationUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/register/${event.slug}`
@@ -126,7 +134,7 @@ export const EventCard: FC<EventCardProps> = ({ event, onDelete }) => {
           {/* Type badge — top right */}
           <div className="absolute top-3 right-3">
             <span className="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white/15 text-white backdrop-blur-md border border-white/20">
-              {TYPE_LABEL[event.type]}
+              {event.type === 'OTHER' ? (event.customType || 'Other') : TYPE_LABEL[event.type]}
             </span>
           </div>
 
@@ -180,11 +188,11 @@ export const EventCard: FC<EventCardProps> = ({ event, onDelete }) => {
         <CardFooter className="px-4 pb-4 pt-2 flex items-center justify-between border-t border-border/40">
           <span className={cn(
             'text-xs font-semibold px-2.5 py-1 rounded-full',
-            event.fee === 0
+            isFree
               ? 'bg-emerald-500/10 text-emerald-500 ring-1 ring-emerald-500/20'
               : 'bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20',
           )}>
-            {event.fee === 0 ? 'Free' : `₱${event.fee.toLocaleString()}`}
+            {feeLabel}
           </span>
 
           <div className="flex items-center gap-1">

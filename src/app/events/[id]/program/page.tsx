@@ -21,6 +21,7 @@ export default async function ProgramPage({ params }: PageProps) {
       id: true,
       title: true,
       type: true,
+      customType: true,
       description: true,
       venue: true,
       startDate: true,
@@ -128,7 +129,7 @@ export default async function ProgramPage({ params }: PageProps) {
       <ProgramClient
         eventId={event.id}
         eventTitle={event.title}
-        eventType={event.type}
+        eventType={event.type === 'OTHER' ? (event.customType || 'Other') : event.type}
         initialProgram={initialProgram}
         churches={churches}
         eventDetails={eventDetails}
