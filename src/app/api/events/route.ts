@@ -70,6 +70,10 @@ export async function GET(req: NextRequest) {
           orderBy: { order: 'asc' },
           select: { id: true, label: true, amount: true, isRequired: true, order: true },
         },
+        registrantTypes: {
+          orderBy: { order: 'asc' },
+          select: { id: true, label: true, order: true },
+        },
       },
     });
 
@@ -184,6 +188,10 @@ export async function POST(req: NextRequest) {
         feeItems: {
           orderBy: { order: 'asc' },
           select: { id: true, label: true, amount: true, isRequired: true, order: true },
+        },
+        registrantTypes: {
+          orderBy: { order: 'asc' },
+          select: { id: true, label: true, order: true },
         },
       },
     });

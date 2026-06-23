@@ -168,7 +168,8 @@ export async function PATCH(
         updatedAt: updated.updatedAt.toISOString(),
       },
     }, { status: 200 });
-  } catch {
+  } catch (err) {
+    console.error('PATCH /api/registrations/[id] failed:', err);
     return NextResponse.json({ error: 'Failed to update registration' }, { status: 500 });
   }
 }

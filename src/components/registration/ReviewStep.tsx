@@ -20,6 +20,10 @@ export const ReviewStep: FC<ReviewStepProps> = ({ event }) => {
     return event.feeItems.filter((i) => ids.includes(i.id));
   }
 
+  function registrantTypeLabel(registrantTypeId: string | undefined) {
+    return event.registrantTypes.find((t) => t.id === registrantTypeId)?.label ?? null;
+  }
+
   const totalFee = values.registrants.reduce(
     (sum, r) => sum + registrantFeeItems(r.selectedFeeItemIds).reduce((s, i) => s + i.amount, 0),
     0,
@@ -58,6 +62,9 @@ export const ReviewStep: FC<ReviewStepProps> = ({ event }) => {
                 {r.fullName}{r.nickname ? ` (${r.nickname})` : ''}
               </p>
               <p className="text-muted-foreground">{r.email} · {r.phone}</p>
+              {registrantTypeLabel(r.registrantTypeId) && (
+                <Badge variant="outline" className="text-xs">{registrantTypeLabel(r.registrantTypeId)}</Badge>
+              )}
               {(r.churchId || r.divisionOrgId) && (
                 <p className="text-muted-foreground text-xs">
                   {[

@@ -55,6 +55,8 @@ export async function GET(req: NextRequest) {
         rejectedBy: true,
         rejectedAt: true,
         notes: true,
+        registrantTypeId: true,
+        registrantTypeLabel: true,
         createdAt: true,
         updatedAt: true,
         registrant: {
@@ -187,6 +189,9 @@ export async function POST(req: NextRequest) {
         feeItems: {
           select: { id: true, label: true, amount: true, isRequired: true },
         },
+        registrantTypes: {
+          select: { id: true, label: true },
+        },
         organizations: {
           where: { role: 'HOST', inviteStatus: 'ACCEPTED' },
           select: { orgId: true },
@@ -234,6 +239,15 @@ export async function POST(req: NextRequest) {
       return { items, amount };
     });
     const totalAmount = registrantFeeSelections.reduce((sum, s) => sum + s.amount, 0);
+
+    // Registrant type must belong to this event — any id that doesn't is silently dropped
+    // rather than rejected outright, since the field is optional.
+    const registrantTypeSnapshots = registrants.map((r) => {
+      const match = r.registrantTypeId
+        ? event.registrantTypes.find((t) => t.id === r.registrantTypeId)
+        : undefined;
+      return match ? { id: match.id, label: match.label } : null;
+    });
 
     if (totalAmount > 0 && paymentIntent === 'ONLINE' && !payment) {
       return NextResponse.json({ error: 'Payment details are required' }, { status: 400 });
@@ -328,7 +342,7 @@ export async function POST(req: NextRequest) {
 
       // Create registrations
       const registrationRecords = await Promise.all(
-        resolvedRegistrants.map((registrant) =>
+        resolvedRegistrants.map((registrant, i) =>
           tx.registration.create({
             data: {
               eventId,
@@ -337,6 +351,8 @@ export async function POST(req: NextRequest) {
               orgId: hostOrgId,
               paymentIntent,
               status: 'PENDING',
+              registrantTypeId: registrantTypeSnapshots[i]?.id ?? null,
+              registrantTypeLabel: registrantTypeSnapshots[i]?.label ?? null,
             },
             select: { id: true, registrantId: true },
           }),

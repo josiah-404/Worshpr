@@ -1,5 +1,8 @@
 import { api } from '@/lib/axios';
-import type { EventListItem, CollaborationInvite, EventFeeItem, EventFeeItemInput } from '@/types';
+import type {
+  EventListItem, CollaborationInvite, EventFeeItem, EventFeeItemInput,
+  EventRegistrantType, EventRegistrantTypeInput,
+} from '@/types';
 import type { CreateEventInput, UpdateEventInput, InviteOrgInput } from '@/validations/event.schema';
 
 export const getEvents = async (params?: { orgId?: string }): Promise<EventListItem[]> => {
@@ -51,5 +54,18 @@ export const setEventFeeItems = async (
   items: EventFeeItemInput[],
 ): Promise<EventFeeItem[]> => {
   const { data } = await api.put<{ data: EventFeeItem[] }>(`/events/${eventId}/fee-items`, { items });
+  return data.data;
+};
+
+export const getEventRegistrantTypes = async (eventId: string): Promise<EventRegistrantType[]> => {
+  const { data } = await api.get<{ data: EventRegistrantType[] }>(`/events/${eventId}/registrant-types`);
+  return data.data;
+};
+
+export const setEventRegistrantTypes = async (
+  eventId: string,
+  items: EventRegistrantTypeInput[],
+): Promise<EventRegistrantType[]> => {
+  const { data } = await api.put<{ data: EventRegistrantType[] }>(`/events/${eventId}/registrant-types`, { items });
   return data.data;
 };

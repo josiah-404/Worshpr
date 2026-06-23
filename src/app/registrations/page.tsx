@@ -32,6 +32,8 @@ export default async function RegistrationsPage() {
       rejectedBy: true,
       rejectedAt: true,
       notes: true,
+      registrantTypeId: true,
+      registrantTypeLabel: true,
       createdAt: true,
       updatedAt: true,
       registrant: {
@@ -176,6 +178,10 @@ export default async function RegistrationsPage() {
       feeItems: {
         orderBy: { order: 'asc' },
         select: { id: true, label: true, amount: true, isRequired: true, order: true },
+      },
+      registrantTypes: {
+        orderBy: { order: 'asc' },
+        select: { id: true, label: true, order: true },
       },
     },
   });

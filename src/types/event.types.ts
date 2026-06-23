@@ -19,6 +19,16 @@ export interface EventFeeItemInput {
   isRequired: boolean;
 }
 
+export interface EventRegistrantType {
+  id: string;
+  label: string;
+  order: number;
+}
+
+export interface EventRegistrantTypeInput {
+  label: string;
+}
+
 export interface EventOrg {
   id: string;
   orgId: string;
@@ -78,4 +88,5 @@ export interface EventListItem {
   updatedAt: string;
   organizations: EventOrg[];
   feeItems: EventFeeItem[];
+  registrantTypes: EventRegistrantType[];
 }

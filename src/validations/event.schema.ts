@@ -69,9 +69,19 @@ export const setFeeItemsSchema = z.object({
   items: z.array(feeItemSchema),
 });
 
+export const registrantTypeSchema = z.object({
+  label: z.string().min(1, 'Label is required'),
+});
+
+export const setRegistrantTypesSchema = z.object({
+  items: z.array(registrantTypeSchema),
+});
+
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 export type InviteOrgInput = z.infer<typeof inviteOrgSchema>;
 export type RespondInviteInput = z.infer<typeof respondInviteSchema>;
 export type FeeItemInput = z.infer<typeof feeItemSchema>;
 export type SetFeeItemsInput = z.infer<typeof setFeeItemsSchema>;
+export type RegistrantTypeInput = z.infer<typeof registrantTypeSchema>;
+export type SetRegistrantTypesInput = z.infer<typeof setRegistrantTypesSchema>;

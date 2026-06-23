@@ -1,6 +1,6 @@
 import type { PaymentAccountSummary } from '@/types/payment-account.types';
 import type { ChurchOption } from '@/types/church.types';
-import type { EventFeeItem } from '@/types/event.types';
+import type { EventFeeItem, EventRegistrantType } from '@/types/event.types';
 
 export type RegistrationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 export type PaymentIntent = 'CASH' | 'ONLINE' | 'FREE';
@@ -20,6 +20,7 @@ export interface RegistrantData {
   emergencyContactName: string;
   emergencyContactPhone: string;
   selectedFeeItemIds?: string[];
+  registrantTypeId?: string;
 }
 
 export interface PaymentPayload {
@@ -75,6 +76,8 @@ export interface PublicEventData {
   churches: ChurchOption[];
   /** Admin-defined fee items registrants can select from (replaces flat `fee`). */
   feeItems: EventFeeItem[];
+  /** Admin-defined registrant types (e.g. Staff, Pastor, Visitor) — empty means the field is hidden. */
+  registrantTypes: EventRegistrantType[];
 }
 
 export interface RegistrationFeeItemDetail {
@@ -137,6 +140,8 @@ export interface RegistrationListItem {
   };
   payment: PaymentDetail | null;
   feeItems: RegistrationFeeItemDetail[];
+  registrantTypeId: string | null;
+  registrantTypeLabel: string | null;
 }
 
 export interface RegistrationGroupResult {

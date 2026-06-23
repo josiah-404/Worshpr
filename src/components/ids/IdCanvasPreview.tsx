@@ -26,6 +26,7 @@ export const SAMPLE_REGISTRANT: IdRegistrant = {
   churchName: 'Sample Church',
   divisionOrgName: 'Youth Division',
   confirmationCode: 'REG-ABCD-1234',
+  registrantType: 'Staff',
 };
 
 export const IdCanvasPreview: FC<IdCanvasPreviewProps> = ({

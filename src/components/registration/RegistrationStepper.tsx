@@ -28,6 +28,7 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
   const [result, setResult] = useState<RegistrationGroupResult | null>(null);
   // Group registration temporarily disabled — selector hidden, defaults to individual
   const [registrationType] = useState<RegistrationType>('individual');
+  const [registrantTypeError, setRegistrantTypeError] = useState(false);
 
   const tc = event.themeColor ?? null;
 
@@ -55,6 +56,7 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
           emergencyContactName: '',
           emergencyContactPhone: '',
           selectedFeeItemIds: [],
+          registrantTypeId: '',
         },
       ],
       paymentIntent: noFeesConfigured ? 'FREE' : 'CASH',
@@ -68,6 +70,15 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
     let valid = false;
     if (step === 0) {
       valid = await form.trigger(['registrants']);
+      if (valid && event.registrantTypes.length > 0) {
+        const registrants = form.getValues('registrants');
+        const missingType = registrants.some((r) => !r.registrantTypeId);
+        if (missingType) {
+          setRegistrantTypeError(true);
+          return;
+        }
+      }
+      setRegistrantTypeError(false);
     } else if (step === 1) {
       const paymentIntent = form.getValues('paymentIntent');
       const fieldsToValidate: (keyof RegistrationGroupInput)[] =
@@ -177,7 +188,15 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
       {/* Step content */}
       <FormProvider {...form}>
         <form onSubmit={(e) => e.preventDefault()}>
-          {step === 0 && <RegistrantInfoStep registrationType={registrationType} eventOrgs={event.organizations} churches={event.churches} />}
+          {step === 0 && (
+            <RegistrantInfoStep
+              registrationType={registrationType}
+              eventOrgs={event.organizations}
+              churches={event.churches}
+              registrantTypes={event.registrantTypes}
+              showRegistrantTypeError={registrantTypeError}
+            />
+          )}
           {step === 1 && <PaymentStep event={event} />}
           {step === 2 && <ReviewStep event={event} />}
 

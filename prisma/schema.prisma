@@ -195,11 +195,12 @@ model Event {
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
 
-  creator            User                @relation("CreatedEvents", fields: [createdBy], references: [id])
-  paymentAccount     PaymentAccount?     @relation(fields: [paymentAccountId], references: [id])
+  creator            User                  @relation("CreatedEvents", fields: [createdBy], references: [id])
+  paymentAccount     PaymentAccount?       @relation(fields: [paymentAccountId], references: [id])
   organizations      EventOrganization[]
   eventChurches      EventChurch[]
   feeItems           EventFeeItem[]
+  registrantTypes    EventRegistrantType[]
   registrationGroups RegistrationGroup[]
   registrations      Registration[]
   financeLedger      FinanceLedger[]
@@ -228,6 +229,23 @@ model EventFeeItem {
 
   @@index([eventId])
   @@map("event_fee_items")
+}
+
+/// Admin-defined registrant type for an event (e.g. "Staff", "Pastor", "Visitor").
+/// Registrants pick one during public registration — see Registration.registrantTypeId.
+model EventRegistrantType {
+  id        String   @id @default(cuid())
+  eventId   String
+  label     String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event         Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  registrations Registration[]
+
+  @@index([eventId])
+  @@map("event_registrant_types")
 }
 
 model EventProgram {
@@ -311,20 +329,23 @@ model RegistrationGroup {
 }
 
 model Registration {
-  id            String             @id @default(cuid())
-  eventId       String
-  registrantId  String
-  groupId       String
-  orgId         String
-  status        RegistrationStatus @default(PENDING)
-  paymentIntent PaymentIntent
-  approvedBy    String?
-  approvedAt    DateTime?
-  rejectedBy    String?
-  rejectedAt    DateTime?
-  notes         String?            @db.Text
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  id                  String             @id @default(cuid())
+  eventId             String
+  registrantId        String
+  groupId             String
+  orgId               String
+  status              RegistrationStatus @default(PENDING)
+  paymentIntent       PaymentIntent
+  approvedBy          String?
+  approvedAt          DateTime?
+  rejectedBy          String?
+  rejectedAt          DateTime?
+  notes               String?            @db.Text
+  registrantTypeId    String?
+  // Snapshot — survives later edits/deletion of the source EventRegistrantType
+  registrantTypeLabel String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
   event        Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
   registrant   Registrant            @relation(fields: [registrantId], references: [id])
@@ -332,6 +353,7 @@ model Registration {
   organization Organization          @relation(fields: [orgId], references: [id])
   payment      Payment?              @relation("IndividualPayment")
   feeItems     RegistrationFeeItem[]
+  registrantType EventRegistrantType? @relation(fields: [registrantTypeId], references: [id], onDelete: SetNull)
 
   @@unique([eventId, registrantId])
   @@index([eventId, status])

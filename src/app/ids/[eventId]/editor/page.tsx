@@ -32,6 +32,7 @@ export default async function IdEditorPage({
     where: { eventId, status: 'APPROVED' },
     orderBy: { createdAt: 'asc' },
     select: {
+      registrantTypeLabel: true,
       registrant: {
         select: {
           id: true,
@@ -54,6 +55,7 @@ export default async function IdEditorPage({
     churchName: r.registrant.churchRef?.name ?? null,
     divisionOrgName: r.registrant.divisionOrg?.name ?? null,
     confirmationCode: r.group.confirmationCode,
+    registrantType: r.registrantTypeLabel,
   }));
 
   const template: IdTemplateRecord | null = event.idTemplate

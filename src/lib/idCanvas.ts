@@ -43,6 +43,7 @@ function getFieldValue(fieldType: LayoutField['field'], registrant: IdRegistrant
     case 'church':   return registrant.churchName ?? '';
     case 'division': return registrant.divisionOrgName ?? '';
     case 'code':     return registrant.confirmationCode;
+    case 'registrantType': return registrant.registrantType ?? '';
     default:         return '';
   }
 }
