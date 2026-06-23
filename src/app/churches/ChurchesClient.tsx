@@ -44,7 +44,6 @@ export const ChurchesClient: FC<ChurchesClientProps> = ({
   const { mutate: deleteChurch } = useDeleteChurch();
   const { mutate: updateChurch } = useUpdateChurch();
 
-  const [orgFilter, setOrgFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Church | null>(null);
@@ -56,14 +55,13 @@ export const ChurchesClient: FC<ChurchesClientProps> = ({
     variant: 'destructive',
   });
 
-  const hasFilters = orgFilter !== 'ALL' || statusFilter !== 'ALL';
+  const hasFilters = statusFilter !== 'ALL';
 
   const filtered = useMemo(() => churches.filter((c) => {
-    if (orgFilter !== 'ALL' && c.orgId !== orgFilter) return false;
     if (statusFilter === 'ACTIVE' && !c.isActive) return false;
     if (statusFilter === 'INACTIVE' && c.isActive) return false;
     return true;
-  }), [churches, orgFilter, statusFilter]);
+  }), [churches, statusFilter]);
 
   function openCreate() {
     setEditing(null);
@@ -98,19 +96,6 @@ export const ChurchesClient: FC<ChurchesClientProps> = ({
     <>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div className="flex flex-wrap gap-2">
-          {isSuperAdmin && (
-            <Select value={orgFilter} onValueChange={setOrgFilter}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="All Organizations" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Organizations</SelectItem>
-                {organizations.map((o) => (
-                  <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="Status" />
@@ -123,7 +108,7 @@ export const ChurchesClient: FC<ChurchesClientProps> = ({
           </Select>
           {hasFilters && (
             <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground"
-              onClick={() => { setOrgFilter('ALL'); setStatusFilter('ALL'); }}>
+              onClick={() => setStatusFilter('ALL')}>
               <X className="h-4 w-4" /> Clear
             </Button>
           )}
@@ -151,7 +136,7 @@ export const ChurchesClient: FC<ChurchesClientProps> = ({
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center gap-2">
           <p className="text-sm text-muted-foreground">No churches match your filters</p>
-          <Button variant="link" size="sm" onClick={() => { setOrgFilter('ALL'); setStatusFilter('ALL'); }}>
+          <Button variant="link" size="sm" onClick={() => setStatusFilter('ALL')}>
             Clear filters
           </Button>
         </div>

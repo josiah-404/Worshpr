@@ -1,7 +1,7 @@
 'use client';
 
 import { type FC, useState } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
+import { useForm, FormProvider, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,10 +31,12 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
 
   const tc = event.themeColor ?? null;
 
-  const isFree = event.fee === 0;
+  // No fees configured at all — used only for the initial form default below.
+  // The actual amount owed is computed from selected fee items at submit time.
+  const noFeesConfigured = event.feeItems.length === 0;
 
   const form = useForm<RegistrationGroupInput>({
-    resolver: zodResolver(registrationGroupSchema),
+    resolver: zodResolver(registrationGroupSchema) as unknown as Resolver<RegistrationGroupInput>,
     defaultValues: {
       eventId: event.id,
       submittedByName: '',
@@ -52,9 +54,10 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
           divisionOrgId: '',
           emergencyContactName: '',
           emergencyContactPhone: '',
+          selectedFeeItemIds: [],
         },
       ],
-      paymentIntent: isFree ? 'FREE' : 'CASH',
+      paymentIntent: noFeesConfigured ? 'FREE' : 'CASH',
       payment: undefined,
     },
   });
@@ -88,8 +91,15 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
     const submittedByName = data.registrants[0]?.fullName ?? '';
     const submittedByEmail = data.registrants[0]?.email ?? '';
 
-    // Strip payment when not paying online, or for free events
-    const paymentIntent = isFree ? ('FREE' as const) : data.paymentIntent;
+    // Compute the actual amount owed from each registrant's selected fee items —
+    // an event can have zero required fees but still have optional ones selected.
+    const totalAmount = data.registrants.reduce((sum, r) => {
+      const ids = r.selectedFeeItemIds ?? [];
+      return sum + event.feeItems.filter((i) => ids.includes(i.id)).reduce((s, i) => s + i.amount, 0);
+    }, 0);
+
+    // Strip payment when not paying online, or when nothing is owed
+    const paymentIntent = totalAmount === 0 ? ('FREE' as const) : data.paymentIntent;
     const payment = paymentIntent === 'ONLINE' ? data.payment : undefined;
 
     mutate(

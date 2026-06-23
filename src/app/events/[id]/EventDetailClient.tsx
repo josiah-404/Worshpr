@@ -25,14 +25,21 @@ import { useUpdateEvent } from '@/hooks/useUpdateEvent';
 import { useGetPaymentAccounts } from '@/hooks/useGetPaymentAccounts';
 import { useGetEventChurches } from '@/hooks/useGetEventChurches';
 import { useSetEventChurches } from '@/hooks/useSetEventChurches';
+import { useGetEventFeeItems } from '@/hooks/useGetEventFeeItems';
+import { useSetEventFeeItems } from '@/hooks/useSetEventFeeItems';
 import { EventInvitePanel } from '@/app/events/EventInvitePanel';
+import { EventFeeItemsEditor } from '@/components/events/EventFeeItemsEditor';
 import { ProgramClient } from './program/ProgramClient';
 import { ChatPanel } from '@/components/chat/ChatPanel';
 import { createEventSchema, type CreateEventInput } from '@/validations/event.schema';
 import type {
   EventListItem, EventProgramData, ChurchOption, Organization,
-  OrgRole, EventType, EventStatus, EventDetails,
+  OrgRole, EventType, EventStatus, EventDetails, EventFeeItemInput,
 } from '@/types';
+
+const DEFAULT_FEE_ITEMS: EventFeeItemInput[] = [
+  { label: 'Registration Fee', amount: 0, isRequired: true },
+];
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -42,7 +49,7 @@ const THEME_PRESETS = [
 ];
 
 const TYPE_LABEL: Record<EventType, string> = {
-  CAMP: 'Camp', FELLOWSHIP: 'Fellowship', SEMINAR: 'Seminar', WORSHIP_NIGHT: 'Worship Night',
+  CAMP: 'Camp', FELLOWSHIP: 'Fellowship', SEMINAR: 'Seminar', WORSHIP_NIGHT: 'Worship Night', OTHER: 'Other',
 };
 
 const STATUS_CONFIG: Record<EventStatus, { label: string; dot: string; pill: string }> = {
@@ -90,9 +97,13 @@ const DetailsForm: FC<DetailsFormProps> = ({
 
   const { mutate: updateMutate, isPending: isUpdating } = useUpdateEvent(event.id);
   const { mutate: setChurches } = useSetEventChurches(event.id);
+  const { mutate: setFeeItems } = useSetEventFeeItems(event.id);
 
   const [selectedChurchIds, setSelectedChurchIds] = useState<string[]>([]);
   const { data: churchData } = useGetEventChurches(event.id);
+
+  const [feeItems, setFeeItemsState] = useState<EventFeeItemInput[]>(DEFAULT_FEE_ITEMS);
+  const { data: feeItemsData } = useGetEventFeeItems(event.id);
 
   const form = useForm<CreateEventInput>({
     resolver: zodResolver(createEventSchema) as unknown as Resolver<CreateEventInput>,
@@ -100,11 +111,11 @@ const DetailsForm: FC<DetailsFormProps> = ({
       title: event.title,
       description: event.description ?? '',
       type: event.type,
+      customType: event.customType ?? '',
       venue: event.venue ?? '',
       startDate: toDatetimeLocal(event.startDate),
       endDate: toDatetimeLocal(event.endDate),
       registrationDeadline: toDatetimeLocal(event.registrationDeadline),
-      fee: event.fee,
       maxSlots: event.maxSlots ?? undefined,
       status: event.status,
       coverImage: event.coverImage ?? '',
@@ -117,8 +128,9 @@ const DetailsForm: FC<DetailsFormProps> = ({
   const { register, control, handleSubmit, setValue, watch, formState: { errors } } = form;
   const coverImage = watch('coverImage');
   const themeColor = watch('themeColor');
-  const fee = watch('fee');
   const watchedHostOrgId = watch('hostOrgId');
+  const watchedType = watch('type');
+  const hasAnyFee = feeItems.some((i) => i.amount > 0);
 
   const { data: paymentAccounts = [] } = useGetPaymentAccounts(
     isSuperAdmin ? (watchedHostOrgId || null) : hostOrgId,
@@ -129,6 +141,12 @@ const DetailsForm: FC<DetailsFormProps> = ({
       setSelectedChurchIds(churchData.participating.map((c) => c.id));
     }
   }, [churchData]);
+
+  useEffect(() => {
+    if (feeItemsData) {
+      setFeeItemsState(feeItemsData.map((i) => ({ label: i.label, amount: i.amount, isRequired: i.isRequired })));
+    }
+  }, [feeItemsData]);
 
   function toggleChurch(churchId: string) {
     setSelectedChurchIds((prev) =>
@@ -141,6 +159,7 @@ const DetailsForm: FC<DetailsFormProps> = ({
     updateMutate(updateData, {
       onSuccess: () => {
         setChurches(selectedChurchIds);
+        setFeeItems(feeItems);
         toast.success('Event updated');
         router.refresh();
       },
@@ -316,6 +335,7 @@ const DetailsForm: FC<DetailsFormProps> = ({
                   <SelectItem value="FELLOWSHIP">Fellowship</SelectItem>
                   <SelectItem value="SEMINAR">Seminar</SelectItem>
                   <SelectItem value="WORSHIP_NIGHT">Worship Night</SelectItem>
+                  <SelectItem value="OTHER">Others</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -343,6 +363,14 @@ const DetailsForm: FC<DetailsFormProps> = ({
         </FormField>
       </div>
 
+      {/* ── Specify (only when Type = Others) ── */}
+      {watchedType === 'OTHER' && (
+        <FormField label="Please Specify" htmlFor="customType">
+          <Input id="customType" placeholder="e.g. Outreach, Retreat, Workshop" {...register('customType')} />
+          {errors.customType && <p className="text-xs text-destructive">{errors.customType.message}</p>}
+        </FormField>
+      )}
+
       {/* ── Venue ── */}
       <FormField label="Venue" htmlFor="venue" hint="(optional)">
         <Input id="venue" placeholder="e.g. Camp Lambayong, South Cotabato" {...register('venue')} />
@@ -364,20 +392,25 @@ const DetailsForm: FC<DetailsFormProps> = ({
         <Input id="registrationDeadline" type="datetime-local" {...register('registrationDeadline')} />
       </FormField>
 
-      {/* ── Fee + Slots ── */}
-      <div className="grid grid-cols-2 gap-4">
-        <FormField label="Registration Fee (₱)" htmlFor="fee">
-          <Input id="fee" type="text" inputMode="decimal" placeholder="0.00" {...register('fee')} />
-          {errors.fee && <p className="text-xs text-destructive">{errors.fee.message}</p>}
-        </FormField>
-        <FormField label="Max Slots" htmlFor="maxSlots" hint="(optional)">
-          <Input id="maxSlots" type="number" min={1} step={1} placeholder="Unlimited" {...register('maxSlots')} />
-          {errors.maxSlots && <p className="text-xs text-destructive">{errors.maxSlots.message}</p>}
-        </FormField>
+      {/* ── Max Slots ── */}
+      <FormField label="Max Slots" htmlFor="maxSlots" hint="(optional)">
+        <Input id="maxSlots" type="number" min={1} step={1} placeholder="Unlimited" {...register('maxSlots')} />
+        {errors.maxSlots && <p className="text-xs text-destructive">{errors.maxSlots.message}</p>}
+      </FormField>
+
+      {/* ── Fees ── */}
+      <div className="space-y-2">
+        <div>
+          <p className="text-sm font-medium">Fees</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Add a fee for each thing registrants can pay for (e.g. Registration, Food, Accommodation). Leave empty for a free event.
+          </p>
+        </div>
+        <EventFeeItemsEditor items={feeItems} onChange={setFeeItemsState} />
       </div>
 
       {/* ── Payment Account ── */}
-      {Number(fee) > 0 && (
+      {hasAnyFee && (
         <FormField label="Payment Account" htmlFor="paymentAccountId" hint="(optional)">
           <Controller
             name="paymentAccountId"
@@ -526,7 +559,7 @@ export const EventDetailClient: FC<EventDetailClientProps> = ({
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-lg font-semibold truncate">{event.title}</h1>
             <Badge variant="outline" className="text-xs shrink-0">
-              {TYPE_LABEL[event.type as EventType]}
+              {event.type === 'OTHER' ? (event.customType || 'Other') : TYPE_LABEL[event.type as EventType]}
             </Badge>
             <span className={cn(
               'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold shrink-0',
@@ -584,7 +617,7 @@ export const EventDetailClient: FC<EventDetailClientProps> = ({
           <ProgramClient
             eventId={event.id}
             eventTitle={event.title}
-            eventType={event.type}
+            eventType={event.type === 'OTHER' ? (event.customType || 'Other') : event.type}
             initialProgram={initialProgram}
             churches={churches}
             eventDetails={eventDetails}

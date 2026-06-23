@@ -16,6 +16,7 @@ export interface WalkInRegistrationInput {
   churchId?:            string;
   divisionOrgId?:       string;
   paymentIntent:        PaymentIntent;
+  selectedFeeItemIds?:  string[];
 }
 
 interface WalkInRegistrationResult {

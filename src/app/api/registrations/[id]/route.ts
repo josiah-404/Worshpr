@@ -9,6 +9,10 @@ function formatDate(date: Date): string {
   return date.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
+function displayEventType(type: string, customType: string | null): string {
+  return type === 'OTHER' ? (customType || 'Other') : type;
+}
+
 const updateStatusSchema = z.object({
   status: z.enum(['APPROVED', 'REJECTED', 'CANCELLED']),
   notes: z.string().optional(),
@@ -73,7 +77,8 @@ export async function PATCH(
           orgId: true,
           paymentIntent: true,
           registrant: { select: { fullName: true, email: true } },
-          event: { select: { title: true, type: true, startDate: true, endDate: true, venue: true, fee: true } },
+          event: { select: { title: true, type: true, customType: true, startDate: true, endDate: true, venue: true } },
+          feeItems: { select: { label: true, amount: true } },
           payment: { select: { id: true, amount: true } },
           group: {
             select: {
@@ -84,13 +89,21 @@ export async function PATCH(
         },
       });
 
-      // Auto-insert finance ledger entry when a registration is approved with payment
+      // Auto-insert finance ledger entry when a registration is approved.
+      // CASH registrations never get a Payment row (only ONLINE submissions carry one), so the
+      // amount owed falls back to the registration's own snapshotted fee-item total.
       if (status === 'APPROVED') {
         const payment = reg.payment ?? reg.group.sharedPayment;
-        if (payment && payment.amount > 0) {
+        const feeItemsTotal = reg.feeItems.reduce((sum, item) => sum + item.amount, 0);
+        const amount = payment?.amount ?? feeItemsTotal;
+        // No shared/individual payment to dedupe by — fall back to the registration id, which
+        // is unique per registrant and stable across repeated approve/reject/approve cycles.
+        const referenceId = payment?.id ?? reg.id;
+
+        if (amount > 0) {
           // Only insert if not already recorded (idempotency check)
           const alreadyRecorded = await tx.financeLedger.findFirst({
-            where: { referenceId: payment.id },
+            where: { referenceId },
           });
           if (!alreadyRecorded) {
             await tx.financeLedger.create({
@@ -99,9 +112,9 @@ export async function PATCH(
                 eventId: reg.eventId,
                 type: 'INCOME',
                 category: 'REGISTRATION',
-                amount: payment.amount,
+                amount,
                 description: `Registration — ${reg.registrant.fullName}`,
-                referenceId: payment.id,
+                referenceId,
                 enteredBy: session.user.id,
                 date: now,
               },
@@ -118,13 +131,13 @@ export async function PATCH(
         to: updated.registrant.email,
         registrantName: updated.registrant.fullName,
         eventTitle: updated.event.title,
-        eventType: updated.event.type,
+        eventType: displayEventType(updated.event.type, updated.event.customType),
         eventStartDate: formatDate(updated.event.startDate),
         eventEndDate: formatDate(updated.event.endDate),
         eventVenue: updated.event.venue ?? null,
         confirmationCode: updated.group.confirmationCode,
         paymentIntent: updated.paymentIntent,
-        eventFee: updated.event.fee,
+        feeItems: updated.feeItems,
         notes: updated.notes ?? null,
       }).catch(console.error);
     }
@@ -134,7 +147,7 @@ export async function PATCH(
         to: updated.registrant.email,
         registrantName: updated.registrant.fullName,
         eventTitle: updated.event.title,
-        eventType: updated.event.type,
+        eventType: displayEventType(updated.event.type, updated.event.customType),
         eventStartDate: formatDate(updated.event.startDate),
         eventEndDate: formatDate(updated.event.endDate),
         eventVenue: updated.event.venue ?? null,

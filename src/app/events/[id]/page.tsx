@@ -22,11 +22,11 @@ export default async function EventDetailPage({ params }: { params: { id: string
         slug: true,
         description: true,
         type: true,
+        customType: true,
         venue: true,
         startDate: true,
         endDate: true,
         registrationDeadline: true,
-        fee: true,
         maxSlots: true,
         status: true,
         coverImage: true,
@@ -45,6 +45,10 @@ export default async function EventDetailPage({ params }: { params: { id: string
             id: true, orgId: true, role: true, inviteStatus: true,
             organization: { select: { name: true, logoUrl: true } },
           },
+        },
+        feeItems: {
+          orderBy: { order: 'asc' },
+          select: { id: true, label: true, amount: true, isRequired: true, order: true },
         },
         eventChurches: {
           select: {

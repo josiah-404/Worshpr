@@ -1,11 +1,11 @@
 'use client';
 
 import { type FC, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Loader2, Banknote, Smartphone, BadgeCheck } from 'lucide-react';
+import { Loader2, Banknote, Smartphone, BadgeCheck, CheckCircle2, Circle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -35,7 +35,7 @@ import { Badge } from '@/components/ui/badge';
 import { useWalkInRegistration } from '@/hooks/useWalkInRegistration';
 import { useGetEventChurches } from '@/hooks/useGetEventChurches';
 import { cn } from '@/lib/utils';
-import type { EventOrg } from '@/types';
+import type { EventOrg, EventFeeItem } from '@/types';
 import type { PaymentAccountSummary } from '@/types/payment-account.types';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -59,6 +59,7 @@ const walkInFormSchema = z.object({
   divisionOrgId:        z.string().optional(),
   churchId:             z.string().optional(),
   paymentIntent:        z.enum(['CASH', 'ONLINE', 'FREE']),
+  selectedFeeItemIds:   z.array(z.string()).default([]),
 });
 
 type WalkInFormValues = z.infer<typeof walkInFormSchema>;
@@ -70,7 +71,7 @@ interface WalkInRegistrationDialogProps {
   onOpenChange: (open: boolean) => void;
   eventId: string;
   eventTitle: string;
-  eventFee: number;
+  feeItems: EventFeeItem[];
   eventOrgs: EventOrg[];
   paymentAccount: PaymentAccountSummary | null;
 }
@@ -180,15 +181,16 @@ export const WalkInRegistrationDialog: FC<WalkInRegistrationDialogProps> = ({
   onOpenChange,
   eventId,
   eventTitle,
-  eventFee,
+  feeItems,
   eventOrgs,
   paymentAccount,
 }) => {
   const { mutate, isPending } = useWalkInRegistration();
-  const isFree = eventFee === 0;
+  const requiredIds = feeItems.filter((i) => i.isRequired).map((i) => i.id);
+  const noFeesConfigured = feeItems.length === 0;
 
   const form = useForm<WalkInFormValues>({
-    resolver: zodResolver(walkInFormSchema),
+    resolver: zodResolver(walkInFormSchema) as unknown as Resolver<WalkInFormValues>,
     defaultValues: {
       fullName:             '',
       email:                '',
@@ -200,11 +202,21 @@ export const WalkInRegistrationDialog: FC<WalkInRegistrationDialogProps> = ({
       emergencyContactPhone:'',
       divisionOrgId:        '',
       churchId:             '',
-      paymentIntent:        isFree ? 'FREE' : 'CASH',
+      paymentIntent:        noFeesConfigured ? 'FREE' : 'CASH',
+      selectedFeeItemIds:   requiredIds,
     },
   });
 
   const paymentIntent = form.watch('paymentIntent');
+  const selectedFeeItemIds = form.watch('selectedFeeItemIds') ?? [];
+  const totalAmount = feeItems.filter((i) => selectedFeeItemIds.includes(i.id)).reduce((sum, i) => sum + i.amount, 0);
+  const isFree = totalAmount === 0;
+
+  function toggleFeeItem(itemId: string) {
+    const current = form.getValues('selectedFeeItemIds') ?? [];
+    const next = current.includes(itemId) ? current.filter((id) => id !== itemId) : [...current, itemId];
+    form.setValue('selectedFeeItemIds', next);
+  }
 
   const handleOpenChange = (open: boolean) => {
     if (!open) form.reset();
@@ -225,7 +237,8 @@ export const WalkInRegistrationDialog: FC<WalkInRegistrationDialogProps> = ({
         emergencyContactPhone:values.emergencyContactPhone || undefined,
         churchId:             values.churchId         || undefined,
         divisionOrgId:        values.divisionOrgId    || undefined,
-        paymentIntent:        values.paymentIntent,
+        paymentIntent:        isFree ? 'FREE' : values.paymentIntent,
+        selectedFeeItemIds:   values.selectedFeeItemIds,
       },
       {
         onSuccess: (data) => {
@@ -351,6 +364,48 @@ export const WalkInRegistrationDialog: FC<WalkInRegistrationDialogProps> = ({
             />
 
             {(eventOrgs.length > 0) && <Separator />}
+
+            {/* ── Fees ── */}
+            {feeItems.length > 0 && (
+              <>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fees</p>
+                  <div className="space-y-1.5">
+                    {feeItems.map((item) => {
+                      const selected = selectedFeeItemIds.includes(item.id);
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          disabled={item.isRequired}
+                          onClick={() => toggleFeeItem(item.id)}
+                          className={cn(
+                            'w-full flex items-center justify-between rounded-md border px-3 py-2 text-sm transition-colors disabled:cursor-default',
+                            selected ? 'bg-primary/10 border-primary/20' : 'border-transparent hover:bg-muted/50',
+                          )}
+                        >
+                          <span className="flex items-center gap-2">
+                            {selected ? (
+                              <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                            ) : (
+                              <Circle className="h-4 w-4 text-muted-foreground shrink-0" />
+                            )}
+                            {item.label}
+                            {item.isRequired && <span className="text-xs text-muted-foreground">(Required)</span>}
+                          </span>
+                          <span className="font-medium">₱{item.amount.toFixed(2)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold border-t pt-2">
+                    <span>Total</span>
+                    <span>₱{totalAmount.toFixed(2)}</span>
+                  </div>
+                </div>
+                <Separator />
+              </>
+            )}
 
             {/* ── Payment ── */}
             <div className="space-y-3">

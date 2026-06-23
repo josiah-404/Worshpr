@@ -18,11 +18,11 @@ async function getEvent(slug: string): Promise<PublicEventData | null> {
       slug: true,
       description: true,
       type: true,
+      customType: true,
       venue: true,
       startDate: true,
       endDate: true,
       registrationDeadline: true,
-      fee: true,
       maxSlots: true,
       status: true,
       coverImage: true,
@@ -55,6 +55,10 @@ async function getEvent(slug: string): Promise<PublicEventData | null> {
           },
         },
       },
+      feeItems: {
+        orderBy: { order: 'asc' },
+        select: { id: true, label: true, amount: true, isRequired: true, order: true },
+      },
     },
   });
 
@@ -72,11 +76,11 @@ async function getEvent(slug: string): Promise<PublicEventData | null> {
     slug: event.slug,
     description: event.description,
     type: event.type,
+    customType: event.customType,
     venue: event.venue,
     startDate: event.startDate.toISOString(),
     endDate: event.endDate.toISOString(),
     registrationDeadline: event.registrationDeadline?.toISOString() ?? null,
-    fee: event.fee,
     maxSlots: event.maxSlots,
     status: event.status,
     coverImage: event.coverImage,
@@ -101,6 +105,7 @@ async function getEvent(slug: string): Promise<PublicEventData | null> {
       orgName: ec.church.organization.name,
       orgId: ec.church.orgId,
     })),
+    feeItems: event.feeItems,
     registrationCount,
   };
 }
@@ -130,6 +135,9 @@ export default async function RegistrationPage({ params }: Props) {
   }
 
   const tc = event.themeColor ?? null;
+  const requiredFeeTotal = event.feeItems.filter((i) => i.isRequired).reduce((sum, i) => sum + i.amount, 0);
+  const hasOptionalFees = event.feeItems.some((i) => !i.isRequired && i.amount > 0);
+  const isFreeEvent = requiredFeeTotal === 0 && !hasOptionalFees;
 
   return (
     <div className="min-h-screen bg-background">
@@ -150,14 +158,18 @@ export default async function RegistrationPage({ params }: Props) {
         {/* Event info */}
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2 items-center">
-            <Badge variant="secondary">{event.type.replace('_', ' ')}</Badge>
+            <Badge variant="secondary">
+              {event.type === 'OTHER' ? (event.customType || 'Other') : event.type.replace('_', ' ')}
+            </Badge>
             {event.status !== 'OPEN' && (
               <Badge variant="destructive">{event.status}</Badge>
             )}
-            {event.fee === 0 ? (
+            {isFreeEvent ? (
               <Badge variant="outline">Free</Badge>
             ) : (
-              <Badge variant="outline">₱{event.fee.toFixed(2)} / person</Badge>
+              <Badge variant="outline">
+                {hasOptionalFees ? 'From ' : ''}₱{requiredFeeTotal.toFixed(2)} / person
+              </Badge>
             )}
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold">{event.title}</h1>

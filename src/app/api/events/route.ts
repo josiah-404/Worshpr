@@ -31,11 +31,11 @@ export async function GET(req: NextRequest) {
         slug: true,
         description: true,
         type: true,
+        customType: true,
         venue: true,
         startDate: true,
         endDate: true,
         registrationDeadline: true,
-        fee: true,
         maxSlots: true,
         status: true,
         coverImage: true,
@@ -65,6 +65,10 @@ export async function GET(req: NextRequest) {
               select: { name: true, logoUrl: true },
             },
           },
+        },
+        feeItems: {
+          orderBy: { order: 'asc' },
+          select: { id: true, label: true, amount: true, isRequired: true, order: true },
         },
       },
     });
@@ -104,7 +108,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { hostOrgId, coverImage, themeColor, paymentAccountId, registrationDeadline, maxSlots, ...rest } = parsed.data;
+    const { hostOrgId, coverImage, themeColor, paymentAccountId, registrationDeadline, maxSlots, customType, ...rest } = parsed.data;
 
     // org_admin can only create events for their own org
     if (session.user.role === 'org_admin' && hostOrgId !== session.user.orgId) {
@@ -118,6 +122,8 @@ export async function POST(req: NextRequest) {
     const event = await prisma.event.create({
       data: {
         ...rest,
+        // customType only makes sense for type "OTHER"
+        customType: rest.type === 'OTHER' ? (customType?.trim() || null) : null,
         slug,
         startDate: new Date(rest.startDate),
         endDate: new Date(rest.endDate),
@@ -142,11 +148,11 @@ export async function POST(req: NextRequest) {
         slug: true,
         description: true,
         type: true,
+        customType: true,
         venue: true,
         startDate: true,
         endDate: true,
         registrationDeadline: true,
-        fee: true,
         maxSlots: true,
         status: true,
         coverImage: true,
@@ -174,6 +180,10 @@ export async function POST(req: NextRequest) {
             inviteStatus: true,
             organization: { select: { name: true, logoUrl: true } },
           },
+        },
+        feeItems: {
+          orderBy: { order: 'asc' },
+          select: { id: true, label: true, amount: true, isRequired: true, order: true },
         },
       },
     });

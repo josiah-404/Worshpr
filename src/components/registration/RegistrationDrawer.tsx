@@ -160,6 +160,16 @@ export const RegistrationDrawer: FC<RegistrationDrawerProps> = ({ registration, 
                        reg.paymentIntent === 'CASH' ? 'Cash On-site' : 'Online'}
                     </Badge>
                   </div>
+                  {reg.feeItems.length > 0 && (
+                    <div className="space-y-1 rounded-md bg-muted/40 p-2.5">
+                      {reg.feeItems.map((item) => (
+                        <div key={item.id} className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">{item.label}</span>
+                          <span>₱{item.amount.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {reg.payment && (
                     <>
                       <div className="flex justify-between">

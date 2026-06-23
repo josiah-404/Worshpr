@@ -24,6 +24,7 @@ const TYPE_GRADIENT: Record<string, string> = {
   FELLOWSHIP: 'from-blue-500 to-indigo-600',
   SEMINAR: 'from-violet-500 to-purple-600',
   WORSHIP_NIGHT: 'from-rose-500 to-pink-600',
+  OTHER: 'from-gray-500 to-gray-600',
 };
 
 export const IdsEventGrid: FC<IdsEventGridProps> = ({ initialEvents }) => {

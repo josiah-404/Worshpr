@@ -309,7 +309,7 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
             onOpenChange={setWalkInOpen}
             eventId={eventFilter}
             eventTitle={selectedEventTitle ?? ''}
-            eventFee={selectedEvent?.fee ?? 0}
+            feeItems={selectedEvent?.feeItems ?? []}
             paymentAccount={selectedEvent?.paymentAccount ?? null}
             eventOrgs={
               selectedEvent?.organizations.filter((o) => o.inviteStatus === 'ACCEPTED') ?? []
