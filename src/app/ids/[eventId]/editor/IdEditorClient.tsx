@@ -32,10 +32,10 @@ import {
 } from '@/components/ui/select';
 import type { IdRegistrant, IdTemplateRecord, IdTemplateConfig, IdSizeId, LayoutFieldType, LayoutField } from '@/types/id.types';
 
-const TEXT_FIELD_TYPES: LayoutFieldType[] = ['name', 'nickname', 'church', 'division', 'code'];
+const TEXT_FIELD_TYPES: LayoutFieldType[] = ['name', 'nickname', 'church', 'division', 'code', 'registrantType'];
 const FIELD_LABELS: Record<LayoutFieldType, string> = {
   name: 'Full Name', nickname: 'Nickname', church: 'Church',
-  division: 'Division', code: 'Reg. Code',
+  division: 'Division', code: 'Reg. Code', registrantType: 'Registrant Type',
   'gradient-overlay': '', 'rect-overlay': '', 'solid-band': '',
   'stripe-overlay': '', 'divider-line': '',
 };

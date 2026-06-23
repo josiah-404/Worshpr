@@ -84,6 +84,9 @@ export const RegistrationDrawer: FC<RegistrationDrawerProps> = ({ registration, 
                 >
                   {statusConfig.label}
                 </Badge>
+                {reg.registrantTypeLabel && (
+                  <Badge variant="outline" className="text-xs">{reg.registrantTypeLabel}</Badge>
+                )}
               </div>
               <SheetDescription>
                 Confirmation: <span className="font-mono font-semibold">{reg.group.confirmationCode}</span>

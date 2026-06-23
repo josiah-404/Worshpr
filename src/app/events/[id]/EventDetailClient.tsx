@@ -27,19 +27,24 @@ import { useGetEventChurches } from '@/hooks/useGetEventChurches';
 import { useSetEventChurches } from '@/hooks/useSetEventChurches';
 import { useGetEventFeeItems } from '@/hooks/useGetEventFeeItems';
 import { useSetEventFeeItems } from '@/hooks/useSetEventFeeItems';
+import { useGetEventRegistrantTypes } from '@/hooks/useGetEventRegistrantTypes';
+import { useSetEventRegistrantTypes } from '@/hooks/useSetEventRegistrantTypes';
 import { EventInvitePanel } from '@/app/events/EventInvitePanel';
 import { EventFeeItemsEditor } from '@/components/events/EventFeeItemsEditor';
+import { EventRegistrantTypesEditor } from '@/components/events/EventRegistrantTypesEditor';
 import { ProgramClient } from './program/ProgramClient';
 import { ChatPanel } from '@/components/chat/ChatPanel';
 import { createEventSchema, type CreateEventInput } from '@/validations/event.schema';
 import type {
   EventListItem, EventProgramData, ChurchOption, Organization,
-  OrgRole, EventType, EventStatus, EventDetails, EventFeeItemInput,
+  OrgRole, EventType, EventStatus, EventDetails, EventFeeItemInput, EventRegistrantTypeInput,
 } from '@/types';
 
 const DEFAULT_FEE_ITEMS: EventFeeItemInput[] = [
   { label: 'Registration Fee', amount: 0, isRequired: true },
 ];
+
+const DEFAULT_REGISTRANT_TYPES: EventRegistrantTypeInput[] = [];
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -98,12 +103,16 @@ const DetailsForm: FC<DetailsFormProps> = ({
   const { mutate: updateMutate, isPending: isUpdating } = useUpdateEvent(event.id);
   const { mutate: setChurches } = useSetEventChurches(event.id);
   const { mutate: setFeeItems } = useSetEventFeeItems(event.id);
+  const { mutate: setRegistrantTypes } = useSetEventRegistrantTypes(event.id);
 
   const [selectedChurchIds, setSelectedChurchIds] = useState<string[]>([]);
   const { data: churchData } = useGetEventChurches(event.id);
 
   const [feeItems, setFeeItemsState] = useState<EventFeeItemInput[]>(DEFAULT_FEE_ITEMS);
   const { data: feeItemsData } = useGetEventFeeItems(event.id);
+
+  const [registrantTypes, setRegistrantTypesState] = useState<EventRegistrantTypeInput[]>(DEFAULT_REGISTRANT_TYPES);
+  const { data: registrantTypesData } = useGetEventRegistrantTypes(event.id);
 
   const form = useForm<CreateEventInput>({
     resolver: zodResolver(createEventSchema) as unknown as Resolver<CreateEventInput>,
@@ -148,6 +157,12 @@ const DetailsForm: FC<DetailsFormProps> = ({
     }
   }, [feeItemsData]);
 
+  useEffect(() => {
+    if (registrantTypesData) {
+      setRegistrantTypesState(registrantTypesData.map((t) => ({ label: t.label })));
+    }
+  }, [registrantTypesData]);
+
   function toggleChurch(churchId: string) {
     setSelectedChurchIds((prev) =>
       prev.includes(churchId) ? prev.filter((id) => id !== churchId) : [...prev, churchId],
@@ -160,6 +175,7 @@ const DetailsForm: FC<DetailsFormProps> = ({
       onSuccess: () => {
         setChurches(selectedChurchIds);
         setFeeItems(feeItems);
+        setRegistrantTypes(registrantTypes);
         toast.success('Event updated');
         router.refresh();
       },
@@ -407,6 +423,17 @@ const DetailsForm: FC<DetailsFormProps> = ({
           </p>
         </div>
         <EventFeeItemsEditor items={feeItems} onChange={setFeeItemsState} />
+      </div>
+
+      {/* ── Registrant Types ── */}
+      <div className="space-y-2">
+        <div>
+          <p className="text-sm font-medium">Registrant Types</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Add a type for registrants to identify as (e.g. Staff, Pastor, Visitor). Leave empty to skip this field.
+          </p>
+        </div>
+        <EventRegistrantTypesEditor items={registrantTypes} onChange={setRegistrantTypesState} />
       </div>
 
       {/* ── Payment Account ── */}

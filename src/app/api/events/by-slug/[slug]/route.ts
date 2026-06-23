@@ -57,6 +57,10 @@ export async function GET(
           orderBy: { order: 'asc' },
           select: { id: true, label: true, amount: true, isRequired: true, order: true },
         },
+        registrantTypes: {
+          orderBy: { order: 'asc' },
+          select: { id: true, label: true, order: true },
+        },
       },
     });
 
@@ -106,6 +110,7 @@ export async function GET(
         orgId: ec.church.orgId,
       })),
       feeItems: event.feeItems,
+      registrantTypes: event.registrantTypes,
       registrationCount,
     };
 

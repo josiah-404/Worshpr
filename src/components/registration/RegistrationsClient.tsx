@@ -56,6 +56,7 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [typeFilter, setTypeFilter] = useState('ALL');
   // Event is required — empty string means none selected yet
   const [eventFilter, setEventFilter] = useState('');
   const [selected, setSelected] = useState<RegistrationListItem | null>(null);
@@ -78,6 +79,14 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
   }, [visibleEvents, eventFilter]);
 
   const eventSelected = eventFilter !== '';
+  const selectedEvent = visibleEvents.find((e) => e.id === eventFilter);
+
+  // Clear the type filter if it's no longer valid for the selected event
+  useMemo(() => {
+    if (typeFilter !== 'ALL' && !selectedEvent?.registrantTypes.some((t) => t.id === typeFilter)) {
+      setTypeFilter('ALL');
+    }
+  }, [selectedEvent, typeFilter]);
 
   const params = useMemo(() => ({
     ...(statusFilter !== 'ALL' ? { status: statusFilter } : {}),
@@ -95,16 +104,22 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
     : [];
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return registrations;
-    const q = search.toLowerCase();
-    return registrations.filter((r) =>
-      r.registrant.fullName.toLowerCase().includes(q) ||
-      r.registrant.email.toLowerCase().includes(q) ||
-      (r.registrant.churchName ?? '').toLowerCase().includes(q) ||
-      (r.registrant.divisionOrgName ?? '').toLowerCase().includes(q) ||
-      r.group.confirmationCode.toLowerCase().includes(q),
-    );
-  }, [registrations, search]);
+    let result = registrations;
+    if (typeFilter !== 'ALL') {
+      result = result.filter((r) => r.registrantTypeId === typeFilter);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter((r) =>
+        r.registrant.fullName.toLowerCase().includes(q) ||
+        r.registrant.email.toLowerCase().includes(q) ||
+        (r.registrant.churchName ?? '').toLowerCase().includes(q) ||
+        (r.registrant.divisionOrgName ?? '').toLowerCase().includes(q) ||
+        r.group.confirmationCode.toLowerCase().includes(q),
+      );
+    }
+    return result;
+  }, [registrations, search, typeFilter]);
 
   // Summary counts
   const counts = useMemo(() => ({
@@ -115,7 +130,7 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
     cancelled: registrations.filter((r) => r.status === 'CANCELLED').length,
   }), [registrations]);
 
-  const hasFilters = search || statusFilter !== 'ALL';
+  const hasFilters = search || statusFilter !== 'ALL' || typeFilter !== 'ALL';
 
   const selectedEventTitle = visibleEvents.find((e) => e.id === eventFilter)?.title;
 
@@ -218,12 +233,25 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
                 ))}
               </SelectContent>
             </Select>
+            {(selectedEvent?.registrantTypes.length ?? 0) > 0 && (
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Types</SelectItem>
+                  {selectedEvent?.registrantTypes.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             {hasFilters && (
               <Button
                 variant="ghost"
                 size="sm"
                 className="gap-1.5 text-muted-foreground"
-                onClick={() => { setSearch(''); setStatusFilter('ALL'); }}
+                onClick={() => { setSearch(''); setStatusFilter('ALL'); setTypeFilter('ALL'); }}
               >
                 <X className="h-4 w-4" />
                 Clear
@@ -243,7 +271,7 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
               <Users className="h-10 w-10 text-muted-foreground/30" />
               <p className="text-sm text-muted-foreground">No registrations found</p>
               {hasFilters && (
-                <Button variant="link" size="sm" onClick={() => { setSearch(''); setStatusFilter('ALL'); }}>
+                <Button variant="link" size="sm" onClick={() => { setSearch(''); setStatusFilter('ALL'); setTypeFilter('ALL'); }}>
                   Clear filters
                 </Button>
               )}
@@ -254,6 +282,7 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Registrant</TableHead>
+                    <TableHead className="hidden sm:table-cell">Type</TableHead>
                     <TableHead className="hidden sm:table-cell">Church</TableHead>
                     <TableHead className="hidden md:table-cell">Division</TableHead>
                     <TableHead className="hidden lg:table-cell">Submitted</TableHead>
@@ -273,6 +302,9 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
                         <TableCell>
                           <p className="font-medium">{reg.registrant.fullName}</p>
                           <p className="text-xs text-muted-foreground">{reg.registrant.email}</p>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell text-muted-foreground">
+                          {reg.registrantTypeLabel ?? <span className="italic text-muted-foreground/50">—</span>}
                         </TableCell>
                         <TableCell className="hidden sm:table-cell text-muted-foreground">
                           {reg.registrant.churchName ?? <span className="italic text-muted-foreground/50">—</span>}
@@ -302,7 +334,6 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
       <RegistrationDrawer registration={selected} onClose={() => setSelected(null)} />
 
       {walkInOpen && eventFilter && (() => {
-        const selectedEvent = visibleEvents.find((e) => e.id === eventFilter);
         return (
           <WalkInRegistrationDialog
             open={walkInOpen}
@@ -319,7 +350,6 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
       })()}
 
       {importOpen && eventFilter && (() => {
-        const selectedEvent = visibleEvents.find((e) => e.id === eventFilter);
         const existingEmails = new Set(registrations.map((r) => r.registrant.email.toLowerCase()));
         return (
           <ImportRegistrantsDialog

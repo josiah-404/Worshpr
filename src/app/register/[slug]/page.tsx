@@ -59,6 +59,10 @@ async function getEvent(slug: string): Promise<PublicEventData | null> {
         orderBy: { order: 'asc' },
         select: { id: true, label: true, amount: true, isRequired: true, order: true },
       },
+      registrantTypes: {
+        orderBy: { order: 'asc' },
+        select: { id: true, label: true, order: true },
+      },
     },
   });
 
@@ -106,6 +110,7 @@ async function getEvent(slug: string): Promise<PublicEventData | null> {
       orgId: ec.church.orgId,
     })),
     feeItems: event.feeItems,
+    registrantTypes: event.registrantTypes,
     registrationCount,
   };
 }

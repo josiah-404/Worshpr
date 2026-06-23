@@ -59,6 +59,12 @@ const SESSION_CONFIG: Record<ProgramSession, { label: string; icon: React.Elemen
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
+function isMultiDayEvent(startDate: string, endDate: string): boolean {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  return end.toDateString() !== start.toDateString();
+}
+
 function formatDateRange(start: string, end: string): string {
   const s = new Date(start);
   const e = new Date(end);
@@ -214,7 +220,9 @@ export const ProgramClient: FC<ProgramClientProps> = ({
   eventDetails,
 }) => {
   const router = useRouter();
-  const isCamp = eventType === 'CAMP';
+  // Day-based features (day tabs, per-day PDF pages, day selection) are available
+  // whenever the event spans more than one calendar day — not tied to a specific event type.
+  const isMultiDay = isMultiDayEvent(eventDetails.startDate, eventDetails.endDate);
 
   const { data: program = null } = useGetProgram(eventId, initialProgram);
   const [activeDay, setActiveDay] = useState(1);
@@ -545,7 +553,7 @@ export const ProgramClient: FC<ProgramClientProps> = ({
       }
       firstDayRendered = true;
 
-      if (isCamp) {
+      if (isMultiDay) {
         doc.setFontSize(9.5);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(22, 22, 22);
@@ -720,8 +728,8 @@ export const ProgramClient: FC<ProgramClientProps> = ({
 
       <Separator />
 
-      {/* Day tabs — only for CAMP */}
-      {isCamp && (
+      {/* Day tabs — only when the event spans more than one day */}
+      {isMultiDay && (
         <div className="flex items-center gap-2 flex-wrap" data-tour="program-day-tabs">
           {Array.from({ length: totalDays }, (_, i) => (
             <Button
@@ -786,7 +794,7 @@ export const ProgramClient: FC<ProgramClientProps> = ({
         {dayItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 rounded-lg border border-dashed gap-2">
             <p className="text-sm text-muted-foreground">
-              No items for {isCamp ? `Day ${activeDay}` : 'this program'} yet.
+              No items for {isMultiDay ? `Day ${activeDay}` : 'this program'} yet.
             </p>
             <Button
               size="sm"
@@ -914,8 +922,8 @@ export const ProgramClient: FC<ProgramClientProps> = ({
               </div>
             </div>
 
-            {/* Day selection — only for CAMP with multiple days */}
-            {isCamp && totalDays > 1 && (
+            {/* Day selection — only when the program has multiple days */}
+            {isMultiDay && totalDays > 1 && (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Days to Include</p>
@@ -967,10 +975,10 @@ export const ProgramClient: FC<ProgramClientProps> = ({
             <Button
               size="sm"
               className="gap-1.5"
-              disabled={isCamp && totalDays > 1 ? selectedPrintDays.size === 0 : false}
+              disabled={isMultiDay && totalDays > 1 ? selectedPrintDays.size === 0 : false}
               onClick={() => {
                 setPrintDialogOpen(false);
-                const days = isCamp && totalDays > 1
+                const days = isMultiDay && totalDays > 1
                   ? Array.from(selectedPrintDays).sort((a, b) => a - b)
                   : [1];
                 void exportToPDF(days, printPageSize, printOrientation);

@@ -33,6 +33,7 @@ export default async function IdsEventPage({
     orderBy: { createdAt: 'asc' },
     select: {
       id: true,
+      registrantTypeLabel: true,
       registrant: {
         select: {
           id: true,
@@ -55,6 +56,7 @@ export default async function IdsEventPage({
     churchName: r.registrant.churchRef?.name ?? null,
     divisionOrgName: r.registrant.divisionOrg?.name ?? null,
     confirmationCode: r.group.confirmationCode,
+    registrantType: r.registrantTypeLabel,
   }));
 
   return (

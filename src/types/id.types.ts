@@ -19,7 +19,7 @@ export interface IdSize {
 }
 
 export type LayoutFieldType =
-  | 'name' | 'nickname' | 'church' | 'division' | 'code'
+  | 'name' | 'nickname' | 'church' | 'division' | 'code' | 'registrantType'
   | 'gradient-overlay'  // fades bottom/top of image to a color — drawn before text
   | 'rect-overlay'      // semi-transparent rounded rectangle block — drawn before text
   | 'solid-band'        // full-opacity solid rect using theme overlay color — drawn before text
@@ -97,4 +97,5 @@ export interface IdRegistrant {
   churchName: string | null;
   divisionOrgName: string | null;
   confirmationCode: string;
+  registrantType: string | null;
 }

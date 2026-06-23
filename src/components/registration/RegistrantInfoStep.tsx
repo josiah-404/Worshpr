@@ -23,7 +23,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEdgeStore } from '@/lib/edgestore-client';
 import type { RegistrationGroupInput } from '@/validations/registration.schema';
-import type { ChurchOption, EventOrgOption } from '@/types';
+import type { ChurchOption, EventOrgOption, EventRegistrantType } from '@/types';
 
 // ─── PhotoUploadField ──────────────────────────────────────────────────────
 
@@ -218,15 +218,57 @@ const DivisionChurchFields: FC<DivisionChurchFieldsProps> = ({ index, eventOrgs,
   );
 };
 
+// ─── RegistrantTypeField ───────────────────────────────────────────────────
+
+interface RegistrantTypeFieldProps {
+  index: number;
+  registrantTypes: EventRegistrantType[];
+  showError: boolean;
+}
+
+const RegistrantTypeField: FC<RegistrantTypeFieldProps> = ({ index, registrantTypes, showError }) => {
+  const form = useFormContext<RegistrationGroupInput>();
+  const value = useWatch({ control: form.control, name: `registrants.${index}.registrantTypeId` }) as string | undefined;
+  const isMissing = showError && !value;
+
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium leading-none">
+        Registrant Type <span className="text-destructive">*</span>
+      </label>
+      <Select
+        onValueChange={(v) => form.setValue(`registrants.${index}.registrantTypeId`, v)}
+        value={value ?? ''}
+      >
+        <SelectTrigger className={isMissing ? 'border-destructive' : undefined}>
+          <SelectValue placeholder="Select a type" />
+        </SelectTrigger>
+        <SelectContent>
+          {registrantTypes.map((t) => (
+            <SelectItem key={t.id} value={t.id}>
+              {t.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {isMissing && <p className="text-xs text-destructive">Please select a registrant type</p>}
+    </div>
+  );
+};
+
 // ─── Component ─────────────────────────────────────────────────────────────
 
 interface RegistrantInfoStepProps {
   registrationType: 'individual' | 'group';
   eventOrgs: EventOrgOption[];
   churches: ChurchOption[];
+  registrantTypes: EventRegistrantType[];
+  showRegistrantTypeError?: boolean;
 }
 
-export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({ registrationType, eventOrgs, churches }) => {
+export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({
+  registrationType, eventOrgs, churches, registrantTypes, showRegistrantTypeError = false,
+}) => {
   const form = useFormContext<RegistrationGroupInput>();
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -247,6 +289,7 @@ export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({ registrationTy
       emergencyContactName: '',
       emergencyContactPhone: '',
       selectedFeeItemIds: [],
+      registrantTypeId: '',
     });
   }
 
@@ -363,6 +406,13 @@ export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({ registrationTy
               )}
             />
             <DivisionChurchFields index={index} eventOrgs={eventOrgs} churches={churches} />
+            {registrantTypes.length > 0 && (
+              <RegistrantTypeField
+                index={index}
+                registrantTypes={registrantTypes}
+                showError={showRegistrantTypeError}
+              />
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}

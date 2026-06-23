@@ -10,7 +10,7 @@ import type { LayoutField, LayoutFieldType, IdSizeId } from '@/types/id.types';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const TEXT_FIELD_TYPES: LayoutFieldType[] = ['name', 'nickname', 'church', 'division', 'code'];
+const TEXT_FIELD_TYPES: LayoutFieldType[] = ['name', 'nickname', 'church', 'division', 'code', 'registrantType'];
 const OVERLAY_FIELD_TYPES = ['gradient-overlay', 'rect-overlay', 'stripe-overlay', 'solid-band', 'divider-line'];
 
 const SAMPLE_TEXT: Partial<Record<LayoutFieldType, string>> = {
@@ -19,6 +19,7 @@ const SAMPLE_TEXT: Partial<Record<LayoutFieldType, string>> = {
   church:   'Sample Church',
   division: 'Youth Division',
   code:     'REG-ABCD-1234',
+  registrantType: 'Staff',
 };
 
 const FIELD_LABEL: Partial<Record<LayoutFieldType, string>> = {
@@ -27,6 +28,7 @@ const FIELD_LABEL: Partial<Record<LayoutFieldType, string>> = {
   church:   'Church',
   division: 'Division',
   code:     'Code',
+  registrantType: 'Registrant Type',
 };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
