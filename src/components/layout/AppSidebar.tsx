@@ -84,7 +84,7 @@ const ALL_NAV_GROUPS = [
         title: 'ID Generator',
         url: '/ids',
         icon: IdCard,
-        roles: ['super_admin', 'org_admin'],
+        roles: ['super_admin', 'org_admin', 'officer'],
       },
       {
         title: 'Finance',
@@ -116,17 +116,21 @@ export default function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
   const { data: session } = useSession();
-  const role = session?.user?.role ?? 'officer';
+  const isSuperAdmin = session?.user?.isSuperAdmin ?? false;
+  const activeRole = isSuperAdmin
+    ? 'super_admin'
+    : (session?.user?.activeRole ?? 'officer');
   const collaborationBadge = useCollaborationBadge();
   const chatUnread = useChatUnread();
-  const navGroups = ALL_NAV_GROUPS.filter((g) => g.roles.includes(role))
+
+  const navGroups = ALL_NAV_GROUPS.filter((g) => g.roles.includes(activeRole))
     .map((g) => ({
       ...g,
       items: g.items
         .filter((item) => {
           if (!('roles' in item)) return true;
           const roles = item.roles as string[];
-          return roles.includes(role);
+          return roles.includes(activeRole);
         })
         .map((item) => ({
           ...item,

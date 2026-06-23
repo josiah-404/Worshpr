@@ -2,35 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getEventHostAccess } from '@/lib/event-access';
+import { isOfficer, OrgAccessError } from '@/lib/org-access';
 import { setRegistrantTypesSchema } from '@/validations/event.schema';
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-async function getEventAndCheckOwnership(
-  eventId: string,
-  role: string,
-  userOrgId: string | null | undefined,
-) {
-  const event = await prisma.event.findUnique({
-    where: { id: eventId },
-    select: {
-      id: true,
-      organizations: {
-        where: { inviteStatus: 'ACCEPTED' },
-        select: { orgId: true, role: true },
-      },
-    },
-  });
-
-  if (!event) return { event: null, allowed: false };
-  if (role === 'super_admin') return { event, allowed: true };
-
-  const isHost = event.organizations.some(
-    (o) => o.role === 'HOST' && o.orgId === userOrgId,
-  );
-
-  return { event, allowed: isHost };
-}
 
 function mapRegistrantType(item: {
   id: string;
@@ -44,8 +18,6 @@ function mapRegistrantType(item: {
   };
 }
 
-// ─── GET /api/events/[id]/registrant-types ───────────────────────────────────
-
 export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } },
@@ -56,11 +28,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { event, allowed } = await getEventAndCheckOwnership(
-      params.id,
-      session.user.role,
-      session.user.orgId,
-    );
+    const { event, allowed } = await getEventHostAccess(session, params.id);
 
     if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -71,12 +39,13 @@ export async function GET(
     });
 
     return NextResponse.json({ data: items.map(mapRegistrantType) }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to fetch registrant types' }, { status: 500 });
   }
 }
-
-// ─── PUT /api/events/[id]/registrant-types ───────────────────────────────────
 
 export async function PUT(
   req: NextRequest,
@@ -87,15 +56,11 @@ export async function PUT(
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (session.user.role === 'officer') {
+    if (isOfficer(session)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { event, allowed } = await getEventAndCheckOwnership(
-      params.id,
-      session.user.role,
-      session.user.orgId,
-    );
+    const { event, allowed } = await getEventHostAccess(session, params.id);
 
     if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -123,7 +88,10 @@ export async function PUT(
     });
 
     return NextResponse.json({ data: created.map(mapRegistrantType) }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to update registrant types' }, { status: 500 });
   }
 }

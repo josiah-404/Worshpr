@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { OrgAccessError, resolveFilterOrgId, assertCanManageFinance } from '@/lib/org-access';
 import { orgFundSchema } from '@/validations/finance.schema';
 
 export async function GET(req: NextRequest) {
@@ -9,9 +10,7 @@ export async function GET(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const orgId = session.user.role === 'super_admin'
-      ? (req.nextUrl.searchParams.get('orgId') ?? session.user.orgId)
-      : session.user.orgId;
+    const orgId = resolveFilterOrgId(session, req.nextUrl.searchParams.get('orgId'));
     if (!orgId) return NextResponse.json({ data: null }, { status: 200 });
 
     let fund = await prisma.orgFund.findUnique({ where: { orgId } });
@@ -49,7 +48,10 @@ export async function GET(req: NextRequest) {
         updatedAt: fund.updatedAt.toISOString(),
       },
     }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -59,10 +61,9 @@ export async function PATCH(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // super_admin may pass orgId via query param (same as GET)
-    const orgId = session.user.role === 'super_admin'
-      ? (req.nextUrl.searchParams.get('orgId') ?? session.user.orgId)
-      : session.user.orgId;
+    assertCanManageFinance(session);
+
+    const orgId = resolveFilterOrgId(session, req.nextUrl.searchParams.get('orgId'));
 
     if (!orgId) return NextResponse.json({ error: 'No organization' }, { status: 400 });
 
@@ -85,7 +86,10 @@ export async function PATCH(req: NextRequest) {
         updatedAt: fund.updatedAt.toISOString(),
       },
     }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

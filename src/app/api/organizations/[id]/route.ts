@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { OrgAccessError } from '@/lib/org-access';
 import { updateOrganizationSchema } from '@/validations/organization.schema';
 
 export async function PUT(
@@ -10,7 +11,7 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'super_admin') {
+    if (!session || !session.user.isSuperAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -40,7 +41,10 @@ export async function PUT(
     });
 
     return NextResponse.json({ data: organization }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to update organization' }, { status: 500 });
   }
 }
@@ -51,13 +55,16 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'super_admin') {
+    if (!session || !session.user.isSuperAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     await prisma.organization.delete({ where: { id: params.id } });
     return NextResponse.json({ data: { message: 'Organization deleted' } }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to delete organization' }, { status: 500 });
   }
 }

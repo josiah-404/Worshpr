@@ -11,9 +11,9 @@ export default async function CollaborationsPage() {
   const session = await getServerSession(authOptions);
 
   if (!session) redirect('/login');
-  if (session.user.role === 'super_admin' || !session.user.orgId) redirect('/events');
+  if (session.user.isSuperAdmin || !session.user.activeOrgId) redirect('/events');
 
-  const orgId = session.user.orgId;
+  const orgId = session.user.activeOrgId;
 
   const raw = await prisma.eventOrganization.findMany({
     where: { orgId, role: 'COLLABORATOR' },

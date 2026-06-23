@@ -4,6 +4,7 @@ import { type FC, useEffect, useState } from 'react';
 import { useForm, Controller, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import {
   ArrowLeft, Building2, Church, ImagePlus, Loader2,
   MessageSquare, Pencil, Pipette, ScrollText, UserPlus, X,
@@ -37,7 +38,7 @@ import { ChatPanel } from '@/components/chat/ChatPanel';
 import { createEventSchema, type CreateEventInput } from '@/validations/event.schema';
 import type {
   EventListItem, EventProgramData, ChurchOption, Organization,
-  OrgRole, EventType, EventStatus, EventDetails, EventFeeItemInput, EventRegistrantTypeInput,
+  EventType, EventStatus, EventDetails, EventFeeItemInput, EventRegistrantTypeInput,
 } from '@/types';
 
 const DEFAULT_FEE_ITEMS: EventFeeItemInput[] = [
@@ -79,7 +80,6 @@ interface EventDetailClientProps {
   initialProgram: EventProgramData | null;
   churches: ChurchOption[];
   organizations: Organization[];
-  role: OrgRole;
 }
 
 // ─── Details Form ──────────────────────────────────────────────────────────────
@@ -549,12 +549,15 @@ export const EventDetailClient: FC<EventDetailClientProps> = ({
   initialProgram,
   churches,
   organizations,
-  role,
 }) => {
   const router = useRouter();
+  const { data: session } = useSession();
+  const isSuperAdmin = session?.user?.isSuperAdmin ?? false;
+  const activeRole = isSuperAdmin
+    ? 'super_admin'
+    : (session?.user?.activeRole ?? 'officer');
   const canEdit = true;
-  const canInvite = role !== 'officer';
-  const isSuperAdmin = role === 'super_admin';
+  const canInvite = activeRole !== 'officer';
   const hostOrg = event.organizations.find((o) => o.role === 'HOST');
 
   const [invitePanelOpen, setInvitePanelOpen] = useState(false);

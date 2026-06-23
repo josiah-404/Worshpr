@@ -7,7 +7,16 @@ export const getUsers = async (): Promise<User[]> => {
 };
 
 export const createUser = async (form: UserFormState): Promise<User> => {
-  const { data } = await api.post<{ data: User }>('/users', form);
+  const { data } = await api.post<{ data: User }>('/users', {
+    name: form.name,
+    email: form.email,
+    isSuperAdmin: form.isSuperAdmin,
+    memberships: form.memberships.map((m) => ({
+      orgId: m.orgId,
+      role: m.role,
+      title: m.title || undefined,
+    })),
+  });
   return data.data;
 };
 
@@ -18,9 +27,12 @@ export const updateUser = async (
   const { data } = await api.put<{ data: User }>(`/users/${id}`, {
     name: form.name,
     email: form.email,
-    role: form.role,
-    orgId: form.orgId || undefined,
-    title: form.title || undefined,
+    isSuperAdmin: form.isSuperAdmin,
+    memberships: form.memberships.map((m) => ({
+      orgId: m.orgId,
+      role: m.role,
+      title: m.title || undefined,
+    })),
   });
   return data.data;
 };

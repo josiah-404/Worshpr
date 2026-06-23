@@ -28,8 +28,11 @@ interface ChatRoomListProps {
 
 export const ChatRoomList: FC<ChatRoomListProps> = ({ rooms, activeRoomId, onSelect, unreadCounts }) => {
   const { data: session } = useSession();
-  const role = session?.user?.role ?? 'officer';
-  const canCreate = role === 'super_admin' || role === 'org_admin';
+  const isSuperAdmin = session?.user?.isSuperAdmin ?? false;
+  const activeRole = isSuperAdmin
+    ? 'super_admin'
+    : (session?.user?.activeRole ?? 'officer');
+  const canCreate = activeRole === 'super_admin' || activeRole === 'org_admin';
   const { activeOrgId } = useOrgContext();
 
   const [dialogOpen, setDialogOpen] = useState(false);

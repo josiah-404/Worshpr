@@ -16,6 +16,7 @@ import { useGetPaymentAccounts } from '@/hooks/useGetPaymentAccounts';
 import { useDeletePaymentAccount } from '@/hooks/useDeletePaymentAccount';
 import { useUpdatePaymentAccount } from '@/hooks/useUpdatePaymentAccount';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useCanManageFinance } from '@/hooks/useCanManageFinance';
 import { useOrgContext } from '@/providers/OrgContext';
 import { PaymentAccountDialog } from './PaymentAccountDialog';
 import { toast } from 'sonner';
@@ -54,6 +55,7 @@ export const PaymentAccountsClient: FC<PaymentAccountsClientProps> = ({
   // Use activeOrgId from OrgContext so super_admin org-switcher works
   const { activeOrgId } = useOrgContext();
   const orgId = activeOrgId ?? ssrOrgId;
+  const canManageFinance = useCanManageFinance();
 
   const { data: accounts = initialAccounts } = useGetPaymentAccounts(orgId || null);
   const { mutate: deleteAccount } = useDeletePaymentAccount();
@@ -157,9 +159,11 @@ export const PaymentAccountsClient: FC<PaymentAccountsClientProps> = ({
             </Button>
           )}
         </div>
-        <Button onClick={openCreate} size="sm">
-          <PlusCircle className="mr-2 h-4 w-4" /> Add Account
-        </Button>
+        {canManageFinance && (
+          <Button onClick={openCreate} size="sm">
+            <PlusCircle className="mr-2 h-4 w-4" /> Add Account
+          </Button>
+        )}
       </div>
 
       {accounts.length === 0 ? (
@@ -173,9 +177,11 @@ export const PaymentAccountsClient: FC<PaymentAccountsClientProps> = ({
               Add a payment account so registrants know where to send payments.
             </p>
           </div>
-          <Button onClick={openCreate} size="sm" variant="outline">
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Account
-          </Button>
+          {canManageFinance && (
+            <Button onClick={openCreate} size="sm" variant="outline">
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Account
+            </Button>
+          )}
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center gap-2">
@@ -194,7 +200,7 @@ export const PaymentAccountsClient: FC<PaymentAccountsClientProps> = ({
                 <TableHead>Number / Mobile</TableHead>
                 <TableHead>QR</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {canManageFinance && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -235,26 +241,38 @@ export const PaymentAccountsClient: FC<PaymentAccountsClientProps> = ({
                       )}
                     </TableCell>
                     <TableCell>
-                      <button onClick={() => handleToggleActive(account)}>
+                      {canManageFinance ? (
+                        <button onClick={() => handleToggleActive(account)}>
+                          <Badge variant="outline" className={cn(
+                            'cursor-pointer',
+                            account.isActive
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
+                              : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted',
+                          )}>
+                            {account.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </button>
+                      ) : (
                         <Badge variant="outline" className={cn(
-                          'cursor-pointer',
                           account.isActive
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
-                            : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted',
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : 'bg-muted/50 text-muted-foreground border-border',
                         )}>
                           {account.isActive ? 'Active' : 'Inactive'}
                         </Badge>
-                      </button>
+                      )}
                     </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(account)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(account)}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+                    {canManageFinance && (
+                      <TableCell className="text-right space-x-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(account)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(account)}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })}

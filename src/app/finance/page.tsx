@@ -12,12 +12,11 @@ export default async function FinancePage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
 
-  const role = session.user.role;
-  const orgId = session.user.orgId;
+  const isSuperAdmin = session.user.isSuperAdmin;
+  const orgId = session.user.activeOrgId;
 
-  if (!orgId && role !== 'super_admin') redirect('/');
+  if (!orgId && !isSuperAdmin) redirect('/');
 
-  // Fetch all data in parallel
   const [fund, rawEntries, events, categoryTotals, rawAccounts] = await Promise.all([
     orgId ? prisma.orgFund.findUnique({ where: { orgId } }) : null,
     orgId ? prisma.financeLedger.findMany({
@@ -59,7 +58,6 @@ export default async function FinancePage() {
     updatedAt: a.updatedAt.toISOString(),
   }));
 
-  // Build OrgFund with computed COH
   const totalIncome = categoryTotals.filter((r) => r.type === 'INCOME').reduce((s, r) => s + (r._sum.amount ?? 0), 0);
   const totalExpenses = categoryTotals.filter((r) => r.type === 'EXPENSE').reduce((s, r) => s + (r._sum.amount ?? 0), 0);
   const initialBalance = fund?.initialBalance ?? 0;
@@ -77,7 +75,6 @@ export default async function FinancePage() {
     updatedAt: fund?.updatedAt.toISOString() ?? new Date().toISOString(),
   } : null;
 
-  // Build per-event breakdown
   const eventMap = new Map(events.map((e) => [e.id, e.title]));
   const breakdownMap = new Map<string | null, { totalIncome: number; totalExpenses: number; registrationIncome: number; offertoryIncome: number; donationIncome: number; otherIncome: number }>();
 
@@ -118,7 +115,6 @@ export default async function FinancePage() {
       })),
   } : null;
 
-  // Map ledger entries
   const initialEntries: LedgerEntry[] = rawEntries.map((e) => ({
     id: e.id,
     orgId: e.orgId,

@@ -1,25 +1,20 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { resolveFilterOrgIds, orgIdWhereClause } from '@/lib/org-access';
+import { eventOrgFilterWhere } from '@/lib/event-access';
 import { RegistrationsClient } from '@/components/registration/RegistrationsClient';
-import type { RegistrationListItem, EventListItem, OrgRole } from '@/types';
+import type { RegistrationListItem, EventListItem } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
 export default async function RegistrationsPage() {
   const session = await getServerSession(authOptions);
-  const role = (session?.user?.role ?? 'officer') as OrgRole;
-  const userOrgId = session?.user?.orgId ?? null;
+  const filterOrgIds = session ? resolveFilterOrgIds(session) : [];
+  const orgFilter = session ? orgIdWhereClause(session) : { orgId: { in: [] as string[] } };
 
-  const isSuperAdmin = role === 'super_admin';
-
-  // Fetch registrations
   const rawRegs = await prisma.registration.findMany({
-    where: isSuperAdmin
-      ? undefined
-      : userOrgId
-        ? { orgId: userOrgId }
-        : { id: 'none' },
+    where: orgFilter,
     orderBy: { createdAt: 'desc' },
     select: {
       id: true,
@@ -130,11 +125,7 @@ export default async function RegistrationsPage() {
 
   // Fetch events for the event filter dropdown
   const rawEvents = await prisma.event.findMany({
-    where: isSuperAdmin
-      ? undefined
-      : userOrgId
-        ? { organizations: { some: { orgId: userOrgId } } }
-        : { id: 'none' },
+    where: eventOrgFilterWhere(filterOrgIds),
     orderBy: { startDate: 'desc' },
     select: {
       id: true,

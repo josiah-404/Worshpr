@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useEffect, type FC } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FormField } from '@/components/ui/form-field';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -18,13 +21,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { OFFICER_TITLES } from '@/lib/constants';
-import type { User, UserFormState, Organization } from '@/types';
+import { OFFICER_TITLES, EMPTY_MEMBERSHIP } from '@/lib/constants';
+import type { User, UserFormState, UserMembershipForm, Organization } from '@/types';
 
-const ROLES: { value: UserFormState['role']; label: string }[] = [
-  { value: 'super_admin', label: 'Super Admin' },
-  { value: 'org_admin',   label: 'Org Admin'   },
-  { value: 'officer',     label: 'Officer'      },
+const MEMBERSHIP_ROLES: { value: UserMembershipForm['role']; label: string }[] = [
+  { value: 'org_admin', label: 'Org Admin' },
+  { value: 'officer', label: 'Officer' },
 ];
 
 const PREDEFINED_TITLES = OFFICER_TITLES.filter((t) => t !== 'Other') as readonly string[];
@@ -39,6 +41,7 @@ interface UserDialogProps {
   loading: boolean;
   error: string;
   organizations: Organization[];
+  actorIsSuperAdmin: boolean;
 }
 
 export const UserDialog: FC<UserDialogProps> = ({
@@ -51,38 +54,77 @@ export const UserDialog: FC<UserDialogProps> = ({
   loading,
   error,
   organizations,
+  actorIsSuperAdmin,
 }) => {
+  const { data: session } = useSession();
   const set = (patch: Partial<UserFormState>) => onFormChange({ ...form, ...patch });
 
-  // Local state to track what's selected in the title dropdown
-  const [titleSelectValue, setTitleSelectValue] = useState('');
+  const [titleSelectValues, setTitleSelectValues] = useState<string[]>([]);
 
-  // Sync dropdown selection whenever the dialog opens
   useEffect(() => {
     if (!open) return;
-    if (!form.title) {
-      setTitleSelectValue('');
-    } else if (PREDEFINED_TITLES.includes(form.title)) {
-      setTitleSelectValue(form.title);
-    } else {
-      setTitleSelectValue('other');
-    }
+    setTitleSelectValues(
+      form.memberships.map((m) => {
+        if (!m.title) return '';
+        if (PREDEFINED_TITLES.includes(m.title)) return m.title;
+        return 'other';
+      }),
+    );
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const needsOrg = form.role !== 'super_admin';
+  function addMembership() {
+    set({ memberships: [...form.memberships, { ...EMPTY_MEMBERSHIP }] });
+    setTitleSelectValues((prev) => [...prev, '']);
+  }
 
-  function handleTitleSelectChange(value: string) {
-    setTitleSelectValue(value);
+  function removeMembership(index: number) {
+    set({
+      memberships: form.memberships.filter((_, i) => i !== index),
+    });
+    setTitleSelectValues((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateMembership(index: number, patch: Partial<UserMembershipForm>) {
+    const next = form.memberships.map((m, i) =>
+      i === index ? { ...m, ...patch } : m,
+    );
+    set({ memberships: next });
+  }
+
+  function handleTitleSelectChange(index: number, value: string) {
+    setTitleSelectValues((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
     if (value === 'other') {
-      set({ title: '' }); // clear so user types their own
+      updateMembership(index, { title: '' });
     } else {
-      set({ title: value });
+      updateMembership(index, { title: value });
     }
   }
 
+  function handleSuperAdminChange(checked: boolean) {
+    set({
+      isSuperAdmin: checked,
+      memberships: checked ? [] : [{ ...EMPTY_MEMBERSHIP }],
+    });
+    if (!checked) setTitleSelectValues(['']);
+  }
+
+  const actorManageableOrgIds = actorIsSuperAdmin
+    ? organizations.map((o) => o.id)
+    : (session?.user?.orgMemberships ?? [])
+        .filter((m) => m.role === 'org_admin')
+        .map((m) => m.orgId);
+
+  const selectableOrgs = organizations.filter((o) =>
+    actorManageableOrgIds.includes(o.id),
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
         </DialogHeader>
@@ -109,83 +151,131 @@ export const UserDialog: FC<UserDialogProps> = ({
             />
           </FormField>
 
-          <FormField label="Role">
-            <Select
-              value={form.role}
-              onValueChange={(v) =>
-                set({
-                  role: v as UserFormState['role'],
-                  orgId: v === 'super_admin' ? '' : form.orgId,
-                  title: v !== 'officer' ? '' : form.title,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select role" />
-              </SelectTrigger>
-              <SelectContent>
-                {ROLES.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>
-                    {r.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-
-          {needsOrg && (
-            <FormField label="Organization">
-              <Select
-                required
-                value={form.orgId}
-                onValueChange={(v) => set({ orgId: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select organization" />
-                </SelectTrigger>
-                <SelectContent>
-                  {organizations.map((org) => (
-                    <SelectItem key={org.id} value={org.id}>
-                      {org.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
+          {actorIsSuperAdmin && (
+            <div className="flex items-center gap-2">
+              <input
+                id="isSuperAdmin"
+                type="checkbox"
+                checked={form.isSuperAdmin}
+                onChange={(e) => handleSuperAdminChange(e.target.checked)}
+                className="h-4 w-4 rounded border border-input"
+              />
+              <Label htmlFor="isSuperAdmin" className="text-sm font-normal cursor-pointer">
+                Super Admin (platform-wide access)
+              </Label>
+            </div>
           )}
 
-          {form.role === 'officer' && (
-            <>
-              <FormField label="Title">
-                <Select
-                  value={titleSelectValue}
-                  onValueChange={handleTitleSelectChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select title" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {OFFICER_TITLES.map((t) => (
-                      <SelectItem key={t} value={t === 'Other' ? 'other' : t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormField>
+          {!form.isSuperAdmin && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Organization Memberships</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addMembership}>
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add Org
+                </Button>
+              </div>
 
-              {titleSelectValue === 'other' && (
-                <FormField label="Specify Title" htmlFor="title-custom">
-                  <Input
-                    id="title-custom"
-                    required
-                    placeholder="e.g. Worship Leader"
-                    value={form.title}
-                    onChange={(e) => set({ title: e.target.value })}
-                  />
-                </FormField>
+              {form.memberships.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Add at least one organization membership.
+                </p>
               )}
-            </>
+
+              {form.memberships.map((membership, index) => (
+                <div
+                  key={index}
+                  className="rounded-lg border border-border p-3 space-y-3 relative"
+                >
+                  {form.memberships.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-2 h-7 w-7 text-destructive"
+                      onClick={() => removeMembership(index)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+
+                  <FormField label="Organization">
+                    <Select
+                      required
+                      value={membership.orgId}
+                      onValueChange={(v) => updateMembership(index, { orgId: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select organization" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectableOrgs.map((org) => (
+                          <SelectItem key={org.id} value={org.id}>
+                            {org.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+
+                  <FormField label="Role">
+                    <Select
+                      value={membership.role}
+                      onValueChange={(v) =>
+                        updateMembership(index, {
+                          role: v as UserMembershipForm['role'],
+                          title: v === 'officer' ? membership.title : '',
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MEMBERSHIP_ROLES.map((r) => (
+                          <SelectItem key={r.value} value={r.value}>
+                            {r.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+
+                  {membership.role === 'officer' && (
+                    <>
+                      <FormField label="Title">
+                        <Select
+                          value={titleSelectValues[index] ?? ''}
+                          onValueChange={(v) => handleTitleSelectChange(index, v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select title" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {OFFICER_TITLES.map((t) => (
+                              <SelectItem key={t} value={t === 'Other' ? 'other' : t}>
+                                {t}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormField>
+
+                      {titleSelectValues[index] === 'other' && (
+                        <FormField label="Specify Title" htmlFor={`title-custom-${index}`}>
+                          <Input
+                            id={`title-custom-${index}`}
+                            required
+                            placeholder="e.g. Worship Leader"
+                            value={membership.title}
+                            onChange={(e) => updateMembership(index, { title: e.target.value })}
+                          />
+                        </FormField>
+                      )}
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
 
           {!editingUser && (

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isOfficer, OrgAccessError } from '@/lib/org-access';
 import { idTemplateSchema } from '@/validations/id.schema';
 
 // ─── GET ────────────────────────────────────────────────────────────────────
@@ -18,7 +19,10 @@ export async function GET(
     const template = await prisma.eventIdTemplate.findUnique({ where: { eventId } });
 
     return NextResponse.json({ data: template ?? null }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -32,7 +36,7 @@ export async function PUT(
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (session.user.role === 'officer') {
+    if (isOfficer(session)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -55,7 +59,10 @@ export async function PUT(
     });
 
     return NextResponse.json({ data: template }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

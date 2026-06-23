@@ -14,6 +14,7 @@ import {
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { useGetLedger } from '@/hooks/useGetLedger';
 import { useDeleteLedgerEntry } from '@/hooks/useDeleteLedgerEntry';
+import { useCanManageFinance } from '@/hooks/useCanManageFinance';
 import { FINANCE_CATEGORY_LABELS, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '@/types/finance.types';
 import { cn } from '@/lib/utils';
 import type { LedgerEntry, FinanceEntryType, FinanceCategory } from '@/types/finance.types';
@@ -60,6 +61,7 @@ export const LedgerTable: FC<LedgerTableProps> = ({ initialData, events, filterE
   const { data: fetchedEntries, isLoading } = useGetLedger(params);
   const entries = fetchedEntries ?? (hasActiveFilters ? [] : (initialData ?? []));
   const { mutate: deleteEntry } = useDeleteLedgerEntry();
+  const canManageFinance = useCanManageFinance();
 
   const hasFilters = hasActiveFilters;
 
@@ -173,7 +175,7 @@ export const LedgerTable: FC<LedgerTableProps> = ({ initialData, events, filterE
                           </a>
                         </Button>
                       )}
-                      {!entry.referenceId && (
+                      {!entry.referenceId && canManageFinance && (
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
                           onClick={() => setPendingDelete(entry)}>
                           <Trash2 className="h-3.5 w-3.5" />

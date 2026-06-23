@@ -2,35 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getEventHostAccess } from '@/lib/event-access';
+import { isOfficer, OrgAccessError } from '@/lib/org-access';
 import { z } from 'zod';
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-async function getEventAndCheckOwnership(
-  eventId: string,
-  role: string,
-  userOrgId: string | null | undefined,
-) {
-  const event = await prisma.event.findUnique({
-    where: { id: eventId },
-    select: {
-      id: true,
-      organizations: {
-        where: { inviteStatus: 'ACCEPTED' },
-        select: { orgId: true, role: true },
-      },
-    },
-  });
-
-  if (!event) return { event: null, allowed: false };
-  if (role === 'super_admin') return { event, allowed: true };
-
-  const isHost = event.organizations.some(
-    (o) => o.role === 'HOST' && o.orgId === userOrgId,
-  );
-
-  return { event, allowed: isHost };
-}
 
 function mapChurch(c: {
   id: string;
@@ -54,8 +28,6 @@ function mapChurch(c: {
   };
 }
 
-// ─── GET /api/events/[id]/churches ──────────────────────────────────────────
-
 export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } },
@@ -65,23 +37,19 @@ export async function GET(
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (session.user.role === 'officer') {
+    if (isOfficer(session)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { event, allowed } = await getEventAndCheckOwnership(
-      params.id,
-      session.user.role,
-      session.user.orgId,
-    );
+    const { event, allowed } = await getEventHostAccess(session, params.id);
 
     if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    // All org IDs that are ACCEPTED for this event
-    const acceptedOrgIds = event.organizations.map((o) => o.orgId);
+    const acceptedOrgIds = event.organizations
+      .filter((o) => o.inviteStatus === 'ACCEPTED')
+      .map((o) => o.orgId);
 
-    // Churches already participating in this event
     const participating = await prisma.church.findMany({
       where: { eventChurches: { some: { eventId: params.id } } },
       orderBy: [{ orgId: 'asc' }, { name: 'asc' }],
@@ -94,7 +62,6 @@ export async function GET(
 
     const participatingIds = participating.map((c) => c.id);
 
-    // All active churches from the event's accepted orgs, excluding those already participating
     const available = await prisma.church.findMany({
       where: {
         orgId: { in: acceptedOrgIds },
@@ -115,12 +82,13 @@ export async function GET(
         available: available.map(mapChurch),
       },
     }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to fetch event churches' }, { status: 500 });
   }
 }
-
-// ─── PUT /api/events/[id]/churches ──────────────────────────────────────────
 
 const putSchema = z.object({
   churchIds: z.array(z.string()).min(0),
@@ -135,15 +103,11 @@ export async function PUT(
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (session.user.role === 'officer') {
+    if (isOfficer(session)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { event, allowed } = await getEventAndCheckOwnership(
-      params.id,
-      session.user.role,
-      session.user.orgId,
-    );
+    const { event, allowed } = await getEventHostAccess(session, params.id);
 
     if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -156,7 +120,6 @@ export async function PUT(
 
     const { churchIds } = parsed.data;
 
-    // Replace all EventChurch records for this event in a transaction
     await prisma.$transaction([
       prisma.eventChurch.deleteMany({ where: { eventId: params.id } }),
       ...(churchIds.length > 0
@@ -169,7 +132,10 @@ export async function PUT(
     ]);
 
     return NextResponse.json({ data: { message: 'Churches updated' } }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to update event churches' }, { status: 500 });
   }
 }

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { canAccessOrg } from '@/lib/org-access';
 import { EventFinanceClient } from '@/components/finance/EventFinanceClient';
 import type { LedgerEntry, FinanceCategory, FinanceEntryType } from '@/types/finance.types';
 
@@ -17,11 +18,8 @@ export default async function EventFinancePage({ params }: PageProps) {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
 
-  const role = session.user.role;
-  if (role === 'officer' && session.user.title !== 'Treasurer') redirect('/');
-
   const { eventId } = await params;
-  const orgId = session.user.orgId;
+  const orgId = session.user.activeOrgId;
 
   const [event, rawEntries] = await Promise.all([
     prisma.event.findUnique({
@@ -34,8 +32,7 @@ export default async function EventFinancePage({ params }: PageProps) {
     prisma.financeLedger.findMany({
       where: {
         eventId,
-        // super_admin sees all org entries for the event; others see only their org's
-        ...(role !== 'super_admin' && orgId ? { orgId } : {}),
+        ...(session.user.isSuperAdmin || !orgId ? {} : { orgId }),
       },
       orderBy: { date: 'desc' },
       select: {
@@ -51,9 +48,9 @@ export default async function EventFinancePage({ params }: PageProps) {
 
   if (!event) notFound();
 
-  // Guard: org must be part of this event
-  if (role !== 'super_admin' && orgId && !event.organizations.some((o) => o.orgId === orgId)) {
-    redirect('/finance');
+  if (!session.user.isSuperAdmin && orgId) {
+    const hasAccess = event.organizations.some((o) => canAccessOrg(session, o.orgId));
+    if (!hasAccess) redirect('/finance');
   }
 
   const initialEntries: LedgerEntry[] = rawEntries.map((e) => ({

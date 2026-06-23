@@ -1,25 +1,19 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { resolveFilterOrgIds } from '@/lib/org-access';
+import { eventOrgFilterWhere } from '@/lib/event-access';
 import { EventsGrid } from './EventsGrid';
-import type { EventListItem, Organization, OrgRole } from '@/types';
+import type { EventListItem, Organization } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
 export default async function EventsPage() {
   const session = await getServerSession(authOptions);
-  const role = (session?.user?.role ?? 'officer') as OrgRole;
-  const userOrgId = session?.user?.orgId ?? null;
+  const filterOrgIds = session ? resolveFilterOrgIds(session) : [];
 
-  const isSuperAdmin = role === 'super_admin';
-
-  // Fetch events — super_admin gets all, others get their org's events
   const rawEvents = await prisma.event.findMany({
-    where: isSuperAdmin
-      ? undefined
-      : userOrgId
-        ? { organizations: { some: { orgId: userOrgId } } }
-        : { id: 'none' }, // no org = no events
+    where: eventOrgFilterWhere(filterOrgIds),
     orderBy: { startDate: 'asc' },
     select: {
       id: true,
@@ -88,7 +82,6 @@ export default async function EventsPage() {
     })),
   }));
 
-  // Fetch organizations for the EventDialog + EventInvitePanel
   const rawOrgs = await prisma.organization.findMany({
     where: { isActive: true },
     orderBy: { name: 'asc' },
@@ -111,7 +104,6 @@ export default async function EventsPage() {
       </div>
       <EventsGrid
         initialEvents={events}
-        role={role}
         organizations={organizations}
       />
     </div>

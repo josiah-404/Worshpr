@@ -14,7 +14,7 @@ export default async function OrganizationsPage() {
       isActive: true,
       createdAt: true,
       updatedAt: true,
-      _count: { select: { users: true } },
+      _count: { select: { memberships: true } },
     },
   });
 

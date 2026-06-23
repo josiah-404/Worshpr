@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { createEventSchema } from '@/validations/event.schema';
 import { slugify } from '@/lib/slugify';
+import { resolveFilterOrgIds, assertCanManageOrg, OrgAccessError } from '@/lib/org-access';
+import { eventOrgFilterWhere } from '@/lib/event-access';
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,18 +14,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { role, orgId } = session.user;
     const queryOrgId = req.nextUrl.searchParams.get('orgId');
-
-    // super_admin: filter by activeOrgId if provided, else return all
-    // org_admin / officer: always filter by their org
-    const filterOrgId =
-      role === 'super_admin' ? (queryOrgId ?? undefined) : (orgId ?? undefined);
+    const filterOrgIds = resolveFilterOrgIds(session, queryOrgId);
 
     const events = await prisma.event.findMany({
-      where: filterOrgId
-        ? { organizations: { some: { orgId: filterOrgId } } }
-        : undefined,
+      where: eventOrgFilterWhere(filterOrgIds),
       orderBy: { startDate: 'asc' },
       select: {
         id: true,
@@ -95,7 +90,10 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json({ data }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 });
   }
 }
@@ -114,10 +112,7 @@ export async function POST(req: NextRequest) {
 
     const { hostOrgId, coverImage, themeColor, paymentAccountId, registrationDeadline, maxSlots, customType, ...rest } = parsed.data;
 
-    // org_admin can only create events for their own org
-    if (session.user.role === 'org_admin' && hostOrgId !== session.user.orgId) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    assertCanManageOrg(session, hostOrgId);
 
     const baseSlug = slugify(rest.title);
     const suffix = Math.random().toString(36).slice(-6);
@@ -215,6 +210,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ data }, { status: 201 });
   } catch (err: unknown) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     const isPrismaUniqueError =
       err instanceof Error && 'code' in err && (err as { code: string }).code === 'P2002';
     if (isPrismaUniqueError) {

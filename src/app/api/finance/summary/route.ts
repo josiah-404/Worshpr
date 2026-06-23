@@ -2,19 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { OrgAccessError, resolveFilterOrgId } from '@/lib/org-access';
 
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const orgId = session.user.role === 'super_admin'
-      ? (req.nextUrl.searchParams.get('orgId') ?? session.user.orgId)
-      : session.user.orgId;
+    const orgId = resolveFilterOrgId(session, req.nextUrl.searchParams.get('orgId'));
 
     if (!orgId) return NextResponse.json({ data: null }, { status: 200 });
 
-    // Fetch fund, ledger aggregates, and event list in parallel
     const [fund, categoryTotals, events] = await Promise.all([
       prisma.orgFund.findUnique({ where: { orgId } }),
       prisma.financeLedger.groupBy({
@@ -30,7 +28,6 @@ export async function GET(req: NextRequest) {
 
     const initialBalance = fund?.initialBalance ?? 0;
 
-    // Build per-event breakdown map
     const eventMap = new Map(events.map((e) => [e.id, e.title]));
     const breakdownMap = new Map<string | null, {
       totalIncome: number; totalExpenses: number;
@@ -60,7 +57,6 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Build event breakdowns (only events that have ledger entries)
     const eventBreakdowns = Array.from(breakdownMap.entries())
       .filter(([key]) => key !== null)
       .map(([eventId, totals]) => ({
@@ -70,11 +66,9 @@ export async function GET(req: NextRequest) {
         net: totals.totalIncome - totals.totalExpenses,
       }));
 
-    // Standalone (no event)
     const standalone = breakdownMap.get(null);
     const standaloneExpenses = standalone?.totalExpenses ?? 0;
 
-    // Overall totals
     const totalIncome = Array.from(breakdownMap.values()).reduce((s, e) => s + e.totalIncome, 0);
     const totalExpenses = Array.from(breakdownMap.values()).reduce((s, e) => s + e.totalExpenses, 0);
 
@@ -89,7 +83,10 @@ export async function GET(req: NextRequest) {
         eventBreakdowns,
       },
     }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

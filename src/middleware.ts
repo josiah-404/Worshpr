@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
 const SUPER_ADMIN_ONLY_PATHS = ['/organizations'];
-const ADMIN_ONLY_PATHS = ['/users'];
-const FINANCE_PATHS = ['/finance'];
+const MANAGEMENT_PATHS = ['/users', '/churches'];
+
 export async function middleware(req: NextRequest) {
   const token = await getToken({ req });
   const { pathname } = req.nextUrl;
@@ -20,22 +20,17 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/login', req.url));
   }
 
-  const role = token.role as string | undefined;
-  const title = token.title as string | undefined;
+  const isSuperAdmin = token.isSuperAdmin as boolean | undefined;
+  const activeRole = token.activeRole as string | undefined;
 
-  if (role !== 'super_admin') {
+  if (!isSuperAdmin) {
     if (SUPER_ADMIN_ONLY_PATHS.some((p) => pathname.startsWith(p))) {
       return NextResponse.redirect(new URL('/', req.url));
     }
   }
 
-  if (role === 'officer') {
-    if (ADMIN_ONLY_PATHS.some((p) => pathname.startsWith(p))) {
-      return NextResponse.redirect(new URL('/', req.url));
-    }
-
-    const isFinancePath = FINANCE_PATHS.some((p) => pathname.startsWith(p));
-    if (isFinancePath && title !== 'Treasurer') {
+  if (activeRole === 'officer') {
+    if (MANAGEMENT_PATHS.some((p) => pathname.startsWith(p))) {
       return NextResponse.redirect(new URL('/', req.url));
     }
   }

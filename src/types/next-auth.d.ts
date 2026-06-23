@@ -1,27 +1,34 @@
-import { DefaultSession } from "next-auth";
+import { DefaultSession } from 'next-auth';
+import type { OrgMembership } from '@/types/org.types';
 
-declare module "next-auth" {
+declare module 'next-auth' {
   interface Session {
     user: {
       id: string;
-      role: string;
-      orgId: string | null;
-      title: string | null;
-    } & DefaultSession["user"];
+      isSuperAdmin: boolean;
+      orgMemberships: OrgMembership[];
+      activeOrgId: string | null;
+      activeRole: OrgMembership['role'] | 'super_admin' | null;
+      activeTitle: string | null;
+    } & DefaultSession['user'];
   }
 
   interface User {
-    role: string;
-    orgId: string | null;
-    title: string | null;
+    isSuperAdmin: boolean;
+    orgMemberships: OrgMembership[];
+    activeOrgId: string | null;
+    activeRole: OrgMembership['role'] | 'super_admin' | null;
+    activeTitle: string | null;
   }
 }
 
-declare module "next-auth/jwt" {
+declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
-    role: string;
-    orgId: string | null;
-    title: string | null;
+    isSuperAdmin: boolean;
+    orgMemberships: OrgMembership[];
+    activeOrgId: string | null;
+    activeRole: OrgMembership['role'] | 'super_admin' | null;
+    activeTitle: string | null;
   }
 }

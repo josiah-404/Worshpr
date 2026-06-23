@@ -11,9 +11,9 @@ export default async function PaymentAccountsPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
 
-  const { role, orgId } = session.user;
+  const orgId = session.user.activeOrgId;
 
-  if (!orgId && role !== 'super_admin') redirect('/');
+  if (!orgId && !session.user.isSuperAdmin) redirect('/');
 
   const raw = orgId
     ? await prisma.paymentAccount.findMany({

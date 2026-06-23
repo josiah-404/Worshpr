@@ -58,6 +58,8 @@ export type {
 
 export type OrgRole = 'super_admin' | 'org_admin' | 'officer';
 
+export type { OrgMembership, OrgMembershipRole, OrgMembershipWithName } from '@/types/org.types';
+
 export interface Organization {
   id: string;
   name: string;
@@ -69,7 +71,7 @@ export interface Organization {
 
 /** Organization row as returned by the list query (includes member count). */
 export interface OrganizationRow extends Organization {
-  _count: { users: number };
+  _count: { memberships: number };
 }
 
 export interface OrganizationFormState {
@@ -81,20 +83,24 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: OrgRole;
-  orgId: string | null;
-  title: string | null;
+  isSuperAdmin: boolean;
+  memberships: import('@/types/org.types').OrgMembershipWithName[];
   createdAt: string;
   isSetup: boolean;
+}
+
+export interface UserMembershipForm {
+  orgId: string;
+  role: 'org_admin' | 'officer';
+  title: string;
 }
 
 export interface UserFormState {
   name: string;
   email: string;
-  role: OrgRole;
+  isSuperAdmin: boolean;
   password: string;
-  orgId: string;
-  title: string;
+  memberships: UserMembershipForm[];
 }
 
 export interface Presentation {

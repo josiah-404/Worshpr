@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getAccessibleOrgIds, isOfficer } from '@/lib/org-access';
 import { ChurchesClient } from './ChurchesClient';
 import type { Church, Organization } from '@/types';
 
@@ -11,15 +12,27 @@ export default async function ChurchesPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
 
-  const { role, orgId } = session.user;
-  if (role === 'officer') redirect('/');
-  if (!orgId && role !== 'super_admin') redirect('/');
+  if (isOfficer(session)) redirect('/');
 
-  const isSuperAdmin = role === 'super_admin';
+  const isSuperAdmin = session.user.isSuperAdmin;
+  const accessibleOrgIds = getAccessibleOrgIds(session);
+  const activeOrgId = session.user.activeOrgId;
+
+  if (!isSuperAdmin && (!accessibleOrgIds || accessibleOrgIds.length === 0)) redirect('/');
+
+  const churchWhere = isSuperAdmin
+    ? activeOrgId
+      ? { orgId: activeOrgId }
+      : undefined
+    : accessibleOrgIds && accessibleOrgIds.length === 1
+      ? { orgId: accessibleOrgIds[0] }
+      : activeOrgId
+        ? { orgId: activeOrgId }
+        : { orgId: { in: accessibleOrgIds ?? [] } };
 
   const [rawChurches, rawOrgs] = await Promise.all([
     prisma.church.findMany({
-      where: orgId ? { orgId } : undefined,
+      where: churchWhere,
       orderBy: [{ orgId: 'asc' }, { name: 'asc' }],
       select: {
         id: true,
@@ -37,7 +50,11 @@ export default async function ChurchesPage() {
           orderBy: { name: 'asc' },
           select: { id: true, name: true, logoUrl: true, isActive: true, createdAt: true, updatedAt: true },
         })
-      : [],
+      : prisma.organization.findMany({
+          where: { id: { in: accessibleOrgIds ?? [] } },
+          orderBy: { name: 'asc' },
+          select: { id: true, name: true, logoUrl: true, isActive: true, createdAt: true, updatedAt: true },
+        }),
   ]);
 
   const initialChurches: Church[] = rawChurches.map((c) => ({
@@ -69,7 +86,7 @@ export default async function ChurchesPage() {
         </p>
       </div>
       <ChurchesClient
-        ssrOrgId={orgId ?? ''}
+        ssrOrgId={activeOrgId ?? organizations[0]?.id ?? ''}
         initialChurches={initialChurches}
         isSuperAdmin={isSuperAdmin}
         organizations={organizations}

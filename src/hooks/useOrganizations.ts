@@ -27,7 +27,7 @@ export function useOrganizations(initialOrgs: OrganizationRow[]) {
     setError('');
     try {
       const created = await createOrganization(form);
-      setOrganizations((prev) => [{ ...created, _count: { users: 0 } }, ...prev]);
+      setOrganizations((prev) => [{ ...created, _count: { memberships: 0 } }, ...prev]);
       queryClient.refetchQueries({ queryKey: [QUERY_KEYS.ORGANIZATIONS], type: 'active' });
       toast.success('Organization created', { description: `${created.name} has been added.` });
     } catch (err: unknown) {

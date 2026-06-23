@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
+import { resolveFilterOrgIds } from '@/lib/org-access';
+import { eventOrgFilterWhere } from '@/lib/event-access';
 import { IdsEventGrid } from './IdsEventGrid';
 
 export const dynamic = 'force-dynamic';
@@ -12,10 +14,10 @@ export default async function IdsPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
 
-  const { role, orgId } = session.user;
+  const filterOrgIds = resolveFilterOrgIds(session);
 
   const events = await prisma.event.findMany({
-    where: role === 'super_admin' ? {} : { organizations: { some: { orgId: orgId ?? '', inviteStatus: 'ACCEPTED' } } },
+    where: eventOrgFilterWhere(filterOrgIds),
     orderBy: { startDate: 'desc' },
     select: {
       id: true,

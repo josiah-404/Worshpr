@@ -22,13 +22,12 @@ import { EventCard } from './EventCard';
 import { EventDialog } from './EventDialog';
 import { EventInvitePanel } from './EventInvitePanel';
 import { TourTrigger } from '@/components/guides/TourTrigger';
-import type { EventListItem, OrgRole, Organization } from '@/types';
+import type { EventListItem, Organization } from '@/types';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 interface EventsGridProps {
   initialEvents: EventListItem[];
-  role: OrgRole;
   organizations: Organization[];
 }
 
@@ -36,11 +35,15 @@ interface EventsGridProps {
 
 export const EventsGrid: FC<EventsGridProps> = ({
   initialEvents,
-  role,
   organizations,
 }) => {
   const { data: session } = useSession();
   const { activeOrgId } = useOrgContext();
+
+  const isSuperAdmin = session?.user?.isSuperAdmin ?? false;
+  const activeRole = isSuperAdmin
+    ? 'super_admin'
+    : (session?.user?.activeRole ?? 'officer');
 
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
@@ -63,13 +66,11 @@ export const EventsGrid: FC<EventsGridProps> = ({
     variant: 'destructive',
   });
 
-  const canDelete = role !== 'officer';
-  const isSuperAdmin = role === 'super_admin';
+  const canDelete = activeRole !== 'officer';
 
-  // Host org for non-super_admins
   const hostOrgId = isSuperAdmin
     ? (activeOrgId ?? organizations[0]?.id ?? '')
-    : (session?.user?.orgId ?? '');
+    : (activeOrgId ?? session?.user?.orgMemberships[0]?.orgId ?? '');
 
   const filtered = useMemo(() => {
     return events.filter((e) => {

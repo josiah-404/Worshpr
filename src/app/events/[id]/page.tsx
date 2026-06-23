@@ -11,8 +11,6 @@ export default async function EventDetailPage({ params }: { params: { id: string
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
 
-  const role = (session.user?.role ?? 'officer') as 'super_admin' | 'org_admin' | 'officer';
-
   const [rawEvent, rawOrgs] = await Promise.all([
     prisma.event.findUnique({
       where: { id: params.id },
@@ -153,7 +151,6 @@ export default async function EventDetailPage({ params }: { params: { id: string
       initialProgram={initialProgram}
       churches={churches}
       organizations={organizations}
-      role={role}
     />
   );
 }

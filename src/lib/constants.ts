@@ -45,9 +45,14 @@ export type OfficerTitle = (typeof OFFICER_TITLES)[number];
 export const EMPTY_USER_FORM = {
   name: '',
   email: '',
-  role: 'officer' as const,
+  isSuperAdmin: false,
   password: '',
+  memberships: [] as { orgId: string; role: 'org_admin' | 'officer'; title: string }[],
+};
+
+export const EMPTY_MEMBERSHIP = {
   orgId: '',
+  role: 'officer' as const,
   title: '',
 };
 

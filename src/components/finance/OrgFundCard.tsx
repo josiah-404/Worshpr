@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGetOrgFund } from '@/hooks/useGetOrgFund';
 import { useUpdateOrgFund } from '@/hooks/useUpdateOrgFund';
+import { useCanManageFinance } from '@/hooks/useCanManageFinance';
 import { cn } from '@/lib/utils';
 import type { OrgFundDetail } from '@/types/finance.types';
 
@@ -28,6 +29,7 @@ function formatCurrency(amount: number) {
 export const OrgFundCard: FC<OrgFundCardProps> = ({ initialData }) => {
   const { data: fund, isLoading } = useGetOrgFund(initialData);
   const { mutate: updateFund, isPending } = useUpdateOrgFund();
+  const canManageFinance = useCanManageFinance();
 
   const [editing, setEditing] = useState(false);
   const [draftBalance, setDraftBalance] = useState('');
@@ -67,7 +69,7 @@ export const OrgFundCard: FC<OrgFundCardProps> = ({ initialData }) => {
           <Wallet className="h-5 w-5 text-primary" />
           <h2 className="font-semibold text-base">Cash on Hand</h2>
         </div>
-        {!editing && (
+        {!editing && canManageFinance && (
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleEditStart}>
             <Pencil className="h-4 w-4" />
           </Button>

@@ -22,7 +22,7 @@ model Organization {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  users               User[]
+  memberships         UserOrganization[]
   eventOrganizations  EventOrganization[]
   registrations       Registration[]
   orgFund             OrgFund?
@@ -71,16 +71,12 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
-
-  // ─── Tenant fields ───────────────────────────────────────────────
-  orgId String? // null only for super_admins
-  role  String  @default("officer") // "super_admin" | "org_admin" | "officer"
-  title String? // officer title (e.g. "Worship Leader")
+  isSuperAdmin  Boolean   @default(false) @map("is_super_admin")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  organization         Organization?        @relation(fields: [orgId], references: [id])
+  memberships          UserOrganization[]
   createdEvents        Event[]              @relation("CreatedEvents")
   financeLedgerEntries FinanceLedger[]      @relation("LedgerEnteredBy")
   passwordResetTokens  PasswordResetToken[]
@@ -88,6 +84,23 @@ model User {
   messageReactions     ChatMessageReaction[] @relation("MessageReactions")
 
   @@map("users")
+}
+
+model UserOrganization {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  orgId     String   @map("org_id")
+  role      String   // "org_admin" | "officer"
+  title     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+  @@index([orgId, role])
+  @@map("user_organizations")
 }
 
 model PasswordResetToken {
