@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { canAccessOrg, OrgAccessError } from '@/lib/org-access';
 import { respondInviteSchema } from '@/validations/event.schema';
 
 export async function PATCH(
@@ -14,11 +15,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only the invited org's admin (or super_admin) can respond
-    if (
-      session.user.role !== 'super_admin' &&
-      session.user.orgId !== params.orgId
-    ) {
+    if (!canAccessOrg(session, params.orgId)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -51,7 +48,10 @@ export async function PATCH(
     });
 
     return NextResponse.json({ data: updated }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to respond to invite' }, { status: 500 });
   }
 }

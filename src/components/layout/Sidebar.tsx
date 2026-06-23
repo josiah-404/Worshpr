@@ -70,11 +70,14 @@ export default function Sidebar() {
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
 
-  const role = session?.user?.role ?? 'officer';
-  const navGroups = ALL_NAV_GROUPS.filter((g) => g.roles.includes(role))
+  const isSuperAdmin = session?.user?.isSuperAdmin ?? false;
+  const activeRole = isSuperAdmin
+    ? 'super_admin'
+    : (session?.user?.activeRole ?? 'officer');
+  const navGroups = ALL_NAV_GROUPS.filter((g) => g.roles.includes(activeRole))
     .map((g) => ({
       ...g,
-      items: g.items.filter((item) => item.roles.includes(role)),
+      items: g.items.filter((item) => item.roles.includes(activeRole)),
     }))
     .filter((g) => g.items.length > 0);
 

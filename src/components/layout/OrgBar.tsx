@@ -13,7 +13,6 @@ import {
 import { useGetOrganizations } from '@/hooks/useGetOrganizations';
 import { useOrgContext } from '@/providers/OrgContext';
 
-// ── Shared org logo/avatar ─────────────────────────────────────────────────
 function OrgAvatar({ logoUrl, name, size = 24 }: { logoUrl: string | null; name: string; size?: number }) {
   if (logoUrl) {
     return (
@@ -37,15 +36,19 @@ function OrgAvatar({ logoUrl, name, size = 24 }: { logoUrl: string | null; name:
 
 export const OrgBar: FC = () => {
   const { data: session } = useSession();
-  const { activeOrgId, setActiveOrgId } = useOrgContext();
+  const { activeOrgId, setActiveOrgId, canSwitchOrg } = useOrgContext();
   const { data: organizations = [] } = useGetOrganizations();
 
-  const role = session?.user?.role;
-  const isSuperAdmin = role === 'super_admin';
-  const activeOrg = organizations.find((o) => o.id === activeOrgId) ?? null;
+  const isSuperAdmin = session?.user?.isSuperAdmin ?? false;
+  const memberships = session?.user?.orgMemberships ?? [];
 
-  // ── Super Admin: dropdown switcher ────────────────────────────────────────
-  if (isSuperAdmin) {
+  const selectableOrgs = isSuperAdmin
+    ? organizations
+    : organizations.filter((o) => memberships.some((m) => m.orgId === o.id));
+
+  const activeOrg = selectableOrgs.find((o) => o.id === activeOrgId) ?? null;
+
+  if (canSwitchOrg) {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -65,7 +68,7 @@ export const OrgBar: FC = () => {
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
-          {organizations.map((org) => (
+          {selectableOrgs.map((org) => (
             <DropdownMenuItem
               key={org.id}
               onSelect={() => setActiveOrgId(org.id)}
@@ -80,7 +83,6 @@ export const OrgBar: FC = () => {
     );
   }
 
-  // ── Org Admin / Officer: read-only banner ─────────────────────────────────
   if (!activeOrg) return null;
 
   return (

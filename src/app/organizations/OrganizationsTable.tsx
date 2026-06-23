@@ -133,7 +133,7 @@ export const OrganizationsTable: FC<OrganizationsTableProps> = ({ initialOrgs })
                   <TableCell className="text-muted-foreground">
                     <div className="flex items-center gap-1.5">
                       <Users className="h-3.5 w-3.5" />
-                      <span>{org._count.users}</span>
+                      <span>{org._count.memberships}</span>
                     </div>
                   </TableCell>
                   <TableCell>

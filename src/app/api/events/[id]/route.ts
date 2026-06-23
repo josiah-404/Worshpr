@@ -2,29 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getEventHostAccess } from '@/lib/event-access';
+import { OrgAccessError } from '@/lib/org-access';
 import { updateEventSchema } from '@/validations/event.schema';
-
-async function getEventAndCheckOwnership(
-  eventId: string,
-  userId: string,
-  role: string,
-  userOrgId: string | null | undefined,
-) {
-  const event = await prisma.event.findUnique({
-    where: { id: eventId },
-    include: { organizations: true },
-  });
-
-  if (!event) return { event: null, allowed: false };
-
-  if (role === 'super_admin') return { event, allowed: true };
-
-  const hostEntry = event.organizations.find(
-    (o) => o.role === 'HOST' && o.orgId === userOrgId,
-  );
-
-  return { event, allowed: !!hostEntry };
-}
 
 export async function PATCH(
   req: NextRequest,
@@ -35,12 +15,7 @@ export async function PATCH(
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const { event, allowed } = await getEventAndCheckOwnership(
-      params.id,
-      session.user.id,
-      session.user.role,
-      session.user.orgId,
-    );
+    const { event, allowed } = await getEventHostAccess(session, params.id);
 
     if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -144,7 +119,10 @@ export async function PATCH(
     };
 
     return NextResponse.json({ data }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to update event' }, { status: 500 });
   }
 }
@@ -158,12 +136,7 @@ export async function DELETE(
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const { event, allowed } = await getEventAndCheckOwnership(
-      params.id,
-      session.user.id,
-      session.user.role,
-      session.user.orgId,
-    );
+    const { event, allowed } = await getEventHostAccess(session, params.id);
 
     if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -171,7 +144,10 @@ export async function DELETE(
     await prisma.event.delete({ where: { id: params.id } });
 
     return NextResponse.json({ data: { message: 'Event deleted' } }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to delete event' }, { status: 500 });
   }
 }

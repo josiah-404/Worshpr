@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isOrgAdmin, OrgAccessError, resolveFilterOrgId } from '@/lib/org-access';
 import { createRoomSchema } from '@/validations/chat.schema';
 
 const ROOM_SELECT = {
@@ -25,16 +26,14 @@ function mapRoom(r: {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { role, orgId: sessionOrgId } = session.user;
-  const paramOrgId = req.nextUrl.searchParams.get('orgId');
-  const orgId = role === 'super_admin' ? (paramOrgId ?? sessionOrgId) : sessionOrgId;
-
-  if (!orgId) return NextResponse.json({ error: 'No org context' }, { status: 400 });
-
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const orgId = resolveFilterOrgId(session, req.nextUrl.searchParams.get('orgId'));
+
+    if (!orgId) return NextResponse.json({ error: 'No org context' }, { status: 400 });
+
     const rooms = await prisma.chatRoom.findMany({
       where: { orgId, type: 'ORG' },
       orderBy: { createdAt: 'asc' },
@@ -42,29 +41,30 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({ data: rooms.map(mapRoom) });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { role, orgId: sessionOrgId } = session.user;
-  if (role !== 'super_admin' && role !== 'org_admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    if (!isOrgAdmin(session)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await req.json();
     const parsed = createRoomSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const orgId =
-      role === 'super_admin' ? (parsed.data.orgId ?? sessionOrgId) : sessionOrgId;
+    const orgId = resolveFilterOrgId(session, parsed.data.orgId);
     if (!orgId) return NextResponse.json({ error: 'No org context' }, { status: 400 });
 
     const room = await prisma.chatRoom.create({
@@ -73,7 +73,10 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ data: mapRoom(room) }, { status: 201 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

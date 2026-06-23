@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { assertCanManageFinance, canAccessOrg, OrgAccessError } from '@/lib/org-access';
 import { updateLedgerEntrySchema } from '@/validations/finance.schema';
 
 export async function PATCH(
@@ -11,6 +12,8 @@ export async function PATCH(
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    assertCanManageFinance(session);
 
     const { id } = await params;
     const body = await req.json();
@@ -25,10 +28,9 @@ export async function PATCH(
     });
 
     if (!existing) return NextResponse.json({ error: 'Entry not found' }, { status: 404 });
-    if (session.user.role !== 'super_admin' && existing.orgId !== session.user.orgId) {
+    if (!canAccessOrg(session, existing.orgId)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-    // Auto-created registration entries should not be manually edited
     if (existing.referenceId) {
       return NextResponse.json({ error: 'Auto-generated entries cannot be edited' }, { status: 400 });
     }
@@ -50,7 +52,10 @@ export async function PATCH(
     return NextResponse.json({
       data: { ...updated, updatedAt: updated.updatedAt.toISOString() },
     }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -63,6 +68,8 @@ export async function DELETE(
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    assertCanManageFinance(session);
+
     const { id } = await params;
 
     const existing = await prisma.financeLedger.findUnique({
@@ -71,7 +78,7 @@ export async function DELETE(
     });
 
     if (!existing) return NextResponse.json({ error: 'Entry not found' }, { status: 404 });
-    if (session.user.role !== 'super_admin' && existing.orgId !== session.user.orgId) {
+    if (!canAccessOrg(session, existing.orgId)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     if (existing.referenceId) {
@@ -80,7 +87,10 @@ export async function DELETE(
 
     await prisma.financeLedger.delete({ where: { id } });
     return NextResponse.json({ data: { id } }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

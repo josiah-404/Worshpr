@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { OrgAccessError, resolveFilterOrgId, assertCanManageFinance } from '@/lib/org-access';
 import { ledgerEntrySchema } from '@/validations/finance.schema';
 import type { FinanceEntryType, FinanceCategory } from '@/types/finance.types';
 
@@ -62,9 +63,7 @@ export async function GET(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const orgId = session.user.role === 'super_admin'
-      ? (req.nextUrl.searchParams.get('orgId') ?? undefined)
-      : (session.user.orgId ?? undefined);
+    const orgId = resolveFilterOrgId(session, req.nextUrl.searchParams.get('orgId'));
 
     const eventId = req.nextUrl.searchParams.get('eventId') ?? undefined;
     const type = req.nextUrl.searchParams.get('type') as FinanceEntryType | null;
@@ -90,7 +89,10 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({ data: entries.map(mapEntry) }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -100,11 +102,11 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    assertCanManageFinance(session);
+
     const body = await req.json();
 
-    const orgId = session.user.role === 'super_admin'
-      ? (body.orgId ?? null)
-      : session.user.orgId;
+    const orgId = resolveFilterOrgId(session, body.orgId);
 
     if (!orgId) return NextResponse.json({ error: 'No organization' }, { status: 400 });
 
@@ -127,8 +129,11 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ data: mapEntry(entry) }, { status: 201 });
-  } catch (e) {
-    console.error('[POST /finance/ledger]', e);
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    console.error('[POST /finance/ledger]', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

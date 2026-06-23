@@ -2,22 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import {
+  assertCanManageFinance,
+  canAccessOrg,
+  OrgAccessError,
+} from '@/lib/org-access';
 import { updatePaymentAccountSchema } from '@/validations/payment-account.schema';
-
-async function getAccountAndCheckOwnership(
-  accountId: string,
-  role: string,
-  userOrgId: string | null | undefined,
-) {
-  const account = await prisma.paymentAccount.findUnique({
-    where: { id: accountId },
-  });
-
-  if (!account) return { account: null, allowed: false };
-  if (role === 'super_admin') return { account, allowed: true };
-
-  return { account, allowed: account.orgId === userOrgId };
-}
 
 export async function PATCH(
   req: NextRequest,
@@ -28,14 +18,16 @@ export async function PATCH(
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const { account, allowed } = await getAccountAndCheckOwnership(
-      params.id,
-      session.user.role,
-      session.user.orgId,
-    );
+
+    const account = await prisma.paymentAccount.findUnique({
+      where: { id: params.id },
+    });
 
     if (!account) return NextResponse.json({ error: 'Payment account not found' }, { status: 404 });
-    if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!canAccessOrg(session, account.orgId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    assertCanManageFinance(session);
 
     const body = await req.json();
     const parsed = updatePaymentAccountSchema.safeParse(body);
@@ -74,7 +66,10 @@ export async function PATCH(
     };
 
     return NextResponse.json({ data }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to update payment account' }, { status: 500 });
   }
 }
@@ -88,19 +83,24 @@ export async function DELETE(
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const { account, allowed } = await getAccountAndCheckOwnership(
-      params.id,
-      session.user.role,
-      session.user.orgId,
-    );
+
+    const account = await prisma.paymentAccount.findUnique({
+      where: { id: params.id },
+    });
 
     if (!account) return NextResponse.json({ error: 'Payment account not found' }, { status: 404 });
-    if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!canAccessOrg(session, account.orgId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    assertCanManageFinance(session);
 
     await prisma.paymentAccount.delete({ where: { id: params.id } });
 
     return NextResponse.json({ data: { message: 'Payment account deleted' } }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to delete payment account' }, { status: 500 });
   }
 }

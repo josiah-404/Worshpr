@@ -1,24 +1,36 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getManageableOrgIds } from '@/lib/org-access';
+import { serializeUser, userSelect } from '@/lib/user-serialize';
 import { UsersTable } from './UsersTable';
 import type { User, Organization } from '@/types';
-import type { User as PrismaUser } from '@/generated/prisma';
 
 export const dynamic = 'force-dynamic';
 
 export default async function UsersPage() {
   const session = await getServerSession(authOptions);
-  const isOrgAdmin = session?.user?.role === 'org_admin';
-  const orgId = session?.user?.orgId ?? null;
+  const manageableOrgIds = session ? getManageableOrgIds(session) : [];
 
-  const userWhere = isOrgAdmin && orgId ? { orgId } : undefined;
-  const orgWhere = isOrgAdmin && orgId
-    ? { isActive: true, id: orgId }
+  const userWhere = manageableOrgIds
+    ? {
+        isSuperAdmin: false,
+        memberships: {
+          some: { orgId: { in: manageableOrgIds } },
+        },
+      }
+    : undefined;
+
+  const orgWhere = manageableOrgIds
+    ? { isActive: true, id: { in: manageableOrgIds } }
     : { isActive: true };
 
   const [rawUsers, rawOrgs] = await Promise.all([
-    prisma.user.findMany({ where: userWhere, orderBy: { createdAt: 'desc' } }),
+    prisma.user.findMany({
+      where: userWhere,
+      orderBy: { createdAt: 'desc' },
+      select: userSelect,
+    }),
     prisma.organization.findMany({
       where: orgWhere,
       orderBy: { name: 'asc' },
@@ -26,22 +38,15 @@ export default async function UsersPage() {
     }),
   ]);
 
-  const users: User[] = rawUsers.map((u: PrismaUser) => ({
-    id: u.id.toString(),
-    name: u.name,
-    email: u.email,
-    role: u.role as User['role'],
-    orgId: u.orgId ?? null,
-    title: u.title ?? null,
-    createdAt: u.createdAt.toISOString(),
-    isSetup: u.password !== null,
-  }));
+  const users: User[] = rawUsers.map(serializeUser);
 
   const organizations: Organization[] = rawOrgs.map((o) => ({
     ...o,
     createdAt: o.createdAt.toISOString(),
     updatedAt: o.updatedAt.toISOString(),
   }));
+
+  const actorIsSuperAdmin = session?.user?.isSuperAdmin ?? false;
 
   return (
     <div className='space-y-6'>
@@ -51,7 +56,11 @@ export default async function UsersPage() {
           Manage worship team members and their roles
         </p>
       </div>
-      <UsersTable initialUsers={users} organizations={organizations} />
+      <UsersTable
+        initialUsers={users}
+        organizations={organizations}
+        actorIsSuperAdmin={actorIsSuperAdmin}
+      />
     </div>
   );
 }

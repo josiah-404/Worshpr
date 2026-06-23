@@ -15,6 +15,7 @@ import { useGetLedger } from '@/hooks/useGetLedger';
 import { useGetOrgFund } from '@/hooks/useGetOrgFund';
 import { useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/lib/constants';
+import { useCanManageFinance } from '@/hooks/useCanManageFinance';
 import { cn } from '@/lib/utils';
 import type { OrgFundDetail, FinanceSummary, LedgerEntry } from '@/types/finance.types';
 import type { PaymentAccount } from '@/types';
@@ -41,6 +42,7 @@ export const FinanceClient: FC<FinanceClientProps> = ({
   const [addOpen, setAddOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const queryClient = useQueryClient();
+  const canManageFinance = useCanManageFinance();
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -99,9 +101,11 @@ export const FinanceClient: FC<FinanceClientProps> = ({
               <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
               Refresh
             </Button>
-            <Button size="sm" className="gap-2" onClick={() => setAddOpen(true)} data-tour="finance-add-btn">
-              <Plus className="h-4 w-4" /> Add Entry
-            </Button>
+            {canManageFinance && (
+              <Button size="sm" className="gap-2" onClick={() => setAddOpen(true)} data-tour="finance-add-btn">
+                <Plus className="h-4 w-4" /> Add Entry
+              </Button>
+            )}
           </div>
         )}
       </div>

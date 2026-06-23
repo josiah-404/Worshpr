@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import {
+  assertCanAccessOrg,
+  assertCanManageFinance,
+  orgIdWhereClause,
+  OrgAccessError,
+} from '@/lib/org-access';
 import { createPaymentAccountSchema } from '@/validations/payment-account.schema';
 
 export async function GET(req: NextRequest) {
@@ -11,16 +17,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { role, orgId } = session.user;
     const queryOrgId = req.nextUrl.searchParams.get('orgId');
-
-    // super_admin: filter by orgId query param if provided, else return all
-    // org_admin / officer: always filter by their org
-    const filterOrgId =
-      role === 'super_admin' ? (queryOrgId ?? undefined) : (orgId ?? undefined);
+    const orgFilter = orgIdWhereClause(session, queryOrgId);
 
     const accounts = await prisma.paymentAccount.findMany({
-      where: filterOrgId ? { orgId: filterOrgId } : undefined,
+      where: orgFilter,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
@@ -45,7 +46,10 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json({ data }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to fetch payment accounts' }, { status: 500 });
   }
 }
@@ -62,13 +66,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    // org_admin can only create accounts for their own org
-    if (
-      session.user.role === 'org_admin' &&
-      parsed.data.orgId !== session.user.orgId
-    ) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    assertCanManageFinance(session);
+    assertCanAccessOrg(session, parsed.data.orgId);
 
     const account = await prisma.paymentAccount.create({
       data: {
@@ -105,6 +104,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ data }, { status: 201 });
   } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     console.error('[POST /api/payment-accounts]', err);
     return NextResponse.json({
       error: 'Failed to create payment account',

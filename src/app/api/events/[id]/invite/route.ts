@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getEventHostAccess } from '@/lib/event-access';
+import { isHostOrgAdmin, OrgAccessError } from '@/lib/org-access';
 import { inviteOrgSchema } from '@/validations/event.schema';
 
 export async function POST(
@@ -13,22 +15,14 @@ export async function POST(
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const event = await prisma.event.findUnique({
-      where: { id: params.id },
-      include: { organizations: true },
-    });
+
+    const { event, hostOrgId } = await getEventHostAccess(session, params.id);
     if (!event) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    // Only the HOST org admin (or super_admin) can invite others
-    if (session.user.role !== 'super_admin') {
-      const isHost = event.organizations.some(
-        (o) => o.role === 'HOST' && o.orgId === session.user.orgId,
-      );
-      if (!isHost) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      }
+    if (!hostOrgId || !isHostOrgAdmin(session, hostOrgId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const body = await req.json();
@@ -39,7 +33,6 @@ export async function POST(
 
     const { orgId, role } = parsed.data;
 
-    // Upsert: re-invite a previously declined org resets status to PENDING
     const invite = await prisma.eventOrganization.upsert({
       where: { eventId_orgId: { eventId: params.id, orgId } },
       create: {
@@ -57,7 +50,10 @@ export async function POST(
     });
 
     return NextResponse.json({ data: invite }, { status: 201 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to send invite' }, { status: 500 });
   }
 }

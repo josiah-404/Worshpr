@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { supabase, getChatChannelName } from '@/lib/supabase';
+import { canAccessOrg, OrgAccessError } from '@/lib/org-access';
 import { sendMessageSchema } from '@/validations/chat.schema';
 import type { ChatMessage } from '@/types/chat.types';
 
@@ -46,16 +47,15 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { roomId: string } },
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { orgId: sessionOrgId } = session.user;
-  const { roomId } = params;
-
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { roomId } = params;
+
     const room = await prisma.chatRoom.findUnique({ where: { id: roomId } });
     if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-    if (session.user.role !== 'super_admin' && room.orgId !== sessionOrgId) {
+    if (!canAccessOrg(session, room.orgId)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -85,7 +85,10 @@ export async function GET(
 
     const mapped = messages.map(mapMessage);
     return NextResponse.json({ data: mapped, hasMore: messages.length === limit });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -94,13 +97,13 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { roomId: string } },
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { id: senderId, orgId: sessionOrgId } = session.user;
-  const { roomId } = params;
-
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { id: senderId } = session.user;
+    const { roomId } = params;
+
     const body = await req.json();
     const parsed = sendMessageSchema.safeParse(body);
     if (!parsed.success) {
@@ -109,7 +112,7 @@ export async function POST(
 
     const room = await prisma.chatRoom.findUnique({ where: { id: roomId } });
     if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-    if (session.user.role !== 'super_admin' && room.orgId !== sessionOrgId) {
+    if (!canAccessOrg(session, room.orgId)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -136,7 +139,10 @@ export async function POST(
     await supabase.channel(channelId).httpSend('new_message', message);
 
     return NextResponse.json({ data: message }, { status: 201 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,34 +1,54 @@
 import { z } from 'zod';
 
-export const orgRoleSchema = z.enum(['super_admin', 'org_admin', 'officer']);
+export const orgMembershipRoleSchema = z.enum(['org_admin', 'officer']);
+
+export const membershipSchema = z.object({
+  orgId: z.string().min(1, 'Organization is required'),
+  role: orgMembershipRoleSchema,
+  title: z.string().optional(),
+});
 
 const userBaseSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email address'),
-  role: orgRoleSchema.default('officer'),
-  orgId: z.string().optional(),
-  title: z.string().optional(),
+  isSuperAdmin: z.boolean().default(false),
+  memberships: z.array(membershipSchema).default([]),
 });
 
 export const createUserSchema = userBaseSchema.superRefine((data, ctx) => {
-  if (data.role !== 'super_admin' && !data.orgId) {
+  if (!data.isSuperAdmin && data.memberships.length === 0) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: 'Organization is required',
-      path: ['orgId'],
+      message: 'At least one organization membership is required',
+      path: ['memberships'],
     });
   }
+  if (data.isSuperAdmin && data.memberships.length > 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Super admins cannot have organization memberships',
+      path: ['memberships'],
+    });
+  }
+  data.memberships.forEach((m, i) => {
+    if (m.role === 'officer' && !m.title?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Title is required for officers',
+        path: ['memberships', i, 'title'],
+      });
+    }
+    if (m.role === 'org_admin' && m.title) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Org admins cannot have a title',
+        path: ['memberships', i, 'title'],
+      });
+    }
+  });
 });
 
-export const updateUserSchema = userBaseSchema.superRefine((data, ctx) => {
-  if (data.role !== 'super_admin' && !data.orgId) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Organization is required',
-      path: ['orgId'],
-    });
-  }
-});
+export const updateUserSchema = createUserSchema;
 
 export const setupPasswordSchema = z.object({
   token: z.string().min(1, 'Token is required'),

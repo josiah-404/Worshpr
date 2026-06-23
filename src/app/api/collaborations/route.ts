@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { OrgAccessError } from '@/lib/org-access';
 
 export async function GET() {
   try {
@@ -10,10 +11,16 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { role, orgId } = session.user;
+    if (session.user.isSuperAdmin) {
+      return NextResponse.json({ data: [] }, { status: 200 });
+    }
 
-    // Only org_admin has an org that can receive invites
-    if (role === 'super_admin' || !orgId) {
+    const orgId =
+      session.user.activeOrgId ??
+      session.user.orgMemberships[0]?.orgId ??
+      null;
+
+    if (!orgId) {
       return NextResponse.json({ data: [] }, { status: 200 });
     }
 
@@ -95,7 +102,10 @@ export async function GET() {
     });
 
     return NextResponse.json({ data }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to fetch collaborations' }, { status: 500 });
   }
 }

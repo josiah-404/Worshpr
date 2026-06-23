@@ -6,6 +6,7 @@ import { CalendarDays, MapPin, TrendingUp, TrendingDown, Plus } from 'lucide-rea
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AddEntryDialog } from '@/components/finance/AddEntryDialog';
+import { useCanManageFinance } from '@/hooks/useCanManageFinance';
 import { cn } from '@/lib/utils';
 import type { EventFinanceSummaryItem } from '@/types/finance.types';
 
@@ -33,6 +34,7 @@ function fmt(n: number) {
 
 export const EventFinanceHeader: FC<EventFinanceHeaderProps> = ({ event, summary, defaultEventId }) => {
   const [addOpen, setAddOpen] = useState(false);
+  const canManageFinance = useCanManageFinance();
   const isSurplus = summary.net >= 0;
 
   return (
@@ -55,9 +57,11 @@ export const EventFinanceHeader: FC<EventFinanceHeaderProps> = ({ event, summary
               )}
             </div>
           </div>
-          <Button size="sm" className="gap-2" onClick={() => setAddOpen(true)}>
-            <Plus className="h-4 w-4" /> Add Entry
-          </Button>
+          {canManageFinance && (
+            <Button size="sm" className="gap-2" onClick={() => setAddOpen(true)}>
+              <Plus className="h-4 w-4" /> Add Entry
+            </Button>
+          )}
         </div>
 
         {/* Stats */}

@@ -11,7 +11,7 @@ const SEED_USERS = [
     name: 'Super Admin',
     email: 'super_admin@example.com',
     password: '@Password123',
-    role: 'super_admin',
+    isSuperAdmin: true,
   },
 ];
 
@@ -23,17 +23,17 @@ async function main() {
 
     await prisma.user.upsert({
       where: { email: u.email },
-      update: { password: hashed, emailVerified: new Date() },
+      update: { password: hashed, emailVerified: new Date(), isSuperAdmin: u.isSuperAdmin },
       create: {
         name: u.name,
         email: u.email,
         password: hashed,
-        role: u.role,
+        isSuperAdmin: u.isSuperAdmin,
         emailVerified: new Date(),
       },
     });
 
-    console.log(`  ✔ ${u.role}: ${u.email} / ${u.password}`);
+    console.log(`  ✔ super_admin: ${u.email} / ${u.password}`);
   }
 
   console.log('Done.');

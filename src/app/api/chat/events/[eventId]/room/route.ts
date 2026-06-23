@@ -2,24 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { canAccessOrg, OrgAccessError } from '@/lib/org-access';
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: { eventId: string } },
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { orgId: sessionOrgId, role } = session.user;
-  const { eventId } = params;
-
   try {
-    // Verify user belongs to an org involved in this event
-    if (role !== 'super_admin') {
-      const membership = await prisma.eventOrganization.findFirst({
-        where: { eventId, orgId: sessionOrgId ?? '' },
+    const session = await getServerSession(authOptions);
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { eventId } = params;
+
+    if (!session.user.isSuperAdmin) {
+      const eventOrgs = await prisma.eventOrganization.findMany({
+        where: { eventId },
+        select: { orgId: true },
       });
-      if (!membership) {
+      const hasAccess = eventOrgs.some((o) => canAccessOrg(session, o.orgId));
+      if (!hasAccess) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
     }
@@ -50,7 +51,6 @@ export async function GET(
           data: { name: event.title, type: 'EVENT', orgId: hostOrgId, eventId },
         });
       } catch {
-        // Race condition: another request already created it
         room = await prisma.chatRoom.findFirst({ where: { eventId } });
         if (!room) {
           return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -68,7 +68,10 @@ export async function GET(
         createdAt: room.createdAt.toISOString(),
       },
     });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

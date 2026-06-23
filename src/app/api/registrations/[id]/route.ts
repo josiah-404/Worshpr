@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { canAccessOrg, OrgAccessError } from '@/lib/org-access';
 import { z } from 'zod';
 import { sendRegistrationApprovedEmail, sendRegistrationRejectedEmail } from '@/lib/mail';
 
@@ -37,7 +38,7 @@ export async function PATCH(
 
     const { status, notes } = parsed.data;
 
-    // Verify the registration belongs to the user's org (unless super_admin)
+    // Verify the registration belongs to an accessible org
     const existing = await prisma.registration.findUnique({
       where: { id },
       select: { id: true, orgId: true, status: true },
@@ -46,7 +47,7 @@ export async function PATCH(
     if (!existing) {
       return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
-    if (session.user.role !== 'super_admin' && existing.orgId !== session.user.orgId) {
+    if (!canAccessOrg(session, existing.orgId)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -169,6 +170,9 @@ export async function PATCH(
       },
     }, { status: 200 });
   } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     console.error('PATCH /api/registrations/[id] failed:', err);
     return NextResponse.json({ error: 'Failed to update registration' }, { status: 500 });
   }

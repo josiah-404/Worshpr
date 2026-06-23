@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { eventOrgFilterWhere } from '@/lib/event-access';
+import { OrgAccessError, resolveFilterOrgIds } from '@/lib/org-access';
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,18 +12,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { role, orgId } = session.user;
     const queryOrgId = req.nextUrl.searchParams.get('orgId');
-
-    // super_admin: filter by activeOrgId if provided, else return all
-    // org_admin / officer: always filter by their own org
-    const filterOrgId =
-      role === 'super_admin' ? (queryOrgId ?? undefined) : (orgId ?? undefined);
+    const orgIds = resolveFilterOrgIds(session, queryOrgId);
+    const orgFilter = eventOrgFilterWhere(orgIds);
 
     const events = await prisma.event.findMany({
-      where: filterOrgId
-        ? { organizations: { some: { orgId: filterOrgId, inviteStatus: 'ACCEPTED' } } }
-        : undefined,
+      where: orgFilter
+        ? {
+            organizations: {
+              some: {
+                orgId: orgFilter.organizations.some.orgId,
+                inviteStatus: 'ACCEPTED',
+              },
+            },
+          }
+        : { organizations: { some: { inviteStatus: 'ACCEPTED' } } },
       orderBy: { startDate: 'desc' },
       select: {
         id: true,
@@ -53,7 +58,10 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json({ data }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 });
   }
 }

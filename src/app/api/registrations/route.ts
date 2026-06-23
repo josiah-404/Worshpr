@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { orgIdWhereClause, OrgAccessError } from '@/lib/org-access';
 import { registrationGroupSchema } from '@/validations/registration.schema';
 import { randomBytes } from 'crypto';
 import { sendRegistrationPendingEmail } from '@/lib/mail';
@@ -29,17 +30,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { role, orgId } = session.user;
     const eventId = req.nextUrl.searchParams.get('eventId') ?? undefined;
     const status = req.nextUrl.searchParams.get('status') ?? undefined;
     const queryOrgId = req.nextUrl.searchParams.get('orgId') ?? undefined;
 
-    // super_admin can query by any orgId; others are locked to their own org
-    const filterOrgId = role === 'super_admin' ? queryOrgId : (orgId ?? undefined);
+    const orgFilter = orgIdWhereClause(session, queryOrgId);
 
     const registrations = await prisma.registration.findMany({
       where: {
-        ...(filterOrgId ? { orgId: filterOrgId } : {}),
+        ...orgFilter,
         ...(eventId ? { eventId } : {}),
         ...(status ? { status: status as 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' } : {}),
       },
@@ -153,7 +152,10 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({ data }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to fetch registrations' }, { status: 500 });
   }
 }

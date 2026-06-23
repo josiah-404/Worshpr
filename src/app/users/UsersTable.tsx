@@ -2,6 +2,7 @@
 
 import { useState, type FC } from 'react';
 import { PlusCircle, Pencil, Trash2, Mail, KeyRound } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -9,27 +10,54 @@ import {
 } from '@/components/ui/table';
 import { useUsers, EMPTY_USER_FORM } from '@/hooks/useUsers';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useOrgContext } from '@/providers/OrgContext';
 import { UserDialog } from '@/app/users/UserDialog';
 import type { User, UserFormState, Organization } from '@/types';
 
 interface UsersTableProps {
   initialUsers: User[];
   organizations: Organization[];
+  actorIsSuperAdmin: boolean;
 }
 
 const ROLE_BADGE_CLASS: Record<string, string> = {
   super_admin: 'bg-purple-500/20 text-purple-400 border-purple-500/30 hover:bg-purple-500/20',
-  org_admin:   'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/20',
-  officer:     'bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/20',
+  org_admin: 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/20',
+  officer: 'bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/20',
 };
 
 const ROLE_LABEL: Record<string, string> = {
   super_admin: 'Super Admin',
-  org_admin:   'Org Admin',
-  officer:     'Officer',
+  org_admin: 'Org Admin',
+  officer: 'Officer',
 };
 
-export const UsersTable: FC<UsersTableProps> = ({ initialUsers, organizations }) => {
+function getDisplayRole(user: User, activeOrgId: string | null): string {
+  if (user.isSuperAdmin) return 'super_admin';
+  if (!activeOrgId) {
+    const highest = user.memberships.find((m) => m.role === 'org_admin');
+    return highest?.role ?? user.memberships[0]?.role ?? 'officer';
+  }
+  const active = user.memberships.find((m) => m.orgId === activeOrgId);
+  return active?.role ?? user.memberships[0]?.role ?? 'officer';
+}
+
+function getDisplayTitle(user: User, activeOrgId: string | null): string | null {
+  if (user.isSuperAdmin) return null;
+  if (!activeOrgId) {
+    return user.memberships[0]?.title ?? null;
+  }
+  const active = user.memberships.find((m) => m.orgId === activeOrgId);
+  return active?.title ?? null;
+}
+
+export const UsersTable: FC<UsersTableProps> = ({
+  initialUsers,
+  organizations,
+  actorIsSuperAdmin,
+}) => {
+  const { data: session } = useSession();
+  const { activeOrgId } = useOrgContext();
   const { users, loading, error, setError, createUser, updateUser, deleteUser, resendOnboarding, sendPasswordReset } =
     useUsers(initialUsers);
   const [emailingId, setEmailingId] = useState<string | null>(null);
@@ -63,7 +91,10 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers, organizations })
 
   function openCreate() {
     setEditingUser(null);
-    setForm(EMPTY_USER_FORM);
+    setForm({
+      ...EMPTY_USER_FORM,
+      memberships: [{ orgId: organizations[0]?.id ?? '', role: 'officer', title: '' }],
+    });
     setError('');
     setOpen(true);
   }
@@ -73,10 +104,13 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers, organizations })
     setForm({
       name: user.name,
       email: user.email,
-      role: user.role,
+      isSuperAdmin: user.isSuperAdmin,
       password: '',
-      orgId: user.orgId ?? '',
-      title: user.title ?? '',
+      memberships: user.memberships.map((m) => ({
+        orgId: m.orgId,
+        role: m.role,
+        title: m.title ?? '',
+      })),
     });
     setError('');
     setOpen(true);
@@ -118,15 +152,21 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers, organizations })
     setEmailingId(null);
   }
 
+  const canManageUsers =
+    session?.user?.isSuperAdmin ||
+    session?.user?.orgMemberships?.some((m) => m.role === 'org_admin');
+
   return (
     <>
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-muted-foreground">
           {users.length} user{users.length !== 1 ? 's' : ''}
         </p>
-        <Button onClick={openCreate} size="sm">
-          <PlusCircle className="mr-2 h-4 w-4" /> Add User
-        </Button>
+        {canManageUsers && (
+          <Button onClick={openCreate} size="sm">
+            <PlusCircle className="mr-2 h-4 w-4" /> Add User
+          </Button>
+        )}
       </div>
 
       <div className="rounded-lg border overflow-hidden">
@@ -135,7 +175,7 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers, organizations })
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Organization</TableHead>
+              <TableHead>Organizations</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Title</TableHead>
               <TableHead>Joined</TableHead>
@@ -150,56 +190,75 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers, organizations })
                 </TableCell>
               </TableRow>
             )}
-            {users.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.name}</TableCell>
-                <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                <TableCell className="text-muted-foreground">
-                  {user.orgId ? orgMap[user.orgId] ?? '—' : '—'}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className={ROLE_BADGE_CLASS[user.role]}>
-                    {ROLE_LABEL[user.role] ?? user.role}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-muted-foreground">{user.title ?? '—'}</TableCell>
-                <TableCell className="text-muted-foreground">
-                  {new Date(user.createdAt).toLocaleDateString()}
-                </TableCell>
-                <TableCell className="text-right space-x-1">
-                  {!user.isSetup ? (
+            {users.map((user) => {
+              const displayRole = getDisplayRole(user, activeOrgId);
+              const displayTitle = getDisplayTitle(user, activeOrgId);
+
+              return (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">{user.name}</TableCell>
+                  <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {user.isSuperAdmin ? (
+                        <Badge variant="outline" className="text-xs">Platform</Badge>
+                      ) : (
+                        user.memberships.map((m) => (
+                          <Badge key={m.orgId} variant="secondary" className="text-xs">
+                            {m.orgName ?? orgMap[m.orgId] ?? m.orgId}
+                          </Badge>
+                        ))
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={ROLE_BADGE_CLASS[displayRole]}>
+                      {ROLE_LABEL[displayRole] ?? displayRole}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{displayTitle ?? '—'}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {new Date(user.createdAt).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="text-right space-x-1">
+                    {!user.isSetup ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Resend setup email"
+                        disabled={emailingId === user.id}
+                        onClick={() => handleResendOnboarding(user)}
+                        className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+                      >
+                        <Mail className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Send password reset"
+                        disabled={emailingId === user.id}
+                        onClick={() => handleSendPasswordReset(user)}
+                        className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                      >
+                        <KeyRound className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="icon" onClick={() => openEdit(user)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      title="Resend setup email"
-                      disabled={emailingId === user.id}
-                      onClick={() => handleResendOnboarding(user)}
-                      className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+                      onClick={() => handleDelete(user)}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
-                      <Mail className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      title="Send password reset"
-                      disabled={emailingId === user.id}
-                      onClick={() => handleSendPasswordReset(user)}
-                      className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
-                    >
-                      <KeyRound className="h-4 w-4" />
-                    </Button>
-                  )}
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(user)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(user)}
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
@@ -214,6 +273,7 @@ export const UsersTable: FC<UsersTableProps> = ({ initialUsers, organizations })
         loading={loading}
         error={error}
         organizations={organizations}
+        actorIsSuperAdmin={actorIsSuperAdmin}
       />
 
       {ConfirmDialogEl}

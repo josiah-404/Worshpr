@@ -3,6 +3,12 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import {
+  assertCanManageOrg,
+  isOfficer,
+  orgIdWhereClause,
+  OrgAccessError,
+} from '@/lib/org-access';
 
 const createChurchSchema = z.object({
   orgId: z.string().min(1, 'Organization is required'),
@@ -15,14 +21,13 @@ export async function GET(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { role, orgId: sessionOrgId } = session.user;
-    if (role === 'officer') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (isOfficer(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const queryOrgId = req.nextUrl.searchParams.get('orgId') ?? undefined;
-    const filterOrgId = role === 'super_admin' ? queryOrgId : (sessionOrgId ?? undefined);
+    const orgFilter = orgIdWhereClause(session, queryOrgId);
 
     const churches = await prisma.church.findMany({
-      where: filterOrgId ? { orgId: filterOrgId } : undefined,
+      where: orgFilter,
       orderBy: [{ orgId: 'asc' }, { name: 'asc' }],
       select: {
         id: true,
@@ -48,7 +53,10 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json({ data }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to fetch churches' }, { status: 500 });
   }
 }
@@ -58,8 +66,7 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { role, orgId: sessionOrgId } = session.user;
-    if (role === 'officer') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (isOfficer(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const body = await req.json();
     const parsed = createChurchSchema.safeParse(body);
@@ -67,10 +74,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    // org_admin can only create churches for their own org
-    if (role === 'org_admin' && parsed.data.orgId !== sessionOrgId) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    assertCanManageOrg(session, parsed.data.orgId);
 
     const church = await prisma.church.create({
       data: {
@@ -98,7 +102,10 @@ export async function POST(req: NextRequest) {
         updatedAt: church.updatedAt.toISOString(),
       },
     }, { status: 201 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to create church' }, { status: 500 });
   }
 }

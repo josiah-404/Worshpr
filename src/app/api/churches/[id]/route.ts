@@ -3,23 +3,18 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import {
+  assertCanManageOrg,
+  canAccessOrg,
+  isOfficer,
+  OrgAccessError,
+} from '@/lib/org-access';
 
 const updateChurchSchema = z.object({
   name: z.string().min(1).optional(),
   location: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
 });
-
-async function getChurchAndCheckOwnership(
-  churchId: string,
-  role: string,
-  sessionOrgId: string | null | undefined,
-) {
-  const church = await prisma.church.findUnique({ where: { id: churchId } });
-  if (!church) return { church: null, allowed: false };
-  if (role === 'super_admin') return { church, allowed: true };
-  return { church, allowed: church.orgId === sessionOrgId };
-}
 
 export async function PATCH(
   req: NextRequest,
@@ -28,12 +23,15 @@ export async function PATCH(
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (session.user.role === 'officer') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (isOfficer(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const { id } = await params;
-    const { church, allowed } = await getChurchAndCheckOwnership(id, session.user.role, session.user.orgId);
+    const church = await prisma.church.findUnique({ where: { id } });
     if (!church) return NextResponse.json({ error: 'Church not found' }, { status: 404 });
-    if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!canAccessOrg(session, church.orgId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    assertCanManageOrg(session, church.orgId);
 
     const body = await req.json();
     const parsed = updateChurchSchema.safeParse(body);
@@ -64,7 +62,10 @@ export async function PATCH(
         updatedAt: updated.updatedAt.toISOString(),
       },
     }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to update church' }, { status: 500 });
   }
 }
@@ -76,17 +77,23 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (session.user.role === 'officer') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (isOfficer(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const { id } = await params;
-    const { church, allowed } = await getChurchAndCheckOwnership(id, session.user.role, session.user.orgId);
+    const church = await prisma.church.findUnique({ where: { id } });
     if (!church) return NextResponse.json({ error: 'Church not found' }, { status: 404 });
-    if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!canAccessOrg(session, church.orgId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    assertCanManageOrg(session, church.orgId);
 
     await prisma.church.delete({ where: { id } });
 
     return NextResponse.json({ data: { message: 'Church deleted' } }, { status: 200 });
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgAccessError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json({ error: 'Failed to delete church' }, { status: 500 });
   }
 }
