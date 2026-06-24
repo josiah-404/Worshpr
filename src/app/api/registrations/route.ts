@@ -7,6 +7,7 @@ import { registrationGroupSchema } from '@/validations/registration.schema';
 import { randomBytes } from 'crypto';
 import { sendRegistrationPendingEmail } from '@/lib/mail';
 import { buildQuestionTree, resolveQuestionAnswers } from '@/lib/eventQuestions';
+import { displayRegistrantEmail } from '@/lib/registrant-email';
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -20,6 +21,12 @@ function generateConfirmationCode(): string {
     code += chars[bytes[i] % chars.length];
   }
   return `REG-${code.slice(0, 4)}-${code.slice(4)}`;
+}
+
+function resolveRegistrantEmail(email: string | undefined): string {
+  const normalized = email?.trim().toLowerCase();
+  if (normalized) return normalized;
+  return `no-email-${randomBytes(16).toString('hex')}@registrant.local`;
 }
 
 // ─── GET (admin) ────────────────────────────────────────────────────────────
@@ -137,12 +144,14 @@ export async function GET(req: NextRequest) {
         updatedAt: r.updatedAt.toISOString(),
         registrant: {
           ...r.registrant,
+          email: displayRegistrantEmail(r.registrant.email),
           birthday: r.registrant.birthday.toISOString(),
           churchName: r.registrant.churchRef?.name ?? null,
           divisionOrgName: r.registrant.divisionOrg?.name ?? null,
         },
         group: {
           ...groupRest,
+          submittedByEmail: displayRegistrantEmail(groupRest.submittedByEmail) ?? '',
           createdAt: r.group.createdAt.toISOString(),
         },
         payment: effectivePayment
@@ -177,6 +186,8 @@ export async function POST(req: NextRequest) {
 
     const { eventId, submittedByName, submittedByEmail, registrants, paymentIntent, payment } =
       parsed.data;
+    const notificationEmail = submittedByEmail?.trim() ?? '';
+    const storedSubmittedByEmail = resolveRegistrantEmail(submittedByEmail);
 
     // Fetch event to validate it exists, is OPEN, and has available slots
     const event = await prisma.event.findUnique({
@@ -286,13 +297,14 @@ export async function POST(req: NextRequest) {
     const result = await prisma.$transaction(async (tx) => {
       // Upsert registrant records by email — always update with the latest submitted data
       const resolvedRegistrants = await Promise.all(
-        registrants.map((r) =>
-          tx.registrant.upsert({
-            where: { email: r.email },
+        registrants.map((r) => {
+          const email = resolveRegistrantEmail(r.email);
+          return tx.registrant.upsert({
+            where: { email },
             create: {
               fullName: r.fullName,
               nickname: r.nickname?.trim() || null,
-              email: r.email,
+              email,
               phone: r.phone,
               birthday: new Date(r.birthday),
               address: r.address,
@@ -314,8 +326,8 @@ export async function POST(req: NextRequest) {
               emergencyContactName: r.emergencyContactName,
               emergencyContactPhone: r.emergencyContactPhone,
             },
-          }),
-        ),
+          });
+        }),
       );
 
       // Check for duplicate registrations by registrantId (email-based)
@@ -363,7 +375,7 @@ export async function POST(req: NextRequest) {
           eventId,
           confirmationCode,
           submittedByName,
-          submittedByEmail,
+          submittedByEmail: storedSubmittedByEmail,
           headcount: registrants.length,
         },
       });
@@ -440,29 +452,31 @@ export async function POST(req: NextRequest) {
           id: reg.id,
           registrantId: reg.registrantId,
           fullName: resolvedRegistrants[i].fullName,
-          email: resolvedRegistrants[i].email,
+          email: registrants[i].email?.trim() || undefined,
         })),
       };
     });
 
-    sendRegistrationPendingEmail({
-      to: submittedByEmail,
-      submittedByName,
-      eventTitle: event.title,
-      eventType: event.type === 'OTHER' ? (event.customType || 'Other') : event.type,
-      eventStartDate: formatDate(event.startDate),
-      eventEndDate: formatDate(event.endDate),
-      eventVenue: event.venue ?? null,
-      confirmationCode: result.confirmationCode,
-      registrants: result.registrations.map((r, i) => ({
-        fullName: r.fullName,
-        email: r.email,
-        feeItems: registrantFeeSelections[i].items.map((item) => ({ label: item.label, amount: item.amount })),
-      })),
-      headcount: result.headcount,
-      paymentIntent,
-      totalAmount,
-    }).catch(console.error);
+    if (notificationEmail) {
+      sendRegistrationPendingEmail({
+        to: notificationEmail,
+        submittedByName,
+        eventTitle: event.title,
+        eventType: event.type === 'OTHER' ? (event.customType || 'Other') : event.type,
+        eventStartDate: formatDate(event.startDate),
+        eventEndDate: formatDate(event.endDate),
+        eventVenue: event.venue ?? null,
+        confirmationCode: result.confirmationCode,
+        registrants: result.registrations.map((r, i) => ({
+          fullName: r.fullName,
+          email: registrants[i].email?.trim() || 'Not provided',
+          feeItems: registrantFeeSelections[i].items.map((item) => ({ label: item.label, amount: item.amount })),
+        })),
+        headcount: result.headcount,
+        paymentIntent,
+        totalAmount,
+      }).catch(console.error);
+    }
 
     return NextResponse.json({ data: result }, { status: 201 });
   } catch (err: unknown) {

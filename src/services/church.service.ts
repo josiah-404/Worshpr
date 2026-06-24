@@ -1,5 +1,6 @@
 import { api } from '@/lib/axios';
 import type { Church } from '@/types';
+import type { GetChurchesListParams, PaginatedChurchesResponse } from '@/types/church.types';
 
 export interface GetChurchesParams {
   orgId?: string;
@@ -18,8 +19,15 @@ export interface UpdateChurchPayload {
 }
 
 export const getChurches = async (params?: GetChurchesParams): Promise<Church[]> => {
-  const { data } = await api.get('/churches', { params });
+  const { data } = await api.get<{ data: Church[] }>('/churches', { params });
   return data.data;
+};
+
+export const getChurchesList = async (
+  params: GetChurchesListParams,
+): Promise<PaginatedChurchesResponse> => {
+  const { data } = await api.get<PaginatedChurchesResponse>('/churches', { params });
+  return data;
 };
 
 export const createChurch = async (payload: CreateChurchPayload): Promise<Church> => {

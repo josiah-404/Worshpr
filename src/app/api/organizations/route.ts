@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { getAllOrganizations, listOrganizations } from '@/lib/organization-list';
 import { getAccessibleOrgIds, OrgAccessError } from '@/lib/org-access';
 import { createOrganizationSchema } from '@/validations/organization.schema';
+import { prisma } from '@/lib/prisma';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -13,21 +14,28 @@ export async function GET() {
     }
 
     const accessibleOrgIds = getAccessibleOrgIds(session);
+    const { searchParams } = req.nextUrl;
+    const pageParam = searchParams.get('page');
 
-    const organizations = await prisma.organization.findMany({
-      where: accessibleOrgIds ? { id: { in: accessibleOrgIds } } : undefined,
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        name: true,
-        logoUrl: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: { select: { memberships: true } },
-      },
-    });
+    if (pageParam !== null) {
+      const page = Math.max(1, parseInt(pageParam, 10));
+      const pageSize = Math.min(
+        50,
+        Math.max(1, parseInt(searchParams.get('page_size') ?? '10', 10)),
+      );
+      const query = searchParams.get('query') ?? '';
 
+      const result = await listOrganizations({
+        accessibleOrgIds,
+        page,
+        pageSize,
+        query,
+      });
+
+      return NextResponse.json(result, { status: 200 });
+    }
+
+    const organizations = await getAllOrganizations(accessibleOrgIds);
     return NextResponse.json({ data: organizations }, { status: 200 });
   } catch (err) {
     if (err instanceof OrgAccessError) {

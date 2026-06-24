@@ -35,21 +35,34 @@ export function buildSessionOrgFields(
   memberships: OrgMembership[],
   activeOrgId?: string | null,
 ): SessionOrgFields {
-  const defaultActiveOrgId = isSuperAdmin
-    ? (activeOrgId ?? null)
-    : (activeOrgId ?? memberships[0]?.orgId ?? null);
+  const resolvedActiveOrgId =
+    activeOrgId !== undefined
+      ? activeOrgId
+      : isSuperAdmin
+        ? null
+        : (memberships[0]?.orgId ?? null);
 
   if (isSuperAdmin) {
     return {
       isSuperAdmin: true,
       orgMemberships: memberships,
-      activeOrgId: defaultActiveOrgId,
+      activeOrgId: resolvedActiveOrgId,
       activeRole: 'super_admin',
       activeTitle: null,
     };
   }
 
-  const active = resolveActiveMembership(memberships, defaultActiveOrgId);
+  if (resolvedActiveOrgId === null) {
+    return {
+      isSuperAdmin: false,
+      orgMemberships: memberships,
+      activeOrgId: null,
+      activeRole: null,
+      activeTitle: null,
+    };
+  }
+
+  const active = resolveActiveMembership(memberships, resolvedActiveOrgId);
 
   return {
     isSuperAdmin: false,

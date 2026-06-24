@@ -53,7 +53,7 @@ export const ReviewStep: FC<ReviewStepProps> = ({ event }) => {
       <div>
         <p className="font-semibold text-xs uppercase text-muted-foreground tracking-wide mb-2">Submitted By</p>
         <p>{values.submittedByName}</p>
-        <p className="text-muted-foreground">{values.submittedByEmail}</p>
+        <p className="text-muted-foreground">{values.submittedByEmail?.trim() || 'Not provided'}</p>
       </div>
 
       <Separator />
@@ -69,7 +69,9 @@ export const ReviewStep: FC<ReviewStepProps> = ({ event }) => {
               <p className="font-medium">
                 {r.fullName}{r.nickname ? ` (${r.nickname})` : ''}
               </p>
-              <p className="text-muted-foreground">{r.email} · {r.phone}</p>
+              <p className="text-muted-foreground">
+                {r.email?.trim() ? `${r.email} · ` : ''}{r.phone}
+              </p>
               {registrantTypeLabel(r.registrantTypeId) && (
                 <Badge variant="outline" className="text-xs">{registrantTypeLabel(r.registrantTypeId)}</Badge>
               )}

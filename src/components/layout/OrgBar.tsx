@@ -8,6 +8,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useGetOrganizations } from '@/hooks/useGetOrganizations';
@@ -61,13 +62,21 @@ export const OrgBar: FC = () => {
             ) : (
               <>
                 <Building2 className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Select organization</span>
+                <span className="font-medium text-muted-foreground">All organizations</span>
               </>
             )}
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground ml-1 shrink-0" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
+          <DropdownMenuItem
+            onSelect={() => setActiveOrgId(null)}
+            className="flex items-center gap-2.5 cursor-pointer"
+          >
+            <Building2 className="h-5 w-5 shrink-0 text-muted-foreground" />
+            <span className={activeOrgId === null ? 'font-medium' : ''}>All organizations</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           {selectableOrgs.map((org) => (
             <DropdownMenuItem
               key={org.id}

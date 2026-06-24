@@ -105,10 +105,12 @@ export const RegistrationDrawer: FC<RegistrationDrawerProps> = ({ registration, 
                       <span>{reg.registrant.nickname}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Mail className="h-3.5 w-3.5 shrink-0" />
-                    <span>{reg.registrant.email}</span>
-                  </div>
+                  {reg.registrant.email ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Mail className="h-3.5 w-3.5 shrink-0" />
+                      <span>{reg.registrant.email}</span>
+                    </div>
+                  ) : null}
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Phone className="h-3.5 w-3.5 shrink-0" />
                     <span>{reg.registrant.phone}</span>

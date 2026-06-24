@@ -389,7 +389,7 @@ export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({
                 name={`registrants.${index}.email`}
                 render={({ field: f }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Email <span className="text-muted-foreground">(optional)</span></FormLabel>
                     <FormControl>
                       <Input type="email" placeholder="juan@example.com" {...f} />
                     </FormControl>

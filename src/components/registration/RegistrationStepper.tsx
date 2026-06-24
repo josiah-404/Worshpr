@@ -10,7 +10,10 @@ import { PaymentStep } from '@/components/registration/PaymentStep';
 import { ReviewStep } from '@/components/registration/ReviewStep';
 import { RegistrationSuccessView } from '@/components/registration/RegistrationSuccessView';
 import { useSubmitRegistration } from '@/hooks/useSubmitRegistration';
-import { registrationGroupSchema, type RegistrationGroupInput } from '@/validations/registration.schema';
+import {
+  registrationGroupSchema,
+  type RegistrationGroupInput,
+} from '@/validations/registration.schema';
 import type { PublicEventData, RegistrationGroupResult } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -24,7 +27,9 @@ interface RegistrationStepperProps {
 
 const STEPS = ['Your Info', 'Payment', 'Review'];
 
-export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => {
+export const RegistrationStepper: FC<RegistrationStepperProps> = ({
+  event,
+}) => {
   const [step, setStep] = useState(0);
   const [result, setResult] = useState<RegistrationGroupResult | null>(null);
   // Group registration temporarily disabled — selector hidden, defaults to individual
@@ -39,7 +44,9 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
   const noFeesConfigured = event.feeItems.length === 0;
 
   const form = useForm<RegistrationGroupInput>({
-    resolver: zodResolver(registrationGroupSchema) as unknown as Resolver<RegistrationGroupInput>,
+    resolver: zodResolver(
+      registrationGroupSchema,
+    ) as unknown as Resolver<RegistrationGroupInput>,
     defaultValues: {
       eventId: event.id,
       submittedByName: '',
@@ -86,7 +93,9 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
       if (valid && event.questions.length > 0) {
         const registrants = form.getValues('registrants');
         const missingAnswer = registrants.some(
-          (r) => resolveQuestionAnswers(event.questions, r.answers ?? {}).missingRequired.length > 0,
+          (r) =>
+            resolveQuestionAnswers(event.questions, r.answers ?? {})
+              .missingRequired.length > 0,
         );
         if (missingAnswer) {
           setQuestionError(true);
@@ -97,7 +106,9 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
     } else if (step === 1) {
       const paymentIntent = form.getValues('paymentIntent');
       const fieldsToValidate: (keyof RegistrationGroupInput)[] =
-        paymentIntent === 'ONLINE' ? ['paymentIntent', 'payment'] : ['paymentIntent'];
+        paymentIntent === 'ONLINE'
+          ? ['paymentIntent', 'payment']
+          : ['paymentIntent'];
       valid = await form.trigger(fieldsToValidate);
     } else {
       valid = true;
@@ -121,11 +132,17 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
     // an event can have zero required fees but still have optional ones selected.
     const totalAmount = data.registrants.reduce((sum, r) => {
       const ids = r.selectedFeeItemIds ?? [];
-      return sum + event.feeItems.filter((i) => ids.includes(i.id)).reduce((s, i) => s + i.amount, 0);
+      return (
+        sum +
+        event.feeItems
+          .filter((i) => ids.includes(i.id))
+          .reduce((s, i) => s + i.amount, 0)
+      );
     }, 0);
 
     // Strip payment when not paying online, or when nothing is owed
-    const paymentIntent = totalAmount === 0 ? ('FREE' as const) : data.paymentIntent;
+    const paymentIntent =
+      totalAmount === 0 ? ('FREE' as const) : data.paymentIntent;
     const payment = paymentIntent === 'ONLINE' ? data.payment : undefined;
 
     mutate(
@@ -146,29 +163,42 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
   }
 
   return (
-    <div className="space-y-6">
+    <div className='space-y-6'>
       {/* Registration type selector — temporarily hidden */}
 
       {/* Step indicator */}
-      <div className="flex items-center gap-1.5 sm:gap-2">
+      <div className='flex items-center gap-1.5 sm:gap-2'>
         {STEPS.map((label, i) => (
-          <div key={label} className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <div
+            key={label}
+            className='flex items-center gap-1.5 sm:gap-2 min-w-0'
+          >
             <div
               className={cn(
                 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-all duration-200',
                 i > step
                   ? 'bg-muted text-muted-foreground'
-                  : tc ? '' : i === step
-                    ? 'bg-primary text-primary-foreground ring-[3px] ring-primary/20'
-                    : 'bg-primary text-primary-foreground',
+                  : tc
+                    ? ''
+                    : i === step
+                      ? 'bg-primary text-primary-foreground ring-[3px] ring-primary/20'
+                      : 'bg-primary text-primary-foreground',
               )}
-              style={i <= step && tc ? {
-                backgroundColor: tc,
-                color: 'white',
-                boxShadow: i === step ? `0 0 0 3px ${tc}33` : undefined,
-              } : undefined}
+              style={
+                i <= step && tc
+                  ? {
+                      backgroundColor: tc,
+                      color: 'white',
+                      boxShadow: i === step ? `0 0 0 3px ${tc}33` : undefined,
+                    }
+                  : undefined
+              }
             >
-              {i < step ? <Check className="h-3.5 w-3.5 stroke-[2.5]" /> : i + 1}
+              {i < step ? (
+                <Check className='h-3.5 w-3.5 stroke-[2.5]' />
+              ) : (
+                i + 1
+              )}
             </div>
             {/* Label: hidden on xs, visible on sm+ */}
             <span
@@ -184,7 +214,10 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
             {/* Current step label on mobile only */}
             {i === step && (
               <span
-                className={cn('sm:hidden text-xs font-semibold truncate', !tc ? 'text-primary' : '')}
+                className={cn(
+                  'sm:hidden text-xs font-semibold truncate',
+                  !tc ? 'text-primary' : '',
+                )}
                 style={tc ? { color: tc } : undefined}
               >
                 {label}
@@ -192,7 +225,10 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
             )}
             {i < STEPS.length - 1 && (
               <div
-                className={cn('h-px w-6 sm:w-8 shrink-0 transition-colors duration-500', i < step && !tc ? 'bg-primary' : 'bg-border')}
+                className={cn(
+                  'h-px w-6 sm:w-8 shrink-0 transition-colors duration-500',
+                  i < step && !tc ? 'bg-primary' : 'bg-border',
+                )}
                 style={i < step && tc ? { backgroundColor: tc } : undefined}
               />
             )}
@@ -218,37 +254,41 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
           {step === 2 && <ReviewStep event={event} />}
 
           {/* Navigation */}
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 pt-6">
+          <div className='flex flex-col-reverse sm:flex-row sm:justify-between gap-3 pt-6'>
             <Button
-              type="button"
-              variant="outline"
+              type='button'
+              variant='outline'
               onClick={handleBack}
               disabled={step === 0}
-              className="gap-1 w-full sm:w-auto"
+              className='gap-1 w-full sm:w-auto'
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className='h-4 w-4' />
               Back
             </Button>
 
             {step < STEPS.length - 1 ? (
               <Button
-                type="button"
+                type='button'
                 onClick={handleNext}
-                className="gap-1 w-full sm:w-auto"
-                style={tc ? { backgroundColor: tc, borderColor: tc } : undefined}
+                className='gap-1 w-full sm:w-auto'
+                style={
+                  tc ? { backgroundColor: tc, borderColor: tc } : undefined
+                }
               >
                 Next
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className='h-4 w-4' />
               </Button>
             ) : (
               <Button
-                type="button"
+                type='button'
                 disabled={isPending}
-                className="gap-2 w-full sm:w-auto"
+                className='gap-2 w-full sm:w-auto'
                 onClick={handleSubmit}
-                style={tc ? { backgroundColor: tc, borderColor: tc } : undefined}
+                style={
+                  tc ? { backgroundColor: tc, borderColor: tc } : undefined
+                }
               >
-                {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isPending && <Loader2 className='h-4 w-4 animate-spin' />}
                 Submit Registration
               </Button>
             )}

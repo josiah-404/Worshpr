@@ -1,65 +1,50 @@
 'use client';
 
-import { useState, type FC } from 'react';
-import { PlusCircle, Pencil, Trash2, Mail, KeyRound } from 'lucide-react';
+import { Suspense, useState, type FC } from 'react';
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  type SortingState,
+  type Row,
+} from '@tanstack/react-table';
+import { PlusCircle, Mail, KeyRound, Pencil, Trash2 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+import { Search } from '@/components/table/Search';
+import { Pagination } from '@/components/table/Pagination';
+import { ResponsiveTableLayout } from '@/components/table/ResponsiveTableLayout';
+import { getUserColumns, getDisplayRole, ROLE_BADGE_CLASS, ROLE_LABEL } from '@/components/users/UserColumns';
+import { useSearchFilter } from '@/hooks/useSearchFilter';
+import { useGetUsers } from '@/hooks/useGetUsers';
 import { useUsers, EMPTY_USER_FORM } from '@/hooks/useUsers';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useOrgContext } from '@/providers/OrgContext';
 import { UserDialog } from '@/app/users/UserDialog';
 import type { User, UserFormState, Organization } from '@/types';
 
+const PAGE_SIZE = 10;
+
 interface UsersTableProps {
-  initialUsers: User[];
   organizations: Organization[];
   actorIsSuperAdmin: boolean;
 }
 
-const ROLE_BADGE_CLASS: Record<string, string> = {
-  super_admin: 'bg-purple-500/20 text-purple-400 border-purple-500/30 hover:bg-purple-500/20',
-  org_admin: 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/20',
-  officer: 'bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/20',
-};
+function UsersTableInner({ organizations, actorIsSuperAdmin }: UsersTableProps) {
+  const searchParams = useSearchParams();
+  const page = parseInt(searchParams.get('page') ?? '1', 10);
+  const query = searchParams.get('query') ?? '';
 
-const ROLE_LABEL: Record<string, string> = {
-  super_admin: 'Super Admin',
-  org_admin: 'Org Admin',
-  officer: 'Officer',
-};
-
-function getDisplayRole(user: User, activeOrgId: string | null): string {
-  if (user.isSuperAdmin) return 'super_admin';
-  if (!activeOrgId) {
-    const highest = user.memberships.find((m) => m.role === 'org_admin');
-    return highest?.role ?? user.memberships[0]?.role ?? 'officer';
-  }
-  const active = user.memberships.find((m) => m.orgId === activeOrgId);
-  return active?.role ?? user.memberships[0]?.role ?? 'officer';
-}
-
-function getDisplayTitle(user: User, activeOrgId: string | null): string | null {
-  if (user.isSuperAdmin) return null;
-  if (!activeOrgId) {
-    return user.memberships[0]?.title ?? null;
-  }
-  const active = user.memberships.find((m) => m.orgId === activeOrgId);
-  return active?.title ?? null;
-}
-
-export const UsersTable: FC<UsersTableProps> = ({
-  initialUsers,
-  organizations,
-  actorIsSuperAdmin,
-}) => {
   const { data: session } = useSession();
   const { activeOrgId } = useOrgContext();
-  const { users, loading, error, setError, createUser, updateUser, deleteUser, resendOnboarding, sendPasswordReset } =
-    useUsers(initialUsers);
+  const { data, isLoading } = useGetUsers({ page, page_size: PAGE_SIZE, query });
+  const { loading, error, setError, createUser, updateUser, deleteUser, resendOnboarding, sendPasswordReset } =
+    useUsers();
+  const { columnFilters } = useSearchFilter('name');
+
+  const [sorting, setSorting] = useState<SortingState>([]);
   const [emailingId, setEmailingId] = useState<string | null>(null);
 
   const [confirm, ConfirmDialogEl] = useConfirm({
@@ -78,7 +63,7 @@ export const UsersTable: FC<UsersTableProps> = ({
 
   const [confirmReset, ConfirmResetEl] = useConfirm({
     title: 'Send Password Reset',
-    description: 'A password reset link will be sent to the user\'s email address.',
+    description: "A password reset link will be sent to the user's email address.",
     confirmLabel: 'Send',
     variant: 'default',
   });
@@ -87,6 +72,8 @@ export const UsersTable: FC<UsersTableProps> = ({
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [form, setForm] = useState<UserFormState>(EMPTY_USER_FORM);
 
+  const users: User[] = data?.data ?? [];
+  const meta = data?.meta;
   const orgMap = Object.fromEntries(organizations.map((o) => [o.id, o.name]));
 
   function openCreate() {
@@ -156,11 +143,33 @@ export const UsersTable: FC<UsersTableProps> = ({
     session?.user?.isSuperAdmin ||
     session?.user?.orgMemberships?.some((m) => m.role === 'org_admin');
 
+  const columns = getUserColumns({
+    activeOrgId,
+    orgMap,
+    emailingId,
+    onEdit: openEdit,
+    onDelete: handleDelete,
+    onResend: handleResendOnboarding,
+    onReset: handleSendPasswordReset,
+  });
+
+  const table = useReactTable({
+    data: users,
+    columns,
+    state: { sorting, columnFilters },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    manualPagination: true,
+    manualFiltering: true,
+    pageCount: meta?.totalPages ?? 1,
+  });
+
   return (
     <>
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {users.length} user{users.length !== 1 ? 's' : ''}
+          {meta?.total ?? 0} user{(meta?.total ?? 0) !== 1 ? 's' : ''}
         </p>
         {canManageUsers && (
           <Button onClick={openCreate} size="sm">
@@ -169,99 +178,86 @@ export const UsersTable: FC<UsersTableProps> = ({
         )}
       </div>
 
-      <div className="rounded-lg border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Organizations</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Title</TableHead>
-              <TableHead>Joined</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
-                  No users yet. Add your first team member.
-                </TableCell>
-              </TableRow>
-            )}
-            {users.map((user) => {
-              const displayRole = getDisplayRole(user, activeOrgId);
-              const displayTitle = getDisplayTitle(user, activeOrgId);
-
-              return (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {user.isSuperAdmin ? (
-                        <Badge variant="outline" className="text-xs">Platform</Badge>
-                      ) : (
-                        user.memberships.map((m) => (
-                          <Badge key={m.orgId} variant="secondary" className="text-xs">
-                            {m.orgName ?? orgMap[m.orgId] ?? m.orgId}
-                          </Badge>
-                        ))
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={ROLE_BADGE_CLASS[displayRole]}>
-                      {ROLE_LABEL[displayRole] ?? displayRole}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{displayTitle ?? '—'}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="text-right space-x-1">
-                    {!user.isSetup ? (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title="Resend setup email"
-                        disabled={emailingId === user.id}
-                        onClick={() => handleResendOnboarding(user)}
-                        className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
-                      >
-                        <Mail className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title="Send password reset"
-                        disabled={emailingId === user.id}
-                        onClick={() => handleSendPasswordReset(user)}
-                        className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
-                      >
-                        <KeyRound className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(user)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(user)}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+      <div className="mb-4">
+        <Search placeholder="Search users by name or email..." />
       </div>
+
+      <ResponsiveTableLayout
+        table={table}
+        columns={columns}
+        isLoading={isLoading}
+        loadingRows={PAGE_SIZE}
+        noRecordMessage="No users found. Try a different search or add your first team member."
+        renderMobileRow={(row: Row<User>) => {
+          const user = row.original;
+          const displayRole = getDisplayRole(user, activeOrgId);
+          return (
+            <div className="flex min-h-[3.5rem] items-center gap-2 px-4 py-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{user.name}</p>
+                <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+              </div>
+              <Badge variant="outline" className={`shrink-0 text-xs ${ROLE_BADGE_CLASS[displayRole]}`}>
+                {ROLE_LABEL[displayRole] ?? displayRole}
+              </Badge>
+              <div className="flex shrink-0 items-center gap-0.5">
+                {!user.isSetup ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-11 w-11 text-amber-400"
+                    disabled={emailingId === user.id}
+                    onClick={() => handleResendOnboarding(user)}
+                    aria-label="Resend setup email"
+                  >
+                    <Mail className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-11 w-11 text-blue-400"
+                    disabled={emailingId === user.id}
+                    onClick={() => handleSendPasswordReset(user)}
+                    aria-label="Send password reset"
+                  >
+                    <KeyRound className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-11 w-11"
+                  onClick={() => openEdit(user)}
+                  aria-label="Edit user"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-11 w-11 text-destructive"
+                  onClick={() => handleDelete(user)}
+                  aria-label="Delete user"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          );
+        }}
+      />
+
+      {meta && meta.totalPages > 1 && (
+        <div className="mt-4">
+          <Pagination
+            currentPage={meta.page}
+            totalPages={meta.totalPages}
+            pageSize={meta.pageSize}
+            totalItems={meta.total}
+          />
+        </div>
+      )}
 
       <UserDialog
         open={open}
@@ -281,4 +277,10 @@ export const UsersTable: FC<UsersTableProps> = ({
       {ConfirmResetEl}
     </>
   );
-};
+}
+
+export const UsersTable: FC<UsersTableProps> = (props) => (
+  <Suspense>
+    <UsersTableInner {...props} />
+  </Suspense>
+);

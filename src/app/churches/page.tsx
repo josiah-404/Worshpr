@@ -3,8 +3,8 @@ import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getAccessibleOrgIds, isOfficer } from '@/lib/org-access';
-import { ChurchesClient } from './ChurchesClient';
-import type { Church, Organization } from '@/types';
+import { ChurchesTable } from './ChurchesTable';
+import type { Organization } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,53 +20,30 @@ export default async function ChurchesPage() {
 
   if (!isSuperAdmin && (!accessibleOrgIds || accessibleOrgIds.length === 0)) redirect('/');
 
-  const churchWhere = isSuperAdmin
-    ? activeOrgId
-      ? { orgId: activeOrgId }
-      : undefined
-    : accessibleOrgIds && accessibleOrgIds.length === 1
-      ? { orgId: accessibleOrgIds[0] }
-      : activeOrgId
-        ? { orgId: activeOrgId }
-        : { orgId: { in: accessibleOrgIds ?? [] } };
-
-  const [rawChurches, rawOrgs] = await Promise.all([
-    prisma.church.findMany({
-      where: churchWhere,
-      orderBy: [{ orgId: 'asc' }, { name: 'asc' }],
-      select: {
-        id: true,
-        orgId: true,
-        name: true,
-        location: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        organization: { select: { name: true } },
-      },
-    }),
-    isSuperAdmin
-      ? prisma.organization.findMany({
-          orderBy: { name: 'asc' },
-          select: { id: true, name: true, logoUrl: true, isActive: true, createdAt: true, updatedAt: true },
-        })
-      : prisma.organization.findMany({
-          where: { id: { in: accessibleOrgIds ?? [] } },
-          orderBy: { name: 'asc' },
-          select: { id: true, name: true, logoUrl: true, isActive: true, createdAt: true, updatedAt: true },
-        }),
-  ]);
-
-  const initialChurches: Church[] = rawChurches.map((c) => ({
-    id: c.id,
-    orgId: c.orgId,
-    orgName: c.organization.name,
-    name: c.name,
-    location: c.location,
-    isActive: c.isActive,
-    createdAt: c.createdAt.toISOString(),
-    updatedAt: c.updatedAt.toISOString(),
-  }));
+  const rawOrgs = isSuperAdmin
+    ? await prisma.organization.findMany({
+        orderBy: { name: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          logoUrl: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      })
+    : await prisma.organization.findMany({
+        where: { id: { in: accessibleOrgIds ?? [] } },
+        orderBy: { name: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          logoUrl: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
 
   const organizations: Organization[] = rawOrgs.map((o) => ({
     id: o.id,
@@ -81,13 +58,12 @@ export default async function ChurchesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold">Churches</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
+        <p className="mt-0.5 text-sm text-muted-foreground">
           Manage the churches under your organization
         </p>
       </div>
-      <ChurchesClient
+      <ChurchesTable
         ssrOrgId={activeOrgId ?? organizations[0]?.id ?? ''}
-        initialChurches={initialChurches}
         isSuperAdmin={isSuperAdmin}
         organizations={organizations}
       />
