@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { buildQuestionTree } from '@/lib/eventQuestions';
 
 export async function GET(
   _req: NextRequest,
@@ -61,6 +62,13 @@ export async function GET(
           orderBy: { order: 'asc' },
           select: { id: true, label: true, order: true },
         },
+        questions: {
+          orderBy: { order: 'asc' },
+          select: {
+            id: true, parentQuestionId: true, triggerOption: true,
+            label: true, type: true, options: true, isRequired: true, order: true,
+          },
+        },
       },
     });
 
@@ -111,6 +119,7 @@ export async function GET(
       })),
       feeItems: event.feeItems,
       registrantTypes: event.registrantTypes,
+      questions: buildQuestionTree(event.questions),
       registrationCount,
     };
 

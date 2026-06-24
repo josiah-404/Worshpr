@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { RegistrationStepper } from '@/components/registration/RegistrationStepper';
 import { Badge } from '@/components/ui/badge';
 import { CalendarDays, MapPin } from 'lucide-react';
+import { buildQuestionTree } from '@/lib/eventQuestions';
 import type { PublicEventData } from '@/types';
 
 interface Props {
@@ -63,6 +64,13 @@ async function getEvent(slug: string): Promise<PublicEventData | null> {
         orderBy: { order: 'asc' },
         select: { id: true, label: true, order: true },
       },
+      questions: {
+        orderBy: { order: 'asc' },
+        select: {
+          id: true, parentQuestionId: true, triggerOption: true,
+          label: true, type: true, options: true, isRequired: true, order: true,
+        },
+      },
     },
   });
 
@@ -111,6 +119,7 @@ async function getEvent(slug: string): Promise<PublicEventData | null> {
     })),
     feeItems: event.feeItems,
     registrantTypes: event.registrantTypes,
+    questions: buildQuestionTree(event.questions),
     registrationCount,
   };
 }

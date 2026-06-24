@@ -36,18 +36,24 @@ import { useGetEventFeeItems } from '@/hooks/useGetEventFeeItems';
 import { useSetEventFeeItems } from '@/hooks/useSetEventFeeItems';
 import { useGetEventRegistrantTypes } from '@/hooks/useGetEventRegistrantTypes';
 import { useSetEventRegistrantTypes } from '@/hooks/useSetEventRegistrantTypes';
+import { useGetEventQuestions } from '@/hooks/useGetEventQuestions';
+import { useSetEventQuestions } from '@/hooks/useSetEventQuestions';
 import { setEventChurches } from '@/services/church.service';
-import { setEventFeeItems, setEventRegistrantTypes } from '@/services/event.service';
+import { setEventFeeItems, setEventRegistrantTypes, setEventQuestions } from '@/services/event.service';
+import { toQuestionInput } from '@/lib/eventQuestions';
 import { EventFeeItemsEditor } from '@/components/events/EventFeeItemsEditor';
 import { EventRegistrantTypesEditor } from '@/components/events/EventRegistrantTypesEditor';
+import { EventQuestionsEditor } from '@/components/events/EventQuestionsEditor';
 import { createEventSchema, type CreateEventInput } from '@/validations/event.schema';
-import type { EventListItem, Organization, EventFeeItemInput, EventRegistrantTypeInput } from '@/types';
+import type { EventListItem, Organization, EventFeeItemInput, EventRegistrantTypeInput, EventQuestionInput } from '@/types';
 
 const DEFAULT_FEE_ITEMS: EventFeeItemInput[] = [
   { label: 'Registration Fee', amount: 0, isRequired: true },
 ];
 
 const DEFAULT_REGISTRANT_TYPES: EventRegistrantTypeInput[] = [];
+
+const DEFAULT_QUESTIONS: EventQuestionInput[] = [];
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -100,6 +106,7 @@ export const EventDialog: FC<EventDialogProps> = ({
   const { mutate: setChurches } = useSetEventChurches(editingEvent?.id ?? '');
   const { mutate: setFeeItems } = useSetEventFeeItems(editingEvent?.id ?? '');
   const { mutate: setRegistrantTypes } = useSetEventRegistrantTypes(editingEvent?.id ?? '');
+  const { mutate: setQuestions } = useSetEventQuestions(editingEvent?.id ?? '');
 
   const isPending = isCreating || isUpdating;
 
@@ -115,6 +122,10 @@ export const EventDialog: FC<EventDialogProps> = ({
   // ── Registrant types ──────────────────────────────────────────────────────
   const [registrantTypes, setRegistrantTypesState] = useState<EventRegistrantTypeInput[]>(DEFAULT_REGISTRANT_TYPES);
   const { data: registrantTypesData } = useGetEventRegistrantTypes(editingEvent?.id ?? null);
+
+  // ── Questions ─────────────────────────────────────────────────────────────
+  const [questions, setQuestionsState] = useState<EventQuestionInput[]>(DEFAULT_QUESTIONS);
+  const { data: questionsData } = useGetEventQuestions(editingEvent?.id ?? null);
 
   const form = useForm<CreateEventInput>({
     resolver: zodResolver(createEventSchema) as unknown as Resolver<CreateEventInput>,
@@ -176,6 +187,15 @@ export const EventDialog: FC<EventDialogProps> = ({
     }
   }, [registrantTypesData, editingEvent, open]);
 
+  // Sync questions when data loads or dialog opens fresh
+  useEffect(() => {
+    if (editingEvent && questionsData) {
+      setQuestionsState(questionsData.map(toQuestionInput));
+    } else if (!editingEvent) {
+      setQuestionsState(DEFAULT_QUESTIONS);
+    }
+  }, [questionsData, editingEvent, open]);
+
   // Populate form when editing
   useEffect(() => {
     if (editingEvent) {
@@ -235,6 +255,7 @@ export const EventDialog: FC<EventDialogProps> = ({
           setChurches(selectedChurchIds);
           setFeeItems(feeItems);
           setRegistrantTypes(registrantTypes);
+          setQuestions(questions);
           toast.success('Event updated');
           onOpenChange(false);
         },
@@ -246,6 +267,7 @@ export const EventDialog: FC<EventDialogProps> = ({
           await setEventChurches(newEvent.id, selectedChurchIds);
           await setEventFeeItems(newEvent.id, feeItems);
           await setEventRegistrantTypes(newEvent.id, registrantTypes);
+          await setEventQuestions(newEvent.id, questions);
           toast.success('Event created');
           onOpenChange(false);
         },
@@ -572,6 +594,17 @@ export const EventDialog: FC<EventDialogProps> = ({
               </p>
             </div>
             <EventRegistrantTypesEditor items={registrantTypes} onChange={setRegistrantTypesState} />
+          </div>
+
+          {/* ── Questions ── */}
+          <div className="space-y-2">
+            <div>
+              <p className="text-sm font-medium">Questions</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Ask registrants additional questions (text or multiple choice). Leave empty to skip.
+              </p>
+            </div>
+            <EventQuestionsEditor items={questions} onChange={setQuestionsState} />
           </div>
 
           {/* ── Payment Account (only when any fee > 0) ── */}

@@ -1,7 +1,7 @@
 import { api } from '@/lib/axios';
 import type {
   EventListItem, CollaborationInvite, EventFeeItem, EventFeeItemInput,
-  EventRegistrantType, EventRegistrantTypeInput,
+  EventRegistrantType, EventRegistrantTypeInput, EventQuestion, EventQuestionInput,
 } from '@/types';
 import type { CreateEventInput, UpdateEventInput, InviteOrgInput } from '@/validations/event.schema';
 
@@ -67,5 +67,18 @@ export const setEventRegistrantTypes = async (
   items: EventRegistrantTypeInput[],
 ): Promise<EventRegistrantType[]> => {
   const { data } = await api.put<{ data: EventRegistrantType[] }>(`/events/${eventId}/registrant-types`, { items });
+  return data.data;
+};
+
+export const getEventQuestions = async (eventId: string): Promise<EventQuestion[]> => {
+  const { data } = await api.get<{ data: EventQuestion[] }>(`/events/${eventId}/questions`);
+  return data.data;
+};
+
+export const setEventQuestions = async (
+  eventId: string,
+  items: EventQuestionInput[],
+): Promise<EventQuestion[]> => {
+  const { data } = await api.put<{ data: EventQuestion[] }>(`/events/${eventId}/questions`, { items });
   return data.data;
 };

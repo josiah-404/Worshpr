@@ -29,6 +29,28 @@ export interface EventRegistrantTypeInput {
   label: string;
 }
 
+export type QuestionType = 'TEXT' | 'CHOICE';
+
+export interface EventQuestion {
+  id: string;
+  label: string;
+  type: QuestionType;
+  options: string[];
+  isRequired: boolean;
+  order: number;
+  triggerOption: string | null;
+  children: EventQuestion[];
+}
+
+export interface EventQuestionInput {
+  label: string;
+  type: QuestionType;
+  options: string[];
+  isRequired: boolean;
+  triggerOption?: string;
+  children: EventQuestionInput[];
+}
+
 export interface EventOrg {
   id: string;
   orgId: string;
@@ -89,4 +111,5 @@ export interface EventListItem {
   organizations: EventOrg[];
   feeItems: EventFeeItem[];
   registrantTypes: EventRegistrantType[];
+  questions: EventQuestion[];
 }

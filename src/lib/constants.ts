@@ -16,6 +16,7 @@ export const QUERY_KEYS = {
   EVENT_CHURCHES: 'event-churches',
   EVENT_FEE_ITEMS: 'event-fee-items',
   EVENT_REGISTRANT_TYPES: 'event-registrant-types',
+  EVENT_QUESTIONS: 'event-questions',
   PROGRAM: 'program',
   CHAT_ROOMS: 'chat-rooms',
   CHAT_MESSAGES: 'chat-messages',

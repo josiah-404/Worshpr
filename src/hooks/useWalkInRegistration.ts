@@ -17,6 +17,7 @@ export interface WalkInRegistrationInput {
   divisionOrgId?:       string;
   paymentIntent:        PaymentIntent;
   selectedFeeItemIds?:  string[];
+  answers?:             Record<string, string>;
 }
 
 interface WalkInRegistrationResult {

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { resolveFilterOrgIds } from '@/lib/org-access';
 import { eventOrgFilterWhere } from '@/lib/event-access';
 import { EventsGrid } from './EventsGrid';
+import { buildQuestionTree } from '@/lib/eventQuestions';
 import type { EventListItem, Organization } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -62,6 +63,13 @@ export default async function EventsPage() {
         orderBy: { order: 'asc' },
         select: { id: true, label: true, order: true },
       },
+      questions: {
+        orderBy: { order: 'asc' },
+        select: {
+          id: true, parentQuestionId: true, triggerOption: true,
+          label: true, type: true, options: true, isRequired: true, order: true,
+        },
+      },
     },
   });
 
@@ -80,6 +88,7 @@ export default async function EventsPage() {
       role: o.role as 'HOST' | 'COLLABORATOR',
       inviteStatus: o.inviteStatus as 'PENDING' | 'ACCEPTED' | 'DECLINED',
     })),
+    questions: buildQuestionTree(e.questions),
   }));
 
   const rawOrgs = await prisma.organization.findMany({

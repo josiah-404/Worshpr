@@ -341,6 +341,7 @@ export const RegistrationsClient: FC<RegistrationsClientProps> = ({
             eventId={eventFilter}
             eventTitle={selectedEventTitle ?? ''}
             feeItems={selectedEvent?.feeItems ?? []}
+            questions={selectedEvent?.questions ?? []}
             paymentAccount={selectedEvent?.paymentAccount ?? null}
             eventOrgs={
               selectedEvent?.organizations.filter((o) => o.inviteStatus === 'ACCEPTED') ?? []

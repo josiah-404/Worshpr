@@ -225,6 +225,23 @@ export const RegistrationDrawer: FC<RegistrationDrawerProps> = ({ registration, 
                 </div>
               </section>
 
+              {reg.answers.length > 0 && (
+                <>
+                  <Separator />
+                  <section className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Questions</p>
+                    <div className="space-y-1.5 text-sm">
+                      {reg.answers.map((a) => (
+                        <div key={a.questionLabel}>
+                          <p className="text-muted-foreground text-xs">{a.questionLabel}</p>
+                          <p>{a.answer}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </>
+              )}
+
               <Separator />
 
               {/* Timeline */}

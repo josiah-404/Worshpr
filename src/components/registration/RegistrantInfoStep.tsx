@@ -22,8 +22,11 @@ import {
 } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEdgeStore } from '@/lib/edgestore-client';
+import { cn } from '@/lib/utils';
+import { resolveQuestionAnswers } from '@/lib/eventQuestions';
+import { QuestionAnswerFields } from '@/components/registration/QuestionAnswerFields';
 import type { RegistrationGroupInput } from '@/validations/registration.schema';
-import type { ChurchOption, EventOrgOption, EventRegistrantType } from '@/types';
+import type { ChurchOption, EventOrgOption, EventRegistrantType, EventQuestion } from '@/types';
 
 // ─── PhotoUploadField ──────────────────────────────────────────────────────
 
@@ -256,6 +259,39 @@ const RegistrantTypeField: FC<RegistrantTypeFieldProps> = ({ index, registrantTy
   );
 };
 
+// ─── QuestionFields ────────────────────────────────────────────────────────
+
+interface QuestionFieldsProps {
+  index: number;
+  questions: EventQuestion[];
+  showErrors: boolean;
+}
+
+const QuestionFields: FC<QuestionFieldsProps> = ({ index, questions, showErrors }) => {
+  const form = useFormContext<RegistrationGroupInput>();
+  const answers = (useWatch({ control: form.control, name: `registrants.${index}.answers` }) as
+    | Record<string, string>
+    | undefined) ?? {};
+
+  const missingIds = showErrors
+    ? new Set(resolveQuestionAnswers(questions, answers).missingRequired.map((m) => m.id))
+    : new Set<string>();
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Additional Questions
+      </p>
+      <QuestionAnswerFields
+        questions={questions}
+        answers={answers}
+        missingIds={missingIds}
+        onAnswer={(questionId, value) => form.setValue(`registrants.${index}.answers.${questionId}`, value)}
+      />
+    </div>
+  );
+};
+
 // ─── Component ─────────────────────────────────────────────────────────────
 
 interface RegistrantInfoStepProps {
@@ -264,10 +300,13 @@ interface RegistrantInfoStepProps {
   churches: ChurchOption[];
   registrantTypes: EventRegistrantType[];
   showRegistrantTypeError?: boolean;
+  questions: EventQuestion[];
+  showQuestionErrors?: boolean;
 }
 
 export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({
   registrationType, eventOrgs, churches, registrantTypes, showRegistrantTypeError = false,
+  questions, showQuestionErrors = false,
 }) => {
   const form = useFormContext<RegistrationGroupInput>();
   const { fields, append, remove } = useFieldArray({
@@ -290,6 +329,7 @@ export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({
       emergencyContactPhone: '',
       selectedFeeItemIds: [],
       registrantTypeId: '',
+      answers: {},
     });
   }
 
@@ -411,6 +451,13 @@ export const RegistrantInfoStep: FC<RegistrantInfoStepProps> = ({
                 index={index}
                 registrantTypes={registrantTypes}
                 showError={showRegistrantTypeError}
+              />
+            )}
+            {questions.length > 0 && (
+              <QuestionFields
+                index={index}
+                questions={questions}
+                showErrors={showQuestionErrors}
               />
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
