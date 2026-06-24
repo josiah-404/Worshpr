@@ -14,6 +14,7 @@ import { registrationGroupSchema, type RegistrationGroupInput } from '@/validati
 import type { PublicEventData, RegistrationGroupResult } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { resolveQuestionAnswers } from '@/lib/eventQuestions';
 
 type RegistrationType = 'individual' | 'group';
 
@@ -29,6 +30,7 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
   // Group registration temporarily disabled — selector hidden, defaults to individual
   const [registrationType] = useState<RegistrationType>('individual');
   const [registrantTypeError, setRegistrantTypeError] = useState(false);
+  const [questionError, setQuestionError] = useState(false);
 
   const tc = event.themeColor ?? null;
 
@@ -57,6 +59,7 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
           emergencyContactPhone: '',
           selectedFeeItemIds: [],
           registrantTypeId: '',
+          answers: {},
         },
       ],
       paymentIntent: noFeesConfigured ? 'FREE' : 'CASH',
@@ -79,6 +82,18 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
         }
       }
       setRegistrantTypeError(false);
+
+      if (valid && event.questions.length > 0) {
+        const registrants = form.getValues('registrants');
+        const missingAnswer = registrants.some(
+          (r) => resolveQuestionAnswers(event.questions, r.answers ?? {}).missingRequired.length > 0,
+        );
+        if (missingAnswer) {
+          setQuestionError(true);
+          return;
+        }
+      }
+      setQuestionError(false);
     } else if (step === 1) {
       const paymentIntent = form.getValues('paymentIntent');
       const fieldsToValidate: (keyof RegistrationGroupInput)[] =
@@ -195,6 +210,8 @@ export const RegistrationStepper: FC<RegistrationStepperProps> = ({ event }) => 
               churches={event.churches}
               registrantTypes={event.registrantTypes}
               showRegistrantTypeError={registrantTypeError}
+              questions={event.questions}
+              showQuestionErrors={questionError}
             />
           )}
           {step === 1 && <PaymentStep event={event} />}

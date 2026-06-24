@@ -214,6 +214,7 @@ model Event {
   eventChurches      EventChurch[]
   feeItems           EventFeeItem[]
   registrantTypes    EventRegistrantType[]
+  questions          EventQuestion[]
   registrationGroups RegistrationGroup[]
   registrations      Registration[]
   financeLedger      FinanceLedger[]
@@ -259,6 +260,38 @@ model EventRegistrantType {
 
   @@index([eventId])
   @@map("event_registrant_types")
+}
+
+enum QuestionType {
+  TEXT
+  CHOICE
+}
+
+/// Admin-defined registration question for an event (e.g. "Any allergies?", "T-shirt size").
+/// May be a follow-up of another question via parentQuestionId + triggerOption — see
+/// src/lib/eventQuestions.ts for how the resulting tree is walked.
+model EventQuestion {
+  id               String       @id @default(cuid())
+  eventId          String
+  parentQuestionId String?
+  // The parent's option value that reveals this question; null for top-level questions.
+  triggerOption    String?
+  label            String
+  type             QuestionType @default(TEXT)
+  options          String[]     @default([]) // only used when type = CHOICE
+  isRequired       Boolean      @default(false)
+  order            Int          @default(0)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  event    Event                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  parent   EventQuestion?       @relation("QuestionFollowUps", fields: [parentQuestionId], references: [id], onDelete: Cascade)
+  children EventQuestion[]      @relation("QuestionFollowUps")
+  answers  RegistrationAnswer[]
+
+  @@index([eventId])
+  @@index([parentQuestionId])
+  @@map("event_questions")
 }
 
 model EventProgram {
@@ -367,6 +400,7 @@ model Registration {
   payment      Payment?              @relation("IndividualPayment")
   feeItems     RegistrationFeeItem[]
   registrantType EventRegistrantType? @relation(fields: [registrantTypeId], references: [id], onDelete: SetNull)
+  answers      RegistrationAnswer[]
 
   @@unique([eventId, registrantId])
   @@index([eventId, status])
@@ -390,6 +424,24 @@ model RegistrationFeeItem {
 
   @@unique([registrationId, feeItemId])
   @@map("registration_fee_items")
+}
+
+/// Snapshot of a registrant's answer at submission time — questionLabel is copied so later
+/// edits or deletion of the source EventQuestion (questionId nullable + SetNull) don't change
+/// past answers.
+model RegistrationAnswer {
+  id             String   @id @default(cuid())
+  registrationId String
+  questionId     String?
+  questionLabel  String
+  answer         String   @db.Text
+  createdAt      DateTime @default(now())
+
+  registration Registration   @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  question     EventQuestion? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+
+  @@index([registrationId])
+  @@map("registration_answers")
 }
 
 model Payment {

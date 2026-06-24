@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import type { RegistrationGroupInput } from '@/validations/registration.schema';
 import type { PublicEventData } from '@/types';
+import { resolveQuestionAnswers } from '@/lib/eventQuestions';
 
 interface ReviewStepProps {
   event: PublicEventData;
@@ -22,6 +23,13 @@ export const ReviewStep: FC<ReviewStepProps> = ({ event }) => {
 
   function registrantTypeLabel(registrantTypeId: string | undefined) {
     return event.registrantTypes.find((t) => t.id === registrantTypeId)?.label ?? null;
+  }
+
+  function registrantAnswers(answers: Record<string, string> | undefined) {
+    return resolveQuestionAnswers(event.questions, answers ?? {}).snapshots.map((a) => ({
+      label: a.questionLabel,
+      answer: a.answer,
+    }));
   }
 
   const totalFee = values.registrants.reduce(
@@ -74,6 +82,16 @@ export const ReviewStep: FC<ReviewStepProps> = ({ event }) => {
                 </p>
               )}
               <p className="text-muted-foreground text-xs">{r.address}</p>
+              {registrantAnswers(r.answers).length > 0 && (
+                <div className="pt-1 border-t mt-1 space-y-0.5">
+                  {registrantAnswers(r.answers).map(({ label, answer }) => (
+                    <div key={label} className="text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">{label}: </span>
+                      {answer}
+                    </div>
+                  ))}
+                </div>
+              )}
               {registrantFeeItems(r.selectedFeeItemIds).length > 0 && (
                 <div className="pt-1 border-t mt-1 space-y-0.5">
                   {registrantFeeItems(r.selectedFeeItemIds).map((item) => (

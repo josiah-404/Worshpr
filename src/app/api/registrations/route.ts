@@ -6,6 +6,7 @@ import { orgIdWhereClause, OrgAccessError } from '@/lib/org-access';
 import { registrationGroupSchema } from '@/validations/registration.schema';
 import { randomBytes } from 'crypto';
 import { sendRegistrationPendingEmail } from '@/lib/mail';
+import { buildQuestionTree, resolveQuestionAnswers } from '@/lib/eventQuestions';
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -117,6 +118,9 @@ export async function GET(req: NextRequest) {
         feeItems: {
           select: { id: true, label: true, amount: true },
         },
+        answers: {
+          select: { questionLabel: true, answer: true },
+        },
       },
     });
 
@@ -194,6 +198,12 @@ export async function POST(req: NextRequest) {
         registrantTypes: {
           select: { id: true, label: true },
         },
+        questions: {
+          select: {
+            id: true, parentQuestionId: true, triggerOption: true,
+            label: true, type: true, options: true, isRequired: true, order: true,
+          },
+        },
         organizations: {
           where: { role: 'HOST', inviteStatus: 'ACCEPTED' },
           select: { orgId: true },
@@ -250,6 +260,22 @@ export async function POST(req: NextRequest) {
         : undefined;
       return match ? { id: match.id, label: match.label } : null;
     });
+
+    // Only answers on a currently-active branch (i.e. every ancestor's triggerOption matches
+    // what was actually answered) are kept — a stale answer for a since-hidden follow-up is
+    // dropped rather than rejected. Required questions still active with no matching answer
+    // are rejected outright, since "Required" is an explicit admin setting.
+    const questionTree = buildQuestionTree(event.questions);
+    const answerResolutions = registrants.map((r) => resolveQuestionAnswers(questionTree, r.answers ?? {}));
+    const answerSnapshots = answerResolutions.map((r) => r.snapshots);
+    for (const { missingRequired } of answerResolutions) {
+      if (missingRequired.length > 0) {
+        return NextResponse.json(
+          { error: `Please answer: ${missingRequired.map((q) => q.label).join(', ')}` },
+          { status: 400 },
+        );
+      }
+    }
 
     if (totalAmount > 0 && paymentIntent === 'ONLINE' && !payment) {
       return NextResponse.json({ error: 'Payment details are required' }, { status: 400 });
@@ -372,6 +398,22 @@ export async function POST(req: NextRequest) {
               feeItemId: item.id,
               label: item.label,
               amount: item.amount,
+            })),
+          });
+        }),
+      );
+
+      // Snapshot each registrant's question answers (label frozen at submission time)
+      await Promise.all(
+        registrationRecords.map((reg, i) => {
+          const answers = answerSnapshots[i];
+          if (answers.length === 0) return Promise.resolve();
+          return tx.registrationAnswer.createMany({
+            data: answers.map((a) => ({
+              registrationId: reg.id,
+              questionId: a.questionId,
+              questionLabel: a.questionLabel,
+              answer: a.answer,
             })),
           });
         }),

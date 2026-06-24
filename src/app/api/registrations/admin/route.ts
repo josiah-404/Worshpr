@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { randomBytes } from 'crypto';
+import { buildQuestionTree, resolveQuestionAnswers } from '@/lib/eventQuestions';
 
 function generateConfirmationCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -29,6 +30,7 @@ const walkInSchema = z.object({
   divisionOrgId:         z.string().optional(),
   paymentIntent:         z.enum(['CASH', 'ONLINE', 'FREE']).default('CASH'),
   selectedFeeItemIds:    z.array(z.string()).default([]),
+  answers:               z.record(z.string(), z.string()).default({}),
 });
 
 export async function POST(req: NextRequest) {
@@ -47,7 +49,7 @@ export async function POST(req: NextRequest) {
     const {
       eventId, fullName, email, phone, birthday,
       nickname, address, emergencyContactName, emergencyContactPhone,
-      churchId, divisionOrgId, paymentIntent, selectedFeeItemIds,
+      churchId, divisionOrgId, paymentIntent, selectedFeeItemIds, answers,
     } = parsed.data;
 
     const event = await prisma.event.findUnique({
@@ -56,6 +58,12 @@ export async function POST(req: NextRequest) {
         id: true,
         feeItems: {
           select: { id: true, label: true, amount: true, isRequired: true },
+        },
+        questions: {
+          select: {
+            id: true, parentQuestionId: true, triggerOption: true,
+            label: true, type: true, options: true, isRequired: true, order: true,
+          },
         },
         organizations: {
           where: { role: 'HOST', inviteStatus: 'ACCEPTED' },
@@ -81,6 +89,20 @@ export async function POST(req: NextRequest) {
     const finalFeeItemIds = Array.from(new Set([...validIds, ...requiredFeeItemIds]));
     const selectedItems = event.feeItems.filter((i) => finalFeeItemIds.includes(i.id));
     const totalAmount = selectedItems.reduce((sum, i) => sum + i.amount, 0);
+
+    // Only answers on a currently-active branch are kept — required questions still active
+    // with no matching answer are rejected outright, since "Required" is an explicit admin
+    // setting. See resolveQuestionAnswers for the active-branch tree walk.
+    const { snapshots: answerSnapshots, missingRequired } = resolveQuestionAnswers(
+      buildQuestionTree(event.questions),
+      answers,
+    );
+    if (missingRequired.length > 0) {
+      return NextResponse.json(
+        { error: `Please answer: ${missingRequired.map((q) => q.label).join(', ')}` },
+        { status: 400 },
+      );
+    }
 
     const confirmationCode = generateConfirmationCode();
     const submittedByName = session.user.name ?? session.user.email ?? 'Admin';
@@ -169,6 +191,17 @@ export async function POST(req: NextRequest) {
             feeItemId: item.id,
             label: item.label,
             amount: item.amount,
+          })),
+        });
+      }
+
+      if (answerSnapshots.length > 0) {
+        await tx.registrationAnswer.createMany({
+          data: answerSnapshots.map((a) => ({
+            registrationId: registration.id,
+            questionId: a.questionId,
+            questionLabel: a.questionLabel,
+            answer: a.answer,
           })),
         });
       }

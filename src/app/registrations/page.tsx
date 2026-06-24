@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { resolveFilterOrgIds, orgIdWhereClause } from '@/lib/org-access';
 import { eventOrgFilterWhere } from '@/lib/event-access';
 import { RegistrationsClient } from '@/components/registration/RegistrationsClient';
+import { buildQuestionTree } from '@/lib/eventQuestions';
 import type { RegistrationListItem, EventListItem } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -90,6 +91,9 @@ export default async function RegistrationsPage() {
       feeItems: {
         select: { id: true, label: true, amount: true },
       },
+      answers: {
+        select: { questionLabel: true, answer: true },
+      },
     },
   });
 
@@ -174,6 +178,13 @@ export default async function RegistrationsPage() {
         orderBy: { order: 'asc' },
         select: { id: true, label: true, order: true },
       },
+      questions: {
+        orderBy: { order: 'asc' },
+        select: {
+          id: true, parentQuestionId: true, triggerOption: true,
+          label: true, type: true, options: true, isRequired: true, order: true,
+        },
+      },
     },
   });
 
@@ -192,6 +203,7 @@ export default async function RegistrationsPage() {
       role: o.role as 'HOST' | 'COLLABORATOR',
       inviteStatus: o.inviteStatus as 'PENDING' | 'ACCEPTED' | 'DECLINED',
     })),
+    questions: buildQuestionTree(e.questions),
   }));
 
   return (

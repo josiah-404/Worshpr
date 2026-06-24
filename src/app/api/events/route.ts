@@ -6,6 +6,7 @@ import { createEventSchema } from '@/validations/event.schema';
 import { slugify } from '@/lib/slugify';
 import { resolveFilterOrgIds, assertCanManageOrg, OrgAccessError } from '@/lib/org-access';
 import { eventOrgFilterWhere } from '@/lib/event-access';
+import { buildQuestionTree } from '@/lib/eventQuestions';
 
 export async function GET(req: NextRequest) {
   try {
@@ -69,6 +70,13 @@ export async function GET(req: NextRequest) {
           orderBy: { order: 'asc' },
           select: { id: true, label: true, order: true },
         },
+        questions: {
+          orderBy: { order: 'asc' },
+          select: {
+            id: true, parentQuestionId: true, triggerOption: true,
+            label: true, type: true, options: true, isRequired: true, order: true,
+          },
+        },
       },
     });
 
@@ -87,6 +95,7 @@ export async function GET(req: NextRequest) {
         role: o.role,
         inviteStatus: o.inviteStatus,
       })),
+      questions: buildQuestionTree(e.questions),
     }));
 
     return NextResponse.json({ data }, { status: 200 });
@@ -188,6 +197,13 @@ export async function POST(req: NextRequest) {
           orderBy: { order: 'asc' },
           select: { id: true, label: true, order: true },
         },
+        questions: {
+          orderBy: { order: 'asc' },
+          select: {
+            id: true, parentQuestionId: true, triggerOption: true,
+            label: true, type: true, options: true, isRequired: true, order: true,
+          },
+        },
       },
     });
 
@@ -206,6 +222,7 @@ export async function POST(req: NextRequest) {
         role: o.role,
         inviteStatus: o.inviteStatus,
       })),
+      questions: buildQuestionTree(event.questions),
     };
 
     return NextResponse.json({ data }, { status: 201 });

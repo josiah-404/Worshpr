@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { getEventHostAccess } from '@/lib/event-access';
 import { OrgAccessError } from '@/lib/org-access';
 import { updateEventSchema } from '@/validations/event.schema';
+import { buildQuestionTree } from '@/lib/eventQuestions';
 
 export async function PATCH(
   req: NextRequest,
@@ -98,6 +99,13 @@ export async function PATCH(
           orderBy: { order: 'asc' },
           select: { id: true, label: true, order: true },
         },
+        questions: {
+          orderBy: { order: 'asc' },
+          select: {
+            id: true, parentQuestionId: true, triggerOption: true,
+            label: true, type: true, options: true, isRequired: true, order: true,
+          },
+        },
       },
     });
 
@@ -116,6 +124,7 @@ export async function PATCH(
         role: o.role,
         inviteStatus: o.inviteStatus,
       })),
+      questions: buildQuestionTree(updated.questions),
     };
 
     return NextResponse.json({ data }, { status: 200 });

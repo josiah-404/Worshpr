@@ -30,15 +30,19 @@ import { useGetEventFeeItems } from '@/hooks/useGetEventFeeItems';
 import { useSetEventFeeItems } from '@/hooks/useSetEventFeeItems';
 import { useGetEventRegistrantTypes } from '@/hooks/useGetEventRegistrantTypes';
 import { useSetEventRegistrantTypes } from '@/hooks/useSetEventRegistrantTypes';
+import { useGetEventQuestions } from '@/hooks/useGetEventQuestions';
+import { useSetEventQuestions } from '@/hooks/useSetEventQuestions';
+import { toQuestionInput } from '@/lib/eventQuestions';
 import { EventInvitePanel } from '@/app/events/EventInvitePanel';
 import { EventFeeItemsEditor } from '@/components/events/EventFeeItemsEditor';
 import { EventRegistrantTypesEditor } from '@/components/events/EventRegistrantTypesEditor';
+import { EventQuestionsEditor } from '@/components/events/EventQuestionsEditor';
 import { ProgramClient } from './program/ProgramClient';
 import { ChatPanel } from '@/components/chat/ChatPanel';
 import { createEventSchema, type CreateEventInput } from '@/validations/event.schema';
 import type {
   EventListItem, EventProgramData, ChurchOption, Organization,
-  EventType, EventStatus, EventDetails, EventFeeItemInput, EventRegistrantTypeInput,
+  EventType, EventStatus, EventDetails, EventFeeItemInput, EventRegistrantTypeInput, EventQuestionInput,
 } from '@/types';
 
 const DEFAULT_FEE_ITEMS: EventFeeItemInput[] = [
@@ -46,6 +50,8 @@ const DEFAULT_FEE_ITEMS: EventFeeItemInput[] = [
 ];
 
 const DEFAULT_REGISTRANT_TYPES: EventRegistrantTypeInput[] = [];
+
+const DEFAULT_QUESTIONS: EventQuestionInput[] = [];
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -104,6 +110,7 @@ const DetailsForm: FC<DetailsFormProps> = ({
   const { mutate: setChurches } = useSetEventChurches(event.id);
   const { mutate: setFeeItems } = useSetEventFeeItems(event.id);
   const { mutate: setRegistrantTypes } = useSetEventRegistrantTypes(event.id);
+  const { mutate: setQuestions } = useSetEventQuestions(event.id);
 
   const [selectedChurchIds, setSelectedChurchIds] = useState<string[]>([]);
   const { data: churchData } = useGetEventChurches(event.id);
@@ -113,6 +120,9 @@ const DetailsForm: FC<DetailsFormProps> = ({
 
   const [registrantTypes, setRegistrantTypesState] = useState<EventRegistrantTypeInput[]>(DEFAULT_REGISTRANT_TYPES);
   const { data: registrantTypesData } = useGetEventRegistrantTypes(event.id);
+
+  const [questions, setQuestionsState] = useState<EventQuestionInput[]>(DEFAULT_QUESTIONS);
+  const { data: questionsData } = useGetEventQuestions(event.id);
 
   const form = useForm<CreateEventInput>({
     resolver: zodResolver(createEventSchema) as unknown as Resolver<CreateEventInput>,
@@ -163,6 +173,12 @@ const DetailsForm: FC<DetailsFormProps> = ({
     }
   }, [registrantTypesData]);
 
+  useEffect(() => {
+    if (questionsData) {
+      setQuestionsState(questionsData.map(toQuestionInput));
+    }
+  }, [questionsData]);
+
   function toggleChurch(churchId: string) {
     setSelectedChurchIds((prev) =>
       prev.includes(churchId) ? prev.filter((id) => id !== churchId) : [...prev, churchId],
@@ -176,6 +192,7 @@ const DetailsForm: FC<DetailsFormProps> = ({
         setChurches(selectedChurchIds);
         setFeeItems(feeItems);
         setRegistrantTypes(registrantTypes);
+        setQuestions(questions);
         toast.success('Event updated');
         router.refresh();
       },
@@ -434,6 +451,17 @@ const DetailsForm: FC<DetailsFormProps> = ({
           </p>
         </div>
         <EventRegistrantTypesEditor items={registrantTypes} onChange={setRegistrantTypesState} />
+      </div>
+
+      {/* ── Questions ── */}
+      <div className="space-y-2">
+        <div>
+          <p className="text-sm font-medium">Questions</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Ask registrants additional questions (text or multiple choice). Leave empty to skip.
+          </p>
+        </div>
+        <EventQuestionsEditor items={questions} onChange={setQuestionsState} />
       </div>
 
       {/* ── Payment Account ── */}

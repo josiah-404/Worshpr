@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { EventDetailClient } from './EventDetailClient';
+import { buildQuestionTree } from '@/lib/eventQuestions';
 import type { EventListItem, EventProgramData, ChurchOption, Organization } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -51,6 +52,13 @@ export default async function EventDetailPage({ params }: { params: { id: string
         registrantTypes: {
           orderBy: { order: 'asc' },
           select: { id: true, label: true, order: true },
+        },
+        questions: {
+          orderBy: { order: 'asc' },
+          select: {
+            id: true, parentQuestionId: true, triggerOption: true,
+            label: true, type: true, options: true, isRequired: true, order: true,
+          },
         },
         eventChurches: {
           select: {
@@ -103,6 +111,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
       role: o.role as 'HOST' | 'COLLABORATOR',
       inviteStatus: o.inviteStatus as 'PENDING' | 'ACCEPTED' | 'DECLINED',
     })),
+    questions: buildQuestionTree(rawEvent.questions),
   };
 
   const churches: ChurchOption[] = rawEvent.eventChurches.map((ec) => ({

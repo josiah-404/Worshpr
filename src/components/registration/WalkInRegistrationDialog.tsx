@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -33,9 +34,10 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useWalkInRegistration } from '@/hooks/useWalkInRegistration';
+import { QuestionAnswerFields } from '@/components/registration/QuestionAnswerFields';
 import { useGetEventChurches } from '@/hooks/useGetEventChurches';
 import { cn } from '@/lib/utils';
-import type { EventOrg, EventFeeItem } from '@/types';
+import type { EventOrg, EventFeeItem, EventQuestion } from '@/types';
 import type { PaymentAccountSummary } from '@/types/payment-account.types';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -60,6 +62,7 @@ const walkInFormSchema = z.object({
   churchId:             z.string().optional(),
   paymentIntent:        z.enum(['CASH', 'ONLINE', 'FREE']),
   selectedFeeItemIds:   z.array(z.string()).default([]),
+  answers:              z.record(z.string(), z.string()).default({}),
 });
 
 type WalkInFormValues = z.infer<typeof walkInFormSchema>;
@@ -72,6 +75,7 @@ interface WalkInRegistrationDialogProps {
   eventId: string;
   eventTitle: string;
   feeItems: EventFeeItem[];
+  questions: EventQuestion[];
   eventOrgs: EventOrg[];
   paymentAccount: PaymentAccountSummary | null;
 }
@@ -182,6 +186,7 @@ export const WalkInRegistrationDialog: FC<WalkInRegistrationDialogProps> = ({
   eventId,
   eventTitle,
   feeItems,
+  questions,
   eventOrgs,
   paymentAccount,
 }) => {
@@ -204,11 +209,13 @@ export const WalkInRegistrationDialog: FC<WalkInRegistrationDialogProps> = ({
       churchId:             '',
       paymentIntent:        noFeesConfigured ? 'FREE' : 'CASH',
       selectedFeeItemIds:   requiredIds,
+      answers:              {},
     },
   });
 
   const paymentIntent = form.watch('paymentIntent');
   const selectedFeeItemIds = form.watch('selectedFeeItemIds') ?? [];
+  const answers = form.watch('answers') ?? {};
   const totalAmount = feeItems.filter((i) => selectedFeeItemIds.includes(i.id)).reduce((sum, i) => sum + i.amount, 0);
   const isFree = totalAmount === 0;
 
@@ -239,6 +246,7 @@ export const WalkInRegistrationDialog: FC<WalkInRegistrationDialogProps> = ({
         divisionOrgId:        values.divisionOrgId    || undefined,
         paymentIntent:        isFree ? 'FREE' : values.paymentIntent,
         selectedFeeItemIds:   values.selectedFeeItemIds,
+        answers:              values.answers,
       },
       {
         onSuccess: (data) => {
@@ -364,6 +372,22 @@ export const WalkInRegistrationDialog: FC<WalkInRegistrationDialogProps> = ({
             />
 
             {(eventOrgs.length > 0) && <Separator />}
+
+            {/* ── Questions ── */}
+            {questions.length > 0 && (
+              <>
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Questions</p>
+                  <QuestionAnswerFields
+                    questions={questions}
+                    answers={answers}
+                    missingIds={new Set()}
+                    onAnswer={(questionId, value) => form.setValue(`answers.${questionId}`, value)}
+                  />
+                </div>
+                <Separator />
+              </>
+            )}
 
             {/* ── Fees ── */}
             {feeItems.length > 0 && (
