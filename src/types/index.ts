@@ -80,6 +80,17 @@ export interface OrganizationFormState {
   logoUrl: string;
 }
 
+export interface PaginatedOrganizationsResponse {
+  data: OrganizationRow[];
+  meta: PaginatedMeta;
+}
+
+export interface GetOrganizationsListParams {
+  page?: number;
+  page_size?: number;
+  query?: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -88,6 +99,24 @@ export interface User {
   memberships: import('@/types/org.types').OrgMembershipWithName[];
   createdAt: string;
   isSetup: boolean;
+}
+
+export interface PaginatedMeta {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface PaginatedUsersResponse {
+  data: User[];
+  meta: PaginatedMeta;
+}
+
+export interface GetUsersParams {
+  page?: number;
+  page_size?: number;
+  query?: string;
 }
 
 export interface UserMembershipForm {

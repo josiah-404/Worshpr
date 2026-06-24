@@ -1,32 +1,45 @@
 'use client';
 
-import { useState, type FC } from 'react';
-import { PlusCircle, Pencil, Trash2, Building2, Users } from 'lucide-react';
+import { Suspense, useState, type FC } from 'react';
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  type SortingState,
+  type Row,
+} from '@tanstack/react-table';
+import { PlusCircle, Building2, Pencil, Trash2 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { Search } from '@/components/table/Search';
+import { Pagination } from '@/components/table/Pagination';
+import { ResponsiveTableLayout } from '@/components/table/ResponsiveTableLayout';
+import { getOrganizationColumns } from '@/components/organizations/OrganizationColumns';
+import { useSearchFilter } from '@/hooks/useSearchFilter';
+import { useGetOrganizationsList } from '@/hooks/useGetOrganizationsList';
 import { useOrganizations, EMPTY_ORG_FORM } from '@/hooks/useOrganizations';
 import { useConfirm } from '@/hooks/useConfirm';
 import { OrganizationDialog } from '@/app/organizations/OrganizationDialog';
 import type { OrganizationRow, OrganizationFormState } from '@/types';
 
-interface OrganizationsTableProps {
-  initialOrgs: OrganizationRow[];
-}
+const PAGE_SIZE = 10;
 
-export const OrganizationsTable: FC<OrganizationsTableProps> = ({ initialOrgs }) => {
-  const {
-    organizations,
-    loading,
-    error,
-    setError,
-    createOrganization,
-    updateOrganization,
-    deleteOrganization,
-  } = useOrganizations(initialOrgs);
+function OrganizationsTableInner() {
+  const searchParams = useSearchParams();
+  const page = parseInt(searchParams.get('page') ?? '1', 10);
+  const query = searchParams.get('query') ?? '';
+
+  const { data, isLoading } = useGetOrganizationsList({ page, page_size: PAGE_SIZE, query });
+  const { loading, error, setError, createOrganization, updateOrganization, deleteOrganization } =
+    useOrganizations();
+  const { columnFilters } = useSearchFilter('organization');
+
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [open, setOpen] = useState(false);
+  const [editingOrg, setEditingOrg] = useState<OrganizationRow | null>(null);
+  const [form, setForm] = useState<OrganizationFormState>(EMPTY_ORG_FORM);
 
   const [confirm, ConfirmDialogEl] = useConfirm({
     title: 'Delete Organization',
@@ -35,9 +48,8 @@ export const OrganizationsTable: FC<OrganizationsTableProps> = ({ initialOrgs })
     variant: 'destructive',
   });
 
-  const [open, setOpen] = useState(false);
-  const [editingOrg, setEditingOrg] = useState<OrganizationRow | null>(null);
-  const [form, setForm] = useState<OrganizationFormState>(EMPTY_ORG_FORM);
+  const organizations: OrganizationRow[] = data?.data ?? [];
+  const meta = data?.meta;
 
   function openCreate() {
     setEditingOrg(null);
@@ -77,25 +89,51 @@ export const OrganizationsTable: FC<OrganizationsTableProps> = ({ initialOrgs })
     await deleteOrganization(org.id);
   }
 
+  const columns = getOrganizationColumns({
+    onEdit: openEdit,
+    onDelete: handleDelete,
+    onToggleActive: handleToggleActive,
+  });
+
+  const table = useReactTable({
+    data: organizations,
+    columns,
+    state: { sorting, columnFilters },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    manualPagination: true,
+    manualFiltering: true,
+    pageCount: meta?.totalPages ?? 1,
+  });
+
+  const showEmptyCta = !isLoading && (meta?.total ?? 0) === 0 && !query;
+
   return (
     <>
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {organizations.length} organization{organizations.length !== 1 ? 's' : ''}
+          {meta?.total ?? 0} organization{(meta?.total ?? 0) !== 1 ? 's' : ''}
         </p>
         <Button onClick={openCreate} size="sm">
           <PlusCircle className="mr-2 h-4 w-4" /> Add Organization
         </Button>
       </div>
 
-      {organizations.length === 0 ? (
-        <div className="rounded-lg border border-dashed flex flex-col items-center justify-center py-16 text-center gap-3">
+      {!showEmptyCta && (
+        <div className="mb-4">
+          <Search placeholder="Search organizations..." />
+        </div>
+      )}
+
+      {showEmptyCta ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-16 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
             <Building2 className="h-6 w-6 text-muted-foreground" />
           </div>
           <div>
             <p className="text-sm font-medium">No organizations yet</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="mt-0.5 text-xs text-muted-foreground">
               Create your first organization to get started.
             </p>
           </div>
@@ -104,67 +142,81 @@ export const OrganizationsTable: FC<OrganizationsTableProps> = ({ initialOrgs })
           </Button>
         </div>
       ) : (
-        <div className="rounded-lg border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Organization</TableHead>
-                <TableHead>Members</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(organizations as OrganizationRow[]).map((org) => (
-                <TableRow key={org.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      {org.logoUrl ? (
-                        <img src={org.logoUrl} alt={org.name} className="h-8 w-8 rounded-md object-cover shrink-0" />
-                      ) : (
-                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 shrink-0">
-                          <Building2 className="h-4 w-4 text-primary" />
-                        </div>
-                      )}
-                      <span className="font-medium">{org.name}</span>
+        <>
+          <ResponsiveTableLayout
+            table={table}
+            columns={columns}
+            isLoading={isLoading}
+            loadingRows={PAGE_SIZE}
+            noRecordMessage="No organizations found. Try a different search."
+            renderMobileRow={(row: Row<OrganizationRow>) => {
+              const org = row.original;
+              return (
+                <div className="flex min-h-[3.5rem] items-center gap-2 px-4 py-2">
+                  {org.logoUrl ? (
+                    <img
+                      src={org.logoUrl}
+                      alt={org.name}
+                      className="h-8 w-8 shrink-0 rounded-md object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
+                      <Building2 className="h-4 w-4 text-primary" />
                     </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5" />
-                      <span>{org._count.memberships}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <button onClick={() => handleToggleActive(org)}>
-                      <Badge variant="outline" className={cn(
-                        'cursor-pointer',
-                        org.isActive
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
-                          : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted',
-                      )}>
-                        {org.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </button>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {new Date(org.createdAt).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="text-right space-x-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(org)}>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{org.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {org._count.memberships} member{org._count.memberships !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      'shrink-0 text-xs',
+                      org.isActive
+                        ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
+                        : 'border-border bg-muted/50 text-muted-foreground',
+                    )}
+                  >
+                    {org.isActive ? 'Active' : 'Inactive'}
+                  </Badge>
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-11 w-11"
+                      onClick={() => openEdit(org)}
+                      aria-label="Edit organization"
+                    >
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(org)}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-11 w-11 text-destructive"
+                      onClick={() => handleDelete(org)}
+                      aria-label="Delete organization"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+                  </div>
+                </div>
+              );
+            }}
+          />
+
+          {meta && meta.totalPages > 1 && (
+            <div className="mt-4">
+              <Pagination
+                currentPage={meta.page}
+                totalPages={meta.totalPages}
+                pageSize={meta.pageSize}
+                totalItems={meta.total}
+              />
+            </div>
+          )}
+        </>
       )}
 
       <OrganizationDialog
@@ -181,4 +233,10 @@ export const OrganizationsTable: FC<OrganizationsTableProps> = ({ initialOrgs })
       {ConfirmDialogEl}
     </>
   );
-};
+}
+
+export const OrganizationsTable: FC = () => (
+  <Suspense>
+    <OrganizationsTableInner />
+  </Suspense>
+);

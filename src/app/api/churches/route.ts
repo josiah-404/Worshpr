@@ -1,20 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { getAllChurches, listChurches } from '@/lib/church-list';
 import {
   assertCanManageOrg,
   isOfficer,
   orgIdWhereClause,
   OrgAccessError,
 } from '@/lib/org-access';
+import { prisma } from '@/lib/prisma';
 
 const createChurchSchema = z.object({
   orgId: z.string().min(1, 'Organization is required'),
   name: z.string().min(1, 'Church name is required'),
   location: z.string().optional(),
 });
+
+function parseStatus(value: string | null): 'all' | 'active' | 'inactive' {
+  if (value === 'active' || value === 'inactive') return value;
+  return 'all';
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,35 +29,32 @@ export async function GET(req: NextRequest) {
 
     if (isOfficer(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const queryOrgId = req.nextUrl.searchParams.get('orgId') ?? undefined;
+    const { searchParams } = req.nextUrl;
+    const queryOrgId = searchParams.get('orgId') ?? undefined;
     const orgFilter = orgIdWhereClause(session, queryOrgId);
+    const pageParam = searchParams.get('page');
 
-    const churches = await prisma.church.findMany({
-      where: orgFilter,
-      orderBy: [{ orgId: 'asc' }, { name: 'asc' }],
-      select: {
-        id: true,
-        orgId: true,
-        name: true,
-        location: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        organization: { select: { name: true } },
-      },
-    });
+    if (pageParam !== null) {
+      const page = Math.max(1, parseInt(pageParam, 10));
+      const pageSize = Math.min(
+        50,
+        Math.max(1, parseInt(searchParams.get('page_size') ?? '10', 10)),
+      );
+      const query = searchParams.get('query') ?? '';
+      const status = parseStatus(searchParams.get('status'));
 
-    const data = churches.map((c) => ({
-      id: c.id,
-      orgId: c.orgId,
-      orgName: c.organization.name,
-      name: c.name,
-      location: c.location,
-      isActive: c.isActive,
-      createdAt: c.createdAt.toISOString(),
-      updatedAt: c.updatedAt.toISOString(),
-    }));
+      const result = await listChurches({
+        orgFilter,
+        page,
+        pageSize,
+        query,
+        status,
+      });
 
+      return NextResponse.json(result, { status: 200 });
+    }
+
+    const data = await getAllChurches(orgFilter);
     return NextResponse.json({ data }, { status: 200 });
   } catch (err) {
     if (err instanceof OrgAccessError) {
@@ -94,14 +97,17 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({
-      data: {
-        ...church,
-        orgName: church.organization.name,
-        createdAt: church.createdAt.toISOString(),
-        updatedAt: church.updatedAt.toISOString(),
+    return NextResponse.json(
+      {
+        data: {
+          ...church,
+          orgName: church.organization.name,
+          createdAt: church.createdAt.toISOString(),
+          updatedAt: church.updatedAt.toISOString(),
+        },
       },
-    }, { status: 201 });
+      { status: 201 },
+    );
   } catch (err) {
     if (err instanceof OrgAccessError) {
       return NextResponse.json({ error: err.message }, { status: err.status });

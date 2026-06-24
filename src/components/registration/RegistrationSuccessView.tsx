@@ -56,7 +56,9 @@ export const RegistrationSuccessView: FC<RegistrationSuccessViewProps> = ({ resu
           {result.registrations.map((r) => (
             <div key={r.id} className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-2 text-sm border rounded-md px-3 py-2">
               <span className="font-medium">{r.fullName}</span>
-              <span className="text-muted-foreground text-xs sm:text-sm truncate">{r.email}</span>
+              {r.email ? (
+                <span className="text-muted-foreground text-xs sm:text-sm truncate">{r.email}</span>
+              ) : null}
             </div>
           ))}
         </div>

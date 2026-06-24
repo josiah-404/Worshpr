@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { TokenType } from '@/generated/prisma';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { listUsers } from '@/lib/user-list';
 import { createUserSchema } from '@/validations/user.schema';
 import { sendOnboardingEmail } from '@/lib/mail';
 import {
@@ -14,7 +15,7 @@ import {
 } from '@/lib/org-access';
 import { serializeUser, userSelect } from '@/lib/user-serialize';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -24,22 +25,22 @@ export async function GET() {
     assertCanManageUsers(session);
 
     const manageableOrgIds = getManageableOrgIds(session);
+    const { searchParams } = req.nextUrl;
+    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
+    const pageSize = Math.min(
+      50,
+      Math.max(1, parseInt(searchParams.get('page_size') ?? '10', 10)),
+    );
+    const query = searchParams.get('query') ?? '';
 
-    const users = await prisma.user.findMany({
-      where: manageableOrgIds
-        ? {
-            isSuperAdmin: false,
-            memberships: {
-              some: { orgId: { in: manageableOrgIds } },
-            },
-          }
-        : undefined,
-      orderBy: { createdAt: 'desc' },
-      select: userSelect,
+    const result = await listUsers({
+      manageableOrgIds,
+      page,
+      pageSize,
+      query,
     });
 
-    const serialized = users.map(serializeUser);
-    return NextResponse.json({ data: serialized }, { status: 200 });
+    return NextResponse.json(result, { status: 200 });
   } catch (err) {
     if (err instanceof OrgAccessError) {
       return NextResponse.json({ error: err.message }, { status: err.status });

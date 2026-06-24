@@ -1,16 +1,29 @@
 import type { PaymentAccountSummary } from '@/types/payment-account.types';
 import type { ChurchOption } from '@/types/church.types';
-import type { EventFeeItem, EventRegistrantType, EventQuestion } from '@/types/event.types';
+import type {
+  EventFeeItem,
+  EventRegistrantType,
+  EventQuestion,
+} from '@/types/event.types';
 
-export type RegistrationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+export type RegistrationStatus =
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'CANCELLED';
 export type PaymentIntent = 'CASH' | 'ONLINE' | 'FREE';
-export type PaymentMethod = 'CASH' | 'GCASH' | 'MAYA' | 'BANK_TRANSFER' | 'OTHER';
+export type PaymentMethod =
+  | 'CASH'
+  | 'GCASH'
+  | 'MAYA'
+  | 'BANK_TRANSFER'
+  | 'OTHER';
 export type PaymentStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
 
 export interface RegistrantData {
   fullName: string;
   nickname?: string;
-  email: string;
+  email?: string;
   phone: string;
   birthday: string; // ISO date string
   address: string;
@@ -111,7 +124,7 @@ export interface RegistrantDetail {
   id: string;
   fullName: string;
   nickname: string | null;
-  email: string;
+  email?: string;
   phone: string;
   birthday: string;
   address: string;
@@ -160,6 +173,6 @@ export interface RegistrationGroupResult {
     id: string;
     registrantId: string;
     fullName: string;
-    email: string;
+    email?: string;
   }>;
 }

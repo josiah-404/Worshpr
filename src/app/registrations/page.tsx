@@ -5,6 +5,7 @@ import { resolveFilterOrgIds, orgIdWhereClause } from '@/lib/org-access';
 import { eventOrgFilterWhere } from '@/lib/event-access';
 import { RegistrationsClient } from '@/components/registration/RegistrationsClient';
 import { buildQuestionTree } from '@/lib/eventQuestions';
+import { displayRegistrantEmail } from '@/lib/registrant-email';
 import type { RegistrationListItem, EventListItem } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -109,12 +110,14 @@ export default async function RegistrationsPage() {
       updatedAt: r.updatedAt.toISOString(),
       registrant: {
         ...r.registrant,
+        email: displayRegistrantEmail(r.registrant.email),
         birthday: r.registrant.birthday.toISOString(),
         churchName: r.registrant.churchRef?.name ?? null,
         divisionOrgName: r.registrant.divisionOrg?.name ?? null,
       },
       group: {
         ...groupRest,
+        submittedByEmail: displayRegistrantEmail(groupRest.submittedByEmail) ?? '',
         createdAt: r.group.createdAt.toISOString(),
       },
       payment: effectivePayment

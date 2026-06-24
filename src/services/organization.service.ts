@@ -1,9 +1,21 @@
 import { api } from '@/lib/axios';
-import type { Organization, OrganizationFormState } from '@/types';
+import type {
+  GetOrganizationsListParams,
+  Organization,
+  OrganizationFormState,
+  PaginatedOrganizationsResponse,
+} from '@/types';
 
 export const getOrganizations = async (): Promise<Organization[]> => {
   const { data } = await api.get<{ data: Organization[] }>('/organizations');
   return data.data;
+};
+
+export const getOrganizationsList = async (
+  params: GetOrganizationsListParams,
+): Promise<PaginatedOrganizationsResponse> => {
+  const { data } = await api.get<PaginatedOrganizationsResponse>('/organizations', { params });
+  return data;
 };
 
 export const createOrganization = async (

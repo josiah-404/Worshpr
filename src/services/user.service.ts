@@ -1,9 +1,9 @@
 import { api } from '@/lib/axios';
-import type { User, UserFormState } from '@/types';
+import type { GetUsersParams, PaginatedUsersResponse, User, UserFormState } from '@/types';
 
-export const getUsers = async (): Promise<User[]> => {
-  const { data } = await api.get<{ data: User[] }>('/users');
-  return data.data;
+export const getUsers = async (params: GetUsersParams = {}): Promise<PaginatedUsersResponse> => {
+  const { data } = await api.get<PaginatedUsersResponse>('/users', { params });
+  return data;
 };
 
 export const createUser = async (form: UserFormState): Promise<User> => {

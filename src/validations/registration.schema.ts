@@ -1,9 +1,15 @@
 import { z } from 'zod';
 
+/** Accepts empty string or a valid email — form defaults use '' for optional fields. */
+export const optionalEmailSchema = z.union([
+  z.literal(''),
+  z.email('Invalid email address'),
+]).optional();
+
 export const registrantSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
   nickname: z.string().optional(),
-  email: z.email('Invalid email address'),
+  email: optionalEmailSchema,
   phone: z.string().min(1, 'Phone number is required'),
   birthday: z.string().min(1, 'Birthday is required'),
   address: z.string().min(1, 'Address is required'),
@@ -11,7 +17,9 @@ export const registrantSchema = z.object({
   churchId: z.string().optional(),
   divisionOrgId: z.string().optional(),
   emergencyContactName: z.string().min(1, 'Emergency contact name is required'),
-  emergencyContactPhone: z.string().min(1, 'Emergency contact phone is required'),
+  emergencyContactPhone: z
+    .string()
+    .min(1, 'Emergency contact phone is required'),
   selectedFeeItemIds: z.array(z.string()).default([]),
   registrantTypeId: z.string().optional(),
   answers: z.record(z.string(), z.string()).default({}),
@@ -29,8 +37,10 @@ export const paymentSchema = z.object({
 export const registrationGroupSchema = z.object({
   eventId: z.string().min(1, 'Event is required'),
   submittedByName: z.string().min(1, 'Your name is required'),
-  submittedByEmail: z.email('Invalid email address'),
-  registrants: z.array(registrantSchema).min(1, 'At least one registrant is required'),
+  submittedByEmail: optionalEmailSchema,
+  registrants: z
+    .array(registrantSchema)
+    .min(1, 'At least one registrant is required'),
   paymentIntent: z.enum(['CASH', 'ONLINE', 'FREE'], {
     error: 'Payment intent is required',
   }),
