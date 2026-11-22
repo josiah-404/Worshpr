@@ -20,6 +20,7 @@ export default function ConditionalLayout({
   const hideSidebar =
     pathname === '/login' ||
     pathname === '/worship/present' ||
+    pathname.startsWith('/worship/remote/') ||
     pathname.startsWith('/register') ||
     pathname.startsWith('/auth/');
 

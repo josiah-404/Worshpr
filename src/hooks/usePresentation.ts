@@ -141,6 +141,12 @@ export function usePresentation(presentationId: string | null) {
     const ch = new BroadcastChannel("worship-presenter");
     channelRef.current = ch;
     ch.onmessage = (e) => {
+      // Click / key navigation coming from the projector window
+      if (e.data?.type === "NAV") {
+        const step = e.data.dir === "next" ? 1 : e.data.dir === "prev" ? -1 : 0;
+        if (step !== 0) goToRef.current(currentRef.current + step);
+        return;
+      }
       if (e.data?.type === "REQUEST_STATE") {
         ch.postMessage({
           type: "UPDATE",
@@ -180,10 +186,10 @@ export function usePresentation(presentationId: string | null) {
     const handler = (e: KeyboardEvent) => {
       if (modeRef.current !== "controller") return;
       if ((e.target as HTMLElement).tagName === "INPUT") return;
-      if (e.key === "ArrowRight" || e.key === " " || e.key === "ArrowDown") {
+      if (e.key === "ArrowRight" || e.key === " " || e.key === "ArrowDown" || e.key === "PageDown") {
         e.preventDefault();
         goToRef.current(currentRef.current + 1);
-      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp" || e.key === "PageUp") {
         e.preventDefault();
         goToRef.current(currentRef.current - 1);
       }

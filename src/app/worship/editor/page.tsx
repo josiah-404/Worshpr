@@ -12,6 +12,8 @@ import {
 import { usePresentation } from '@/hooks/usePresentation';
 import { useEditorState } from '@/hooks/useEditorState';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useWorshipRemoteHost } from '@/hooks/useWorshipRemoteHost';
+import { getRemoteUrl } from '@/lib/worship-remote';
 import { EditorSkeleton } from '@/app/worship/components/editor/EditorSkeleton';
 import { SlidesPanel } from '@/app/worship/components/editor/SlidesPanel';
 import { LyricsPanel } from '@/app/worship/components/editor/LyricsPanel';
@@ -92,6 +94,15 @@ function WorshipEditorInner() {
 
   const editor = useEditorState({ lyrics, setLyrics, setSlides, initialQueue });
 
+  const remote = useWorshipRemoteHost({
+    enabled: isPresenterOpen,
+    title,
+    slides,
+    current,
+    onGoTo: goTo,
+  });
+  const remoteUrl = remote.token ? getRemoteUrl(window.location.origin, remote.token) : null;
+
   const handleSave = () => _handleSave(editor.songQueue);
 
   const [confirmEnd, ConfirmEndDialog] = useConfirm({
@@ -161,6 +172,8 @@ function WorshipEditorInner() {
         onChangeAnimSpeed={changeAnimSpeed}
         onOpenPresenter={openPresenter}
         onEndPresentation={handleEndPresentation}
+        remoteUrl={remoteUrl}
+        remoteConnectedCount={remote.connectedCount}
       />
     );
   }

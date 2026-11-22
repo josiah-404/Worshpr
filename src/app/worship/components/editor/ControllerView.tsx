@@ -1,17 +1,19 @@
 'use client';
 
-import { type FC } from 'react';
+import { type FC, type MouseEvent, useState } from 'react';
 import {
   ArrowLeft,
   MonitorOff,
   SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
+  Smartphone,
 } from 'lucide-react';
 import { PREVIEW_FONT_SIZES, CONTROLLER_FONT_SIZES } from '@/lib/constants';
 import { SlidePreview } from '@/app/worship/components/SlidePreview';
 import { BackgroundPicker } from '@/app/worship/components/BackgroundPicker';
 import { SettingsDrawer } from '@/app/worship/components/SettingsDrawer';
+import { RemoteControlDialog } from './RemoteControlDialog';
 import { SlidesPanel } from './SlidesPanel';
 
 interface ControllerViewProps {
@@ -44,6 +46,9 @@ interface ControllerViewProps {
   onChangeAnimSpeed: (id: string) => void;
   onOpenPresenter: () => void;
   onEndPresentation: () => void;
+  /** Phone remote link for this live presentation (null until ready). */
+  remoteUrl: string | null;
+  remoteConnectedCount: number;
 }
 
 export const ControllerView: FC<ControllerViewProps> = ({
@@ -76,7 +81,26 @@ export const ControllerView: FC<ControllerViewProps> = ({
   onChangeAnimSpeed,
   onOpenPresenter,
   onEndPresentation,
+  remoteUrl,
+  remoteConnectedCount,
 }) => {
+  const [remoteOpen, setRemoteOpen] = useState(false);
+  const hasRemote = remoteConnectedCount > 0;
+
+  const handlePrev = (e: MouseEvent) => {
+    e.stopPropagation();
+    onGoTo(current - 1);
+  };
+  const handleNext = (e: MouseEvent) => {
+    e.stopPropagation();
+    onGoTo(current + 1);
+  };
+  /* Live preview: left click = previous, right click = next (same as the projector window) */
+  const handlePreviewContextMenu = (e: MouseEvent) => {
+    e.preventDefault();
+    onGoTo(current + 1);
+  };
+
   return (
     <div className='flex flex-col gap-4 flex-1 min-h-0'>
       {/* Header */}
@@ -99,6 +123,14 @@ export const ControllerView: FC<ControllerViewProps> = ({
           </div>
         </div>
         <div className='flex items-center gap-2'>
+          <button
+            onClick={() => setRemoteOpen(true)}
+            className='inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-colors'
+          >
+            <Smartphone className='h-4 w-4' />
+            Phone Remote
+            {hasRemote && <span className='h-2 w-2 rounded-full bg-green-500' />}
+          </button>
           <button
             onClick={() => setSettingsOpen(true)}
             className='inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-colors'
@@ -153,7 +185,12 @@ export const ControllerView: FC<ControllerViewProps> = ({
             <span className='h-1.5 w-1.5 rounded-full bg-green-500 inline-block animate-pulse' />
             <span className='text-green-500'>Live Now</span>
           </p>
-          <div className='relative flex-1 min-h-0'>
+          <div
+            className='relative flex-1 min-h-0 cursor-pointer'
+            onClick={() => onGoTo(current - 1)}
+            onContextMenu={handlePreviewContextMenu}
+            title='Left click: previous · Right click: next'
+          >
             <SlidePreview
               slide={currentSlide ?? ''}
               bgCls={bgCls}
@@ -162,9 +199,14 @@ export const ControllerView: FC<ControllerViewProps> = ({
               ringClass='ring-2 ring-green-500/25 h-full'
             />
             {/* Nav overlay */}
-            <div className='absolute inset-x-0 bottom-4 flex items-center justify-between px-5 pointer-events-none'>
+            {/* Stop clicks on the buttons (incl. disabled ones) from also triggering the preview's click-to-navigate */}
+            <div
+              className='absolute inset-x-0 bottom-4 flex items-center justify-between px-5 pointer-events-none'
+              onClick={(e) => e.stopPropagation()}
+              onContextMenu={(e) => e.stopPropagation()}
+            >
               <button
-                onClick={() => onGoTo(current - 1)}
+                onClick={handlePrev}
                 disabled={current === 0}
                 className='pointer-events-auto flex items-center gap-1.5 rounded-lg bg-black/30 backdrop-blur-sm border border-white/10 px-4 py-2 text-sm font-medium text-white/60 hover:text-white hover:bg-black/50 transition-all disabled:opacity-20 disabled:cursor-not-allowed'
               >
@@ -175,7 +217,7 @@ export const ControllerView: FC<ControllerViewProps> = ({
                 {slides.length > 0 ? `${current + 1} / ${slides.length}` : '—'}
               </span>
               <button
-                onClick={() => onGoTo(current + 1)}
+                onClick={handleNext}
                 disabled={current >= slides.length - 1}
                 className='pointer-events-auto flex items-center gap-1.5 rounded-lg bg-black/30 backdrop-blur-sm border border-white/10 px-4 py-2 text-sm font-medium text-white/60 hover:text-white hover:bg-black/50 transition-all disabled:opacity-20 disabled:cursor-not-allowed'
               >
@@ -187,6 +229,12 @@ export const ControllerView: FC<ControllerViewProps> = ({
         </div>
       </div>
 
+      <RemoteControlDialog
+        open={remoteOpen}
+        onOpenChange={setRemoteOpen}
+        remoteUrl={remoteUrl}
+        connectedCount={remoteConnectedCount}
+      />
       <BackgroundPicker
         open={bgDialogOpen}
         selected={bgId}

@@ -8,6 +8,10 @@ export async function middleware(req: NextRequest) {
   const token = await getToken({ req });
   const { pathname } = req.nextUrl;
 
+  // Phone remote for a live worship presentation — opened by scanning a QR code, so no
+  // login. Access is gated by the random per-presentation token in the URL instead.
+  if (pathname.startsWith('/worship/remote/')) return NextResponse.next();
+
   const isPublicAuthPage =
     pathname === '/login' || pathname.startsWith('/auth/');
 

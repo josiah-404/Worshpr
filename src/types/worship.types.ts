@@ -94,3 +94,18 @@ export function buildDisplaySlides(
 
   return allSlides;
 }
+
+/* ── Phone remote (Supabase Realtime broadcast) ── */
+
+export type RemoteNavAction =
+  | { action: 'next' }
+  | { action: 'prev' }
+  | { action: 'goto'; index: number };
+
+/** Snapshot of the live presentation sent from the controller to connected phone remotes. */
+export interface RemoteState {
+  title: string;
+  current: number;
+  total: number;
+  slides: string[];
+}

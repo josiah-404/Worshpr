@@ -26,6 +26,9 @@ const SIZE_STYLES: Record<string, string> = {
   xl: "clamp(3rem,   6.5vw, 6rem)",
 };
 
+const NEXT_KEYS = new Set(["ArrowRight", "ArrowDown", "PageDown", " "]);
+const PREV_KEYS = new Set(["ArrowLeft", "ArrowUp", "PageUp"]);
+
 export default function WorshipPresentPage() {
   const [slide, setSlide]          = useState("");
   const [bgId, setBgId]            = useState("deep-space");
@@ -37,10 +40,12 @@ export default function WorshipPresentPage() {
   const [slideKey, setSlideKey]    = useState(0);
   const [needsFullscreen, setNeedsFullscreen] = useState(false);
   const bgRef = useRef<HTMLDivElement>(null);
+  const channelRef = useRef<BroadcastChannel | null>(null);
 
   /* BroadcastChannel */
   useEffect(() => {
     const channel = new BroadcastChannel("worship-presenter");
+    channelRef.current = channel;
 
     channel.onmessage = (e) => {
       if (e.data?.type === "CLOSE") {
@@ -70,7 +75,41 @@ export default function WorshipPresentPage() {
     return () => {
       clearInterval(heartbeat);
       channel.postMessage({ type: "PRESENTER_CLOSED" });
+      channelRef.current = null;
       channel.close();
+    };
+  }, []);
+
+  /* Navigation from the projector window itself — the controller tab owns slide state,
+     so we just ask it to move. Left click = previous, right click = next; keys match
+     the controller (and most USB presentation clickers, which send PageUp/PageDown). */
+  useEffect(() => {
+    const nav = (dir: "next" | "prev") => channelRef.current?.postMessage({ type: "NAV", dir });
+
+    const handleClick = (e: MouseEvent) => {
+      if (e.button === 0) nav("prev");
+    };
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      nav("next");
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (NEXT_KEYS.has(e.key)) {
+        e.preventDefault();
+        nav("next");
+      } else if (PREV_KEYS.has(e.key)) {
+        e.preventDefault();
+        nav("prev");
+      }
+    };
+
+    window.addEventListener("click", handleClick);
+    window.addEventListener("contextmenu", handleContextMenu);
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      window.removeEventListener("click", handleClick);
+      window.removeEventListener("contextmenu", handleContextMenu);
+      window.removeEventListener("keydown", handleKey);
     };
   }, []);
 
@@ -192,7 +231,8 @@ export default function WorshipPresentPage() {
       {/* Fullscreen prompt — shown only if auto-fullscreen was blocked */}
       {needsFullscreen && (
         <button
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation(); // don't also count as a "previous slide" click
             document.documentElement.requestFullscreen({ navigationUI: "hide" })
               .then(() => setNeedsFullscreen(false))
               .catch(() => {});
