@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Maximize2 } from "lucide-react";
-import { BACKGROUNDS, FONTS, SPEEDS, parseTitleSlide } from '@/lib/constants';
+import { BACKGROUNDS, FONTS, SPEEDS, parseImageSlide, parseTitleSlide } from '@/lib/constants';
 
 const BG_CLASSES: Record<string, string> = Object.fromEntries(
   BACKGROUNDS.map((b) => [b.id, b.cls])
@@ -147,6 +147,7 @@ export default function WorshipPresentPage() {
   const fontFamily = FONT_FAMILIES[fontId] ?? FONT_FAMILIES.inter;
   const fontSize   = SIZE_STYLES[sizeId]   ?? SIZE_STYLES.md;
   const titleParts = parseTitleSlide(slide);
+  const imageSlide = parseImageSlide(slide);
 
   return (
     <div
@@ -159,8 +160,14 @@ export default function WorshipPresentPage() {
         isolation: "isolate",
       }}
     >
-      {/* Slide text */}
-      {titleParts ? (
+      {/* Slide content */}
+      {imageSlide ? (
+        /* PDF page — black letterbox so it reads like a normal slideshow */
+        <div key={slideKey} className={`absolute inset-0 bg-black ${trCls}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- full-res projector image, no optimisation wanted */}
+          <img src={imageSlide.url} alt={imageSlide.label} className="h-full w-full object-contain" draggable={false} />
+        </div>
+      ) : titleParts ? (
         titleParts.isSection ? (
           /* Section slide — label shown large and centred */
           <p

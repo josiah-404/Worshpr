@@ -1,7 +1,8 @@
 'use client';
 
 import { type FC } from 'react';
-import { parseTitleSlide } from '@/lib/constants';
+import { FileText } from 'lucide-react';
+import { parseImageSlide, parseTitleSlide } from '@/lib/constants';
 
 interface SlidesPanelProps {
   slides: string[];
@@ -56,6 +57,15 @@ export const SlidesPanel: FC<SlidesPanelProps> = ({
 };
 
 function SlideLabel({ slide }: { slide: string }) {
+  const imageSlide = parseImageSlide(slide);
+  if (imageSlide) {
+    return (
+      <span className='inline-flex items-center gap-1 opacity-80'>
+        <FileText className='h-3 w-3 shrink-0' />
+        {imageSlide.label}
+      </span>
+    );
+  }
   const titleParts = parseTitleSlide(slide);
   if (titleParts) {
     if (titleParts.isSection) {

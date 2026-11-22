@@ -34,7 +34,7 @@ function extractBodyMap(
 }
 
 export type LyricsMode = 'paste' | 'ai';
-export type AddMode = 'choose' | 'manual' | 'ai' | 'section' | 'bible';
+export type AddMode = 'choose' | 'manual' | 'ai' | 'section' | 'bible' | 'pdf';
 
 export interface EditorState {
   // Dialog / panel visibility
@@ -243,9 +243,10 @@ export function useEditorState({
   const handleSelectSong = useCallback(
     (song: SongResult) => {
       setSongQueue((prev) => {
-        const alreadyQueued = prev.some(
-          (s) => s.title === song.title && s.artist === song.artist,
-        );
+        // Uploaded PDFs are always distinct (fresh page URLs), even with the same title
+        const alreadyQueued =
+          !song.isDocument &&
+          prev.some((s) => s.title === song.title && s.artist === song.artist);
         if (alreadyQueued) return prev;
 
         const isFirstSong = prev.length === 0;

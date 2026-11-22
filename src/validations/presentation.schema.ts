@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MAX_PDF_PAGES } from '@/lib/pdf-slides';
 
 const songResultSchema = z.object({
   title: z.string(),
@@ -10,6 +11,9 @@ const songResultSchema = z.object({
   lyricsSource: z.string().optional(),
   role: z.string().optional(),
   isSection: z.boolean().optional(),
+  isBibleVerse: z.boolean().optional(),
+  isDocument: z.boolean().optional(),
+  pages: z.array(z.string().url()).max(MAX_PDF_PAGES).optional(),
 });
 
 export const createPresentationSchema = z.object({

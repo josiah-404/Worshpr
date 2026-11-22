@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { isTitleSlide, parseTitleSlide } from "@/lib/constants";
+import { isTitleSlide, parseImageSlide, parseTitleSlide } from "@/lib/constants";
 
 interface SlidePreviewProps {
   slide:       string;
@@ -35,6 +35,7 @@ export function SlidePreview({
   }, []);
 
   const titleParts = parseTitleSlide(slide);
+  const imageSlide = parseImageSlide(slide);
 
   return (
     <div
@@ -55,6 +56,14 @@ export function SlidePreview({
           transformOrigin: "center",
         }}
       />
+
+      {/* PDF page */}
+      {imageSlide && (
+        <div className="absolute inset-0 bg-black">
+          {/* eslint-disable-next-line @next/next/no-img-element -- same full-res URL as the projector, so it's cached for it */}
+          <img src={imageSlide.url} alt={imageSlide.label} className="h-full w-full object-contain" draggable={false} />
+        </div>
+      )}
 
       {/* Text layer */}
       <div className="absolute inset-0 flex items-center justify-center px-10">
@@ -109,7 +118,7 @@ export function SlidePreview({
             </p>
           </div>
           )
-        ) : slide && !isTitleSlide(slide) ? (
+        ) : imageSlide ? null : slide && !isTitleSlide(slide) ? (
           <p
             className="text-white text-center font-bold leading-tight drop-shadow-2xl whitespace-pre-line"
             style={{

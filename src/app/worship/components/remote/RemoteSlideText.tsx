@@ -1,5 +1,5 @@
 import { type FC } from 'react';
-import { parseTitleSlide } from '@/lib/constants';
+import { parseImageSlide, parseTitleSlide } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 interface RemoteSlideTextProps {
@@ -12,10 +12,23 @@ interface RemoteSlideTextProps {
 /** Plain-text rendering of a slide for the phone remote (no backgrounds or animation). */
 export const RemoteSlideText: FC<RemoteSlideTextProps> = ({ slide, compact, emptyText = '—' }) => {
   const titleParts = parseTitleSlide(slide);
+  const imageSlide = parseImageSlide(slide);
   const sizeCls = compact ? 'text-sm' : 'text-lg sm:text-xl';
 
   if (!slide) {
     return <p className='text-sm text-muted-foreground/60 text-center'>{emptyText}</p>;
+  }
+
+  if (imageSlide) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- remote edgestore page image
+      <img
+        src={imageSlide.url}
+        alt={imageSlide.label}
+        className={cn('w-full rounded-md bg-black object-contain', compact ? 'max-h-20' : 'max-h-[40svh]')}
+        draggable={false}
+      />
+    );
   }
 
   if (titleParts) {

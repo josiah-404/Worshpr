@@ -231,6 +231,11 @@ export const LyricsPanel: FC<LyricsPanelProps> = (props) => {
                   setAddDialogOpen(false);
                   setAddMode('choose');
                 }}
+                onAddDocument={(item) => {
+                  props.onSelectSong(item);
+                  setAddDialogOpen(false);
+                  setAddMode('choose');
+                }}
                 onSwitchToAi={() => {
                   setAddDialogOpen(false);
                   setAddMode('choose');

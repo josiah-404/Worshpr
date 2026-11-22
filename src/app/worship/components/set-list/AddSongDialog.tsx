@@ -1,7 +1,7 @@
 'use client';
 
 import { type FC } from 'react';
-import { ClipboardPaste, Sparkles, BookOpen, Wand2, BookMarked } from 'lucide-react';
+import { ClipboardPaste, Sparkles, BookOpen, Wand2, BookMarked, FileText } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Tooltip,
@@ -13,6 +13,7 @@ import { parseLyrics, needsParsing } from '@/lib/lyricsParser';
 import type { AddMode } from '@/hooks/useEditorState';
 import type { SongResult } from '@/types/worship.types';
 import { BibleVersePicker } from './BibleVersePicker';
+import { PdfUploadForm } from './PdfUploadForm';
 
 interface AddSongDialogProps {
   addMode: AddMode;
@@ -40,6 +41,9 @@ interface AddSongDialogProps {
 
   // Bible verse
   onAddBibleVerse: (song: SongResult) => void;
+
+  // Uploaded PDF (each page → one image slide)
+  onAddDocument: (item: SongResult) => void;
 }
 
 export const AddSongDialog: FC<AddSongDialogProps> = ({
@@ -59,6 +63,7 @@ export const AddSongDialog: FC<AddSongDialogProps> = ({
   setSectionLabel,
   onAddSection,
   onAddBibleVerse,
+  onAddDocument,
   // onSwitchToAi,
 }) => {
   return (
@@ -134,6 +139,18 @@ export const AddSongDialog: FC<AddSongDialogProps> = ({
                 <span className='text-xs font-medium'>Bible verse</span>
                 <span className='text-[11px] text-muted-foreground'>
                   Pick a verse from Scripture
+                </span>
+              </span>
+            </button>
+            <button
+              onClick={() => setAddMode('pdf')}
+              className='flex items-center gap-2.5 rounded-md border border-border px-3 py-2 text-left hover:bg-accent/60 transition-colors'
+            >
+              <FileText className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
+              <span className='flex flex-col gap-0.5'>
+                <span className='text-xs font-medium'>PDF slides</span>
+                <span className='text-[11px] text-muted-foreground'>
+                  Sermon, announcements (PPT → PDF)
                 </span>
               </span>
             </button>
@@ -240,6 +257,21 @@ export const AddSongDialog: FC<AddSongDialogProps> = ({
             }}
             onBack={() => setAddMode('choose')}
           />
+        </div>
+      )}
+
+      {addMode === 'pdf' && (
+        <div className='p-3 flex flex-col gap-2'>
+          <div className='flex items-center justify-between'>
+            <p className='text-xs font-medium'>Add PDF slides</p>
+            <button
+              onClick={onClose}
+              className='text-[11px] text-muted-foreground hover:text-foreground transition-colors'
+            >
+              ✕
+            </button>
+          </div>
+          <PdfUploadForm onAdd={onAddDocument} onBack={() => setAddMode('choose')} />
         </div>
       )}
 

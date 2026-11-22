@@ -137,6 +137,20 @@ export function parseTitleSlide(slide: string): { title: string; artist: string;
   return { title, artist, role, isSection: !title && !artist && !!role };
 }
 
+/** Prefix that marks a slide as a full-screen image (e.g. a PDF page):
+ *  "§IMAGE§\n<image url>\n<label>" — label is shown in slide lists only. */
+export const IMAGE_SLIDE_MARKER = '§IMAGE§';
+
+export function parseImageSlide(slide: string): { url: string; label: string } | null {
+  if (!slide.startsWith(IMAGE_SLIDE_MARKER)) return null;
+  const [, url = '', label = ''] = slide.split('\n');
+  return url ? { url, label } : null;
+}
+
+export function buildImageSlide(url: string, label: string): string {
+  return `${IMAGE_SLIDE_MARKER}\n${url}\n${label}`;
+}
+
 export const BACKGROUNDS = [
   { id: "deep-space",     label: "Deep Space",     cls: "bg-deep-space"     },
   { id: "aurora",         label: "Aurora",         cls: "bg-aurora"         },

@@ -1,4 +1,4 @@
-import { TITLE_SLIDE_MARKER } from '@/lib/constants';
+import { TITLE_SLIDE_MARKER, buildImageSlide } from '@/lib/constants';
 
 export interface SongResult {
   title: string;
@@ -18,6 +18,10 @@ export interface SongResult {
   isSection?: boolean;
   /** True for Bible verses — skips the title slide, shows reference + numbered verses on one slide */
   isBibleVerse?: boolean;
+  /** True for uploaded PDFs — each entry in `pages` becomes one full-screen image slide. */
+  isDocument?: boolean;
+  /** Image URLs of the rendered PDF pages, in order. Only set when `isDocument`. */
+  pages?: string[];
 }
 
 /**
@@ -52,6 +56,15 @@ export function buildDisplaySlides(
     if (song.isSection) {
       // Section: single announcement slide — role line holds the label
       allSlides.push(`${TITLE_SLIDE_MARKER}\n\n\n${song.title}`);
+      continue;
+    }
+
+    if (song.isDocument) {
+      // Uploaded PDF: one image slide per page, no title slide, no lyrics body slot
+      const pages = song.pages ?? [];
+      pages.forEach((url, i) =>
+        allSlides.push(buildImageSlide(url, `${song.title} · ${i + 1}/${pages.length}`)),
+      );
       continue;
     }
 

@@ -3,7 +3,7 @@
 import { type FC } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, BookOpen } from 'lucide-react';
+import { GripVertical, BookOpen, FileText } from 'lucide-react';
 import type { SongResult } from '@/types/worship.types';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -138,6 +138,33 @@ export const SetListItem: FC<SetListItemProps> = ({
               Save
             </button>
           </div>
+        </div>
+      ) : s.isDocument ? (
+        /* ── Uploaded PDF row (pages are fixed images — remove & re-upload to change) ── */
+        <div className='flex items-center gap-1 px-1 py-1.5'>
+          <button
+            {...attributes}
+            {...listeners}
+            className='cursor-grab active:cursor-grabbing p-1 text-muted-foreground/40 hover:text-muted-foreground transition-colors shrink-0 touch-none'
+            aria-label='Drag to reorder'
+          >
+            <GripVertical className='h-3.5 w-3.5' />
+          </button>
+          <span className='text-[11px] font-mono text-muted-foreground/60 w-4 shrink-0'>
+            {i + 1}
+          </span>
+          <FileText className='h-3.5 w-3.5 text-primary/70 shrink-0' />
+          <div className='flex-1 min-w-0'>
+            <p className='text-xs font-medium truncate'>{s.title}</p>
+            <p className='text-[11px] text-muted-foreground truncate'>{s.artist}</p>
+          </div>
+          <button
+            onClick={() => onRemove(i)}
+            className='text-[11px] text-muted-foreground/60 hover:text-destructive transition-colors shrink-0 pr-1'
+            aria-label='Remove'
+          >
+            ✕
+          </button>
         </div>
       ) : s.isSection ? (
         /* ── Section row ── */
